@@ -1,35 +1,36 @@
-use crate::transformers::Transformer;
+use super::BufferState::*;
+use super::{BufferState, Transformer};
 
 pub struct DirectTransformer {
   buffer: String,
-  is_stopped: bool,
+  buffer_state: BufferState,
 }
 
 impl DirectTransformer {
   pub fn new() -> Self {
     DirectTransformer {
       buffer: "".to_string(),
-      is_stopped: false,
+      buffer_state: Continue,
     }
   }
 }
 
 impl Transformer for DirectTransformer {
   fn is_stopped(&self) -> bool {
-    self.is_stopped
+    self.buffer_state == Stop
   }
 
   fn push(&mut self, character: char) {
-    if self.is_stopped {
+    if self.buffer_state == Stop {
       return;
     }
 
-    self.is_stopped = true;
+    self.buffer_state = Stop;
     self.buffer.push(character);
   }
 
   fn exit(&mut self) -> String {
-    self.is_stopped = true;
+    self.buffer_state = Stop;
 
     std::mem::replace(&mut self.buffer, "".to_string())
   }

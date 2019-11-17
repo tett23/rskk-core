@@ -1,5 +1,6 @@
 use crate::composition_types::CompositionType;
-use crate::transformers::direct::DirectTransformer;
+use crate::transformers::DirectTransformer;
+use crate::transformers::HiraganaTransformer;
 use crate::transformers::Transformer;
 
 pub struct CompositionBuffer {
@@ -21,7 +22,7 @@ impl CompositionBuffer {
     match composition_type {
       CompositionType::Direct => Box::new(DirectTransformer::new()),
       CompositionType::Abbr => Box::new(DirectTransformer::new()),
-      CompositionType::Hiragana => Box::new(DirectTransformer::new()),
+      CompositionType::Hiragana => Box::new(HiraganaTransformer::new()),
       CompositionType::Katakana => Box::new(DirectTransformer::new()),
       CompositionType::EmEisu => Box::new(DirectTransformer::new()),
       CompositionType::EnKatakana => Box::new(DirectTransformer::new()),

@@ -57,5 +57,30 @@ mod tests {
         composition.key_up(&KeyCode::Shift);
         composition.key_down(&KeyCode::KeyB);
         assert_eq!(composition.display_string(), "Ab");
+
+        let composition = skk.start_composition_as(CompositionType::Hiragana);
+        composition.key_down(&KeyCode::KeyA);
+        assert_eq!(composition.display_string(), "あ");
+
+        let composition = skk.start_composition_as(CompositionType::Hiragana);
+        composition.key_down(&KeyCode::KeyA);
+        composition.key_down(&KeyCode::KeyI);
+        assert_eq!(composition.display_string(), "あい");
+
+        let composition = skk.start_composition_as(CompositionType::Hiragana);
+        composition.key_down(&KeyCode::KeyK);
+        composition.key_down(&KeyCode::KeyA);
+        assert_eq!(composition.display_string(), "か");
+
+        let composition = skk.start_composition_as(CompositionType::Hiragana);
+        composition.key_down(&KeyCode::KeyT);
+        composition.key_down(&KeyCode::KeyS);
+        assert_eq!(composition.display_string(), "ts");
+
+        let composition = skk.start_composition_as(CompositionType::Hiragana);
+        composition.key_down(&KeyCode::KeyT);
+        composition.key_down(&KeyCode::KeyS);
+        composition.key_down(&KeyCode::KeyU);
+        assert_eq!(composition.display_string(), "つ");
     }
 }
