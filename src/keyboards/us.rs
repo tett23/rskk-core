@@ -1,5 +1,5 @@
-use crate::keyboards::Keyboard;
-use crate::keycodes::KeyCode;
+use super::KeyCode;
+use super::Keyboard;
 use std::collections::HashSet;
 
 pub struct US {

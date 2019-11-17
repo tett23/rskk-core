@@ -1,7 +1,6 @@
 mod composition;
 mod composition_buffer;
 mod keyboards;
-mod keycodes;
 mod transformers;
 
 use composition::Composition;
@@ -40,7 +39,7 @@ impl RSKK {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keycodes::KeyCode;
+    use keyboards::KeyCode;
 
     #[test]
     fn it_works() {

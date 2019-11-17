@@ -1,4 +1,4 @@
-use crate::transformers::{Transformer, TransformerTypes};
+use super::transformers::{Transformer, TransformerTypes};
 
 pub struct CompositionBuffer {
   transformer: Box<dyn Transformer>,

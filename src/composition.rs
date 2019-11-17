@@ -1,15 +1,14 @@
-use crate::composition_buffer::CompositionBuffer;
-use crate::keyboards;
-use crate::keycodes::KeyCode;
-use crate::transformers::TransformerTypes;
+use super::composition_buffer::CompositionBuffer;
+use super::keyboards::{KeyCode, Keyboard, Keyboards};
+use super::transformers::TransformerTypes;
 
 pub struct Composition {
   composition_buffer: CompositionBuffer,
-  keyboard: Box<dyn keyboards::Keyboard>,
+  keyboard: Box<dyn Keyboard>,
 }
 
 impl Composition {
-  pub fn new(keyboard_type: &keyboards::Keyboards, transformer_type: TransformerTypes) -> Self {
+  pub fn new(keyboard_type: &Keyboards, transformer_type: TransformerTypes) -> Self {
     Composition {
       composition_buffer: CompositionBuffer::new(transformer_type),
       keyboard: keyboard_type.to_keyboard(),

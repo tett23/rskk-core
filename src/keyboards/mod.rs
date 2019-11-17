@@ -1,7 +1,9 @@
+mod keycodes;
 mod us;
 
-use crate::keycodes::KeyCode;
 use std::collections::HashSet;
+
+pub type KeyCode = keycodes::KeyCode;
 
 pub enum Keyboards {
   US,
