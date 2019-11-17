@@ -18,3 +18,28 @@ pub trait Transformer {
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
 }
+
+#[derive(Eq, PartialEq, Copy, Clone)]
+pub enum TransformerTypes {
+  Direct,
+  Hiragana,
+  Katakana,
+  Kanji,
+  Abbr,
+  EmEisu,
+  EnKatakana,
+}
+
+impl TransformerTypes {
+  pub fn to_transformer(&self) -> Box<dyn Transformer> {
+    match self {
+      TransformerTypes::Direct => Box::new(DirectTransformer::new()),
+      TransformerTypes::Kanji => Box::new(DirectTransformer::new()),
+      TransformerTypes::Hiragana => Box::new(HiraganaTransformer::new()),
+      TransformerTypes::Katakana => Box::new(DirectTransformer::new()),
+      TransformerTypes::Abbr => Box::new(DirectTransformer::new()),
+      TransformerTypes::EmEisu => Box::new(DirectTransformer::new()),
+      TransformerTypes::EnKatakana => Box::new(DirectTransformer::new()),
+    }
+  }
+}

@@ -1,31 +1,17 @@
-use crate::composition_types::CompositionType;
-use crate::transformers::DirectTransformer;
-use crate::transformers::HiraganaTransformer;
-use crate::transformers::Transformer;
+use crate::transformers::{Transformer, TransformerTypes};
 
 pub struct CompositionBuffer {
   transformer: Box<dyn Transformer>,
-  current_composition_type: CompositionType,
+  current_transformer_type: TransformerTypes,
   compositioned_buffer: String,
 }
 
 impl CompositionBuffer {
-  pub fn new(composition_type: CompositionType) -> Self {
+  pub fn new(transformer_types: TransformerTypes) -> Self {
     CompositionBuffer {
-      transformer: Self::new_transformer(&composition_type),
-      current_composition_type: composition_type,
+      transformer: transformer_types.to_transformer(),
+      current_transformer_type: transformer_types,
       compositioned_buffer: "".to_string(),
-    }
-  }
-
-  fn new_transformer(composition_type: &CompositionType) -> Box<dyn Transformer> {
-    match composition_type {
-      CompositionType::Direct => Box::new(DirectTransformer::new()),
-      CompositionType::Abbr => Box::new(DirectTransformer::new()),
-      CompositionType::Hiragana => Box::new(HiraganaTransformer::new()),
-      CompositionType::Katakana => Box::new(DirectTransformer::new()),
-      CompositionType::EmEisu => Box::new(DirectTransformer::new()),
-      CompositionType::EnKatakana => Box::new(DirectTransformer::new()),
     }
   }
 
@@ -41,7 +27,7 @@ impl CompositionBuffer {
 
     std::mem::replace(
       &mut self.transformer,
-      Self::new_transformer(&self.current_composition_type),
+      self.current_transformer_type.to_transformer(),
     );
   }
 

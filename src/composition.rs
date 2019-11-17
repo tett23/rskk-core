@@ -1,7 +1,7 @@
 use crate::composition_buffer::CompositionBuffer;
-use crate::composition_types::CompositionType;
 use crate::keyboards;
 use crate::keycodes::KeyCode;
+use crate::transformers::TransformerTypes;
 
 pub struct Composition {
   composition_buffer: CompositionBuffer,
@@ -9,9 +9,9 @@ pub struct Composition {
 }
 
 impl Composition {
-  pub fn new(keyboard_type: &keyboards::Keyboards, composition_type: CompositionType) -> Self {
+  pub fn new(keyboard_type: &keyboards::Keyboards, transformer_type: TransformerTypes) -> Self {
     Composition {
-      composition_buffer: CompositionBuffer::new(composition_type),
+      composition_buffer: CompositionBuffer::new(transformer_type),
       keyboard: keyboard_type.to_keyboard(),
     }
   }
