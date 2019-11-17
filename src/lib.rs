@@ -1,6 +1,7 @@
 mod composition;
 mod composition_buffer;
 mod composition_types;
+mod keyboards;
 mod keycodes;
 mod transformers;
 
@@ -10,13 +11,18 @@ use composition_types::CompositionType;
 pub struct RSKK {
     compositions: Vec<Composition>,
     default_composition_type: CompositionType,
+    keyboard_type: keyboards::Keyboards,
 }
 
 impl RSKK {
-    pub fn new() -> Self {
+    pub fn new(
+        keyboard_type: keyboards::Keyboards,
+        default_composition_type: CompositionType,
+    ) -> Self {
         RSKK {
             compositions: vec![],
-            default_composition_type: CompositionType::Direct,
+            default_composition_type,
+            keyboard_type,
         }
     }
 
@@ -25,7 +31,8 @@ impl RSKK {
     }
 
     pub fn start_composition_as(&mut self, composition_type: CompositionType) -> &mut Composition {
-        self.compositions.push(Composition::new(composition_type));
+        self.compositions
+            .push(Composition::new(&self.keyboard_type, composition_type));
 
         self.compositions.last_mut().unwrap()
     }
@@ -38,7 +45,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut skk = RSKK::new();
+        let mut skk = RSKK::new(keyboards::Keyboards::US, CompositionType::Direct);
         let composition = skk.start_composition();
         composition.key_down(&KeyCode::KeyA);
         composition.key_down(&KeyCode::KeyB);

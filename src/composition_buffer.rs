@@ -1,5 +1,4 @@
 use crate::composition_types::CompositionType;
-use crate::keycodes::KeyCode;
 use crate::transformers::direct::DirectTransformer;
 use crate::transformers::Transformer;
 
@@ -29,8 +28,8 @@ impl CompositionBuffer {
     }
   }
 
-  pub fn push_key(&mut self, key: &KeyCode, shift: bool) {
-    self.transformer.push(key, shift);
+  pub fn push_character(&mut self, character: char) {
+    self.transformer.push(character);
     if !self.transformer.is_stopped() {
       return;
     }
