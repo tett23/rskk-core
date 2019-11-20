@@ -1,5 +1,5 @@
-mod keycodes;
-mod us;
+pub mod keycodes;
+pub mod us;
 
 use std::collections::HashSet;
 

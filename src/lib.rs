@@ -1,6 +1,7 @@
 mod composition;
 mod composition_buffer;
 mod keyboards;
+mod tests;
 mod transformers;
 
 use composition::Composition;
@@ -37,12 +38,14 @@ impl RSKK {
 }
 
 #[cfg(test)]
-mod tests {
+mod lib_tests {
     use super::*;
+    use crate::tests::helpers;
     use keyboards::KeyCode;
 
     #[test]
     fn it_works() {
+        helpers::str_to_key_code_vector("A[up:s]b[down:s]");
         let mut skk = RSKK::new(keyboards::Keyboards::US, TransformerTypes::Direct);
         let composition = skk.start_composition();
         composition.key_down(&KeyCode::KeyA);

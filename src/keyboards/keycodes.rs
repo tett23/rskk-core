@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Copy, Clone, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum KeyCode {
   KeyA,
   KeyB,
@@ -37,6 +37,8 @@ pub enum KeyCode {
   Key0,
   Ctrl,
   Shift,
+  Alt,
   Super,
   Enter,
+  Space,
 }
