@@ -26,6 +26,19 @@ impl Composition {
 
   pub fn key_down(&mut self, key_code: &KeyCode) {
     let character = self.keyboard.key_down(key_code);
+
+    let new_transformer_type = self
+      .keyboard
+      .try_change_transformer(&self.config.key_config, &self.current_transformer_type);
+    if let Some(new_transformer_type) = new_transformer_type {
+      self
+        .compositioned_buffer
+        .push_str(&self.transformer.buffer_content());
+      self.current_transformer_type = new_transformer_type;
+      std::mem::replace(&mut self.transformer, new_transformer_type.to_transformer());
+      return;
+    }
+
     if let Some(character) = character {
       self.push_character(character)
     }

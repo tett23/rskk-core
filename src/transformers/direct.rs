@@ -1,6 +1,5 @@
 use super::BufferState::*;
-use super::{BufferState, Transformer, TransformerTypes};
-use std::collections::HashSet;
+use super::{BufferState, Transformer};
 
 pub struct DirectTransformer {
   buffer: String,
@@ -42,12 +41,5 @@ impl Transformer for DirectTransformer {
 
   fn display_string(&self) -> String {
     self.buffer.clone()
-  }
-
-  fn allow_change_transformer_to(&self) -> HashSet<TransformerTypes> {
-    let mut ret = HashSet::new();
-    ret.insert(TransformerTypes::Hiragana);
-
-    ret
   }
 }
