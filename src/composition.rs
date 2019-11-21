@@ -26,7 +26,7 @@ impl Composition {
 
   pub fn key_down(&mut self, key_code: &KeyCode) {
     let character = self.keyboard.key_down(key_code);
-    if self.try_change_transformer() {
+    if self.try_replace_transformer() {
       return;
     }
 
@@ -39,7 +39,7 @@ impl Composition {
     self.keyboard.key_up(key);
   }
 
-  fn try_change_transformer(&mut self) -> bool {
+  fn try_replace_transformer(&mut self) -> bool {
     let new_transformer_type = self
       .keyboard
       .try_change_transformer(&self.config.key_config, &self.current_transformer_type);
@@ -48,13 +48,18 @@ impl Composition {
     }
     let new_transformer_type = new_transformer_type.unwrap();
 
+    self.replace_transfomer(new_transformer_type);
+
+    true
+  }
+
+  fn replace_transfomer(&mut self, replace_to: TransformerTypes) {
     self
       .compositioned_buffer
       .push_str(&self.transformer.buffer_content());
-    self.current_transformer_type = new_transformer_type;
-    std::mem::replace(&mut self.transformer, new_transformer_type.to_transformer());
 
-    true
+    self.current_transformer_type = replace_to;
+    std::mem::replace(&mut self.transformer, replace_to.to_transformer());
   }
 
   pub fn push_character(&mut self, character: char) {
@@ -63,14 +68,7 @@ impl Composition {
       return;
     }
 
-    self
-      .compositioned_buffer
-      .push_str(&self.transformer.buffer_content());
-
-    std::mem::replace(
-      &mut self.transformer,
-      self.current_transformer_type.to_transformer(),
-    );
+    self.replace_transfomer(self.current_transformer_type);
   }
 
   pub fn display_string(&self) -> String {
