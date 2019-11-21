@@ -84,7 +84,7 @@ impl TransformerTypes {
     }
   }
 
-  pub fn get_key_combination<'a>(&self, key_config: &'a KeyConfig) -> &'a Vec<KeyCode> {
+  pub fn get_key_combination<'a>(&self, key_config: &'a KeyConfig) -> &'a HashSet<KeyCode> {
     match self {
       TransformerTypes::Direct => &key_config.enter_direct_transformer,
       TransformerTypes::Kanji => &key_config.enter_kanji_transformer,

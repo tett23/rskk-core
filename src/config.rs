@@ -1,5 +1,7 @@
 use crate::keyboards::keycodes::KeyCode::*;
 use crate::keyboards::{KeyCode, Keyboards};
+use crate::set;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -21,31 +23,31 @@ impl Config {
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct KeyConfig {
-  pub enter: Vec<KeyCode>,
-  pub enter_kanji_transformer: Vec<KeyCode>,
-  pub enter_okuri_transformer: Vec<KeyCode>,
-  pub enter_hiragana_transformer: Vec<KeyCode>,
-  pub enter_katakana_transformer: Vec<KeyCode>,
-  pub enter_en_katakana_transformer: Vec<KeyCode>,
-  pub enter_em_eisu_transformer: Vec<KeyCode>,
-  pub enter_abbr_transformer: Vec<KeyCode>,
-  pub enter_direct_transformer: Vec<KeyCode>,
-  pub sticky_key: Vec<KeyCode>,
+  pub enter: HashSet<KeyCode>,
+  pub enter_kanji_transformer: HashSet<KeyCode>,
+  pub enter_okuri_transformer: HashSet<KeyCode>,
+  pub enter_hiragana_transformer: HashSet<KeyCode>,
+  pub enter_katakana_transformer: HashSet<KeyCode>,
+  pub enter_en_katakana_transformer: HashSet<KeyCode>,
+  pub enter_em_eisu_transformer: HashSet<KeyCode>,
+  pub enter_abbr_transformer: HashSet<KeyCode>,
+  pub enter_direct_transformer: HashSet<KeyCode>,
+  pub sticky_key: HashSet<KeyCode>,
 }
 
 impl KeyConfig {
   pub fn default_config() -> Self {
     KeyConfig {
-      enter: vec![Enter],
-      enter_kanji_transformer: vec![Shift],
-      enter_okuri_transformer: vec![Shift],
-      enter_hiragana_transformer: vec![Ctrl, KeyJ],
-      enter_katakana_transformer: vec![KeyQ],
-      enter_en_katakana_transformer: vec![Ctrl, KeyQ],
-      enter_em_eisu_transformer: vec![Shift, KeyL],
-      enter_abbr_transformer: vec![Slash],
-      enter_direct_transformer: vec![KeyL],
-      sticky_key: vec![Semicolon],
+      enter: set![Enter],
+      enter_kanji_transformer: set![Shift],
+      enter_okuri_transformer: set![Shift],
+      enter_hiragana_transformer: set![Ctrl, KeyJ],
+      enter_katakana_transformer: set![KeyQ],
+      enter_en_katakana_transformer: set![Ctrl, KeyQ],
+      enter_em_eisu_transformer: set![Shift, KeyL],
+      enter_abbr_transformer: set![Slash],
+      enter_direct_transformer: set![KeyL],
+      sticky_key: set![Semicolon],
     }
   }
 }
