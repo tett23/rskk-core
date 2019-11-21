@@ -40,7 +40,7 @@ impl RSKK {
 macro_rules! set {
   ( $( $x:expr ),* ) => {
       {
-          #[warn(unused_mut)]
+          #[allow(unused_mut)]
           let mut temp_set = HashSet::new();
           $(
               temp_set.insert($x);
