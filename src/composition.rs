@@ -1,6 +1,8 @@
 use super::composition_buffer::CompositionBuffer;
+use super::config::Config;
 use super::keyboards::{KeyCode, Keyboard, Keyboards};
 use super::transformers::TransformerTypes;
+use std::rc::Rc;
 
 pub struct Composition {
   composition_buffer: CompositionBuffer,
@@ -8,9 +10,13 @@ pub struct Composition {
 }
 
 impl Composition {
-  pub fn new(keyboard_type: &Keyboards, transformer_type: TransformerTypes) -> Self {
+  pub fn new(
+    config: Rc<Config>,
+    keyboard_type: &Keyboards,
+    transformer_type: TransformerTypes,
+  ) -> Self {
     Composition {
-      composition_buffer: CompositionBuffer::new(transformer_type),
+      composition_buffer: CompositionBuffer::new(Rc::clone(&config), transformer_type),
       keyboard: keyboard_type.to_keyboard(),
     }
   }

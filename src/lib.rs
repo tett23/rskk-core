@@ -1,13 +1,17 @@
 mod composition;
 mod composition_buffer;
+mod config;
 mod keyboards;
 mod tests;
 mod transformers;
 
 use composition::Composition;
+use config::Config;
+use std::rc::Rc;
 use transformers::TransformerTypes;
 
 pub struct RSKK {
+    config: Rc<Config>,
     compositions: Vec<Composition>,
     default_composition_type: TransformerTypes,
     keyboard_type: keyboards::Keyboards,
@@ -19,6 +23,7 @@ impl RSKK {
         default_composition_type: TransformerTypes,
     ) -> Self {
         RSKK {
+            config: Rc::new(Config::default_config()),
             compositions: vec![],
             default_composition_type,
             keyboard_type,
@@ -30,8 +35,11 @@ impl RSKK {
     }
 
     pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> &mut Composition {
-        self.compositions
-            .push(Composition::new(&self.keyboard_type, composition_type));
+        self.compositions.push(Composition::new(
+            Rc::clone(&self.config),
+            &self.keyboard_type,
+            composition_type,
+        ));
 
         self.compositions.last_mut().unwrap()
     }

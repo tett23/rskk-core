@@ -2,6 +2,8 @@ mod direct;
 mod hiragana;
 mod tables;
 
+use std::collections::HashSet;
+
 pub type DirectTransformer = direct::DirectTransformer;
 pub type HiraganaTransformer = hiragana::HiraganaTransformer;
 
@@ -17,9 +19,10 @@ pub trait Transformer {
   fn exit(&mut self) -> String;
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
+  fn allow_change_transformer_to(&self) -> HashSet<TransformerTypes>;
 }
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash)]
 pub enum TransformerTypes {
   Direct,
   Hiragana,

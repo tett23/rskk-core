@@ -35,6 +35,8 @@ pub enum KeyCode {
   Key8,
   Key9,
   Key0,
+  Semicolon,
+  Slash,
   Ctrl,
   Shift,
   Alt,

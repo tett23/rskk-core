@@ -1,6 +1,7 @@
 use super::tables::hiragana_convert;
 use super::BufferState::*;
-use super::{BufferState, Transformer};
+use super::{BufferState, Transformer, TransformerTypes};
+use std::collections::HashSet;
 
 pub struct HiraganaTransformer {
   buffer: String,
@@ -46,5 +47,17 @@ impl Transformer for HiraganaTransformer {
 
   fn display_string(&self) -> String {
     self.buffer.clone()
+  }
+
+  fn allow_change_transformer_to(&self) -> HashSet<TransformerTypes> {
+    let mut ret = HashSet::new();
+    ret.insert(TransformerTypes::Direct);
+    ret.insert(TransformerTypes::Kanji);
+    ret.insert(TransformerTypes::Abbr);
+    ret.insert(TransformerTypes::Katakana);
+    ret.insert(TransformerTypes::EnKatakana);
+    ret.insert(TransformerTypes::EmEisu);
+
+    ret
   }
 }

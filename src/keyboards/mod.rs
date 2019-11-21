@@ -5,6 +5,7 @@ use std::collections::HashSet;
 
 pub type KeyCode = keycodes::KeyCode;
 
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum Keyboards {
   US,
 }
