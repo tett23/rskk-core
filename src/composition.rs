@@ -1,30 +1,33 @@
-use super::composition_buffer::CompositionBuffer;
 use super::config::Config;
-use super::keyboards::{KeyCode, Keyboard, Keyboards};
-use super::transformers::TransformerTypes;
+use super::keyboards::{KeyCode, Keyboard};
+use super::transformers::{Transformer, TransformerTypes};
 use std::rc::Rc;
 
 pub struct Composition {
-  composition_buffer: CompositionBuffer,
+  config: Rc<Config>,
+  transformer: Box<dyn Transformer>,
+  current_transformer_type: TransformerTypes,
+  compositioned_buffer: String,
   keyboard: Box<dyn Keyboard>,
 }
 
 impl Composition {
-  pub fn new(
-    config: Rc<Config>,
-    keyboard_type: &Keyboards,
-    transformer_type: TransformerTypes,
-  ) -> Self {
+  pub fn new(config: Rc<Config>, transformer_types: TransformerTypes) -> Self {
+    let keyboard = config.keyboard_type.to_keyboard();
+
     Composition {
-      composition_buffer: CompositionBuffer::new(Rc::clone(&config), transformer_type),
-      keyboard: keyboard_type.to_keyboard(),
+      config,
+      transformer: transformer_types.to_transformer(),
+      current_transformer_type: transformer_types,
+      compositioned_buffer: "".to_string(),
+      keyboard: keyboard,
     }
   }
 
   pub fn key_down(&mut self, key_code: &KeyCode) {
     let character = self.keyboard.key_down(key_code);
-    if let Some(c) = character {
-      self.composition_buffer.push_character(c);
+    if let Some(character) = character {
+      self.push_character(character)
     }
   }
 
@@ -32,7 +35,27 @@ impl Composition {
     self.keyboard.key_up(key);
   }
 
+  pub fn push_character(&mut self, character: char) {
+    self.transformer.push(character);
+    if !self.transformer.is_stopped() {
+      return;
+    }
+
+    self
+      .compositioned_buffer
+      .push_str(&self.transformer.buffer_content());
+
+    std::mem::replace(
+      &mut self.transformer,
+      self.current_transformer_type.to_transformer(),
+    );
+  }
+
   pub fn display_string(&self) -> String {
-    self.composition_buffer.display_string()
+    let mut ret = "".to_string();
+    ret.push_str(&self.compositioned_buffer);
+    ret.push_str(&self.transformer.display_string());
+
+    ret
   }
 }

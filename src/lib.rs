@@ -1,5 +1,4 @@
 mod composition;
-mod composition_buffer;
 mod config;
 mod keyboards;
 mod tests;
@@ -35,11 +34,8 @@ impl RSKK {
     }
 
     pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> &mut Composition {
-        self.compositions.push(Composition::new(
-            Rc::clone(&self.config),
-            &self.keyboard_type,
-            composition_type,
-        ));
+        self.compositions
+            .push(Composition::new(Rc::clone(&self.config), composition_type));
 
         self.compositions.last_mut().unwrap()
     }
