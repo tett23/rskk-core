@@ -53,63 +53,41 @@ macro_rules! set {
 #[cfg(test)]
 mod lib_tests {
     use super::*;
-    use crate::tests::helpers;
-    use keyboards::keycodes::KeyCode::*;
+    use crate::tests::helpers::str_to_key_code_vector;
 
     #[test]
     fn it_works() {
-        helpers::str_to_key_code_vector("A[up:s]b[down:s]");
         let mut skk = RSKK::new(TransformerTypes::Direct);
         let composition = skk.start_composition();
-        composition.key_down(&KeyA);
-        composition.key_down(&KeyB);
-        assert_eq!(composition.display_string(), "ab");
+        composition.push_key_events(&str_to_key_code_vector("abc"));
+        assert_eq!(composition.display_string(), "abc");
 
         let composition = skk.start_composition();
-        composition.key_down(&Shift);
-        composition.key_down(&KeyA);
-        composition.key_up(&Shift);
-        composition.key_down(&KeyB);
+        composition.push_key_events(&str_to_key_code_vector("[down:shift]a[up:shift]b"));
         assert_eq!(composition.display_string(), "Ab");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.key_down(&KeyA);
+        composition.push_key_events(&str_to_key_code_vector("a"));
         assert_eq!(composition.display_string(), "あ");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.key_down(&KeyA);
-        composition.key_down(&KeyI);
+        composition.push_key_events(&str_to_key_code_vector("ai"));
         assert_eq!(composition.display_string(), "あい");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.key_down(&KeyK);
-        composition.key_down(&KeyA);
+        composition.push_key_events(&str_to_key_code_vector("ka"));
         assert_eq!(composition.display_string(), "か");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.key_down(&KeyT);
-        composition.key_down(&KeyS);
+        composition.push_key_events(&str_to_key_code_vector("ts"));
         assert_eq!(composition.display_string(), "ts");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.key_down(&KeyT);
-        composition.key_down(&KeyS);
-        composition.key_down(&KeyU);
+        composition.push_key_events(&str_to_key_code_vector("tsu"));
         assert_eq!(composition.display_string(), "つ");
 
         let composition = skk.start_composition_as(TransformerTypes::Direct);
-        composition.key_down(&KeyA);
-        composition.key_up(&KeyA);
-        composition.key_down(&Ctrl);
-        composition.key_down(&KeyJ);
-        composition.key_up(&Ctrl);
-        composition.key_up(&KeyJ);
-        composition.key_down(&KeyA);
-        composition.key_up(&KeyA);
-        composition.key_down(&KeyL);
-        composition.key_up(&KeyL);
-        composition.key_down(&KeyA);
-        composition.key_up(&KeyA);
+        composition.push_key_events(&str_to_key_code_vector("a[down:ctrl]j[up:ctrl]ala"));
         assert_eq!(composition.display_string(), "aあa");
     }
 }

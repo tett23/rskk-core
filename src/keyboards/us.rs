@@ -101,14 +101,12 @@ impl Keyboard for US {
     self.last_character.clone()
   }
 
-  fn key_down(&mut self, key: &KeyCode) -> Option<char> {
+  fn key_down(&mut self, key: &KeyCode) {
     // 絵文字直接入力に対応するため、コードポイントを渡せるようにしたほうがいい？
-    // non asciiなキーボード時に記号入力がおかしくなりそう
+    // non USなキーボード時に記号入力がおかしくなりそう
     // キーボードの抽象化の層が必要では？
     self.pressing_keys.insert(key.clone());
     self.last_character = US::convert(key, self.is_pressing_shift());
-
-    self.last_character()
   }
 
   fn key_up(&mut self, key: &KeyCode) {

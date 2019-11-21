@@ -1,15 +1,8 @@
 #![cfg(test)]
 
-use crate::keyboards::keycodes::KeyCode;
 use crate::keyboards::keycodes::KeyCode::*;
+use crate::keyboards::{KeyCode, KeyEvents};
 use KeyEvents::*;
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub enum KeyEvents {
-  KeyDown(KeyCode),
-  KeyRepeat(KeyCode),
-  KeyUp(KeyCode),
-}
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum KeyManipulation {
@@ -99,13 +92,7 @@ fn parse_meta_token(token: &str) -> Option<KeyToken> {
     _ => None,
   };
 
-  let key_code = match key {
-    "s" | "shift" => Some(Shift),
-    "c" | "ctrl" => Some(Ctrl),
-    "a" | "alt" => Some(Alt),
-    "e" | "enter" => Some(Enter),
-    _ => None,
-  };
+  let key_code = to_key_code(key);
 
   Some(KeyToken::Meta(key_code?, manipulation?))
 }
@@ -125,7 +112,13 @@ fn build_events(key: &KeyCode, with_shift: bool) -> Vec<KeyEvents> {
 
 fn to_key_events(character: char) -> Option<Vec<KeyEvents>> {
   let lowercase = character.to_lowercase().to_string();
-  let key = match &*lowercase {
+  let key = to_key_code(&*lowercase);
+
+  Some(build_events(&key?, character.is_ascii_uppercase()))
+}
+
+fn to_key_code(character: &str) -> Option<KeyCode> {
+  match character {
     "a" => Some(KeyA),
     "b" => Some(KeyB),
     "c" => Some(KeyC),
@@ -161,14 +154,14 @@ fn to_key_events(character: char) -> Option<Vec<KeyEvents>> {
     "7" => Some(Key7),
     "8" => Some(Key8),
     "9" => Some(Key9),
+    "ctrl" => Some(Ctrl),
+    "shift" => Some(Shift),
+    "alt" => Some(Alt),
+    "super" => Some(Super),
+    "slash" => Some(Slash),
+    "enter" => Some(Enter),
     _ => None,
-  };
-  if key.is_none() {
-    return None;
   }
-  let key = key.unwrap();
-
-  Some(build_events(&key, character.is_ascii_uppercase()))
 }
 
 fn to_meta_events(key: KeyCode, manipulation: KeyManipulation) -> Vec<KeyEvents> {
@@ -185,7 +178,7 @@ mod tests {
 
   #[test]
   fn it_works() {
-    let events = str_to_key_code_vector("A[down:s]b[up:s]");
+    let events = str_to_key_code_vector("A[down:shift]b[up:shift]");
     assert_eq!(
       events,
       vec![

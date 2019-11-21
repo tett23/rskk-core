@@ -20,14 +20,29 @@ impl Keyboards {
   }
 }
 
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum KeyEvents {
+  KeyDown(KeyCode),
+  KeyRepeat(KeyCode),
+  KeyUp(KeyCode),
+}
+
 pub trait Keyboard {
-  fn key_down(&mut self, key: &KeyCode) -> Option<char>;
+  fn key_down(&mut self, key: &KeyCode);
   fn key_up(&mut self, key: &KeyCode);
   fn pressing_keys(&self) -> &HashSet<KeyCode>;
   fn last_character(&self) -> Option<char>;
 
-  fn repeat(&self) -> Option<char> {
-    self.last_character()
+  fn push_event(&mut self, event: &KeyEvents) {
+    match event {
+      KeyEvents::KeyDown(key) => self.key_down(key),
+      KeyEvents::KeyUp(key) => self.key_up(key),
+      KeyEvents::KeyRepeat(_) => unimplemented!(),
+    }
+  }
+
+  fn push_events(&mut self, events: &Vec<KeyEvents>) {
+    events.iter().for_each(|e| self.push_event(e))
   }
 
   fn is_pressing_shift(&self) -> bool {
@@ -45,9 +60,9 @@ pub trait Keyboard {
   fn try_change_transformer(
     &self,
     key_config: &KeyConfig,
-    transformer_type: &TransformerTypes,
+    current_transformer: &TransformerTypes,
   ) -> Option<TransformerTypes> {
-    if let Some(ret) = transformer_type
+    if let Some(ret) = current_transformer
       .allow_change_transformer_to()
       .iter()
       .find(|&&transformer| {
@@ -68,29 +83,28 @@ pub trait Keyboard {
 mod tests {
   use super::*;
   use crate::config::KeyConfig;
-  use crate::keyboards::keycodes::KeyCode::*;
+  use crate::tests::helpers::str_to_key_code_vector;
 
   #[test]
   fn change_transformer() {
     let key_config = KeyConfig::default_config();
 
     let mut keyboard = us::US::new();
-    keyboard.key_down(&KeyA);
+    keyboard.push_events(&str_to_key_code_vector("a"));
     assert_eq!(
       None,
       keyboard.try_change_transformer(&key_config, &TransformerTypes::Direct)
     );
 
     let mut keyboard = us::US::new();
-    keyboard.key_down(&Ctrl);
-    keyboard.key_down(&KeyJ);
+    keyboard.push_events(&str_to_key_code_vector("[down:ctrl][down:j]"));
     assert_eq!(
       Some(TransformerTypes::Hiragana),
       keyboard.try_change_transformer(&key_config, &TransformerTypes::Direct)
     );
 
     let mut keyboard = us::US::new();
-    keyboard.key_down(&KeyL);
+    keyboard.push_events(&str_to_key_code_vector("[down:l]"));
     assert_eq!(
       Some(TransformerTypes::Direct),
       keyboard.try_change_transformer(&key_config, &TransformerTypes::Hiragana)

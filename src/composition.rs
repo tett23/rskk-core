@@ -1,5 +1,5 @@
 use super::config::Config;
-use super::keyboards::{KeyCode, Keyboard};
+use super::keyboards::{KeyEvents, Keyboard};
 use super::transformers::{Transformer, TransformerTypes};
 use std::rc::Rc;
 
@@ -24,19 +24,22 @@ impl Composition {
     }
   }
 
-  pub fn key_down(&mut self, key_code: &KeyCode) {
-    let character = self.keyboard.key_down(key_code);
+  pub fn push_key_events(&mut self, events: &Vec<KeyEvents>) {
+    events.iter().for_each(|e| self.push_key_event(e))
+  }
+
+  pub fn push_key_event(&mut self, event: &KeyEvents) {
+    self.keyboard.push_event(event);
     if self.try_replace_transformer() {
       return;
     }
 
-    if let Some(character) = character {
+    if let KeyEvents::KeyUp(_) = event {
+      return;
+    }
+    if let Some(character) = self.keyboard.last_character() {
       self.push_character(character)
     }
-  }
-
-  pub fn key_up(&mut self, key: &KeyCode) {
-    self.keyboard.key_up(key);
   }
 
   fn try_replace_transformer(&mut self) -> bool {
@@ -54,9 +57,11 @@ impl Composition {
   }
 
   fn replace_transfomer(&mut self, replace_to: TransformerTypes) {
-    self
-      .compositioned_buffer
-      .push_str(&self.transformer.buffer_content());
+    let c = self.compositioned_buffer.clone();
+    std::mem::replace(
+      &mut self.compositioned_buffer,
+      c + &self.transformer.buffer_content(),
+    );
 
     self.current_transformer_type = replace_to;
     std::mem::replace(&mut self.transformer, replace_to.to_transformer());
