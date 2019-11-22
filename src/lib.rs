@@ -1,11 +1,14 @@
 mod composition;
 mod config;
+mod dictionary;
 mod keyboards;
 mod tests;
 mod transformers;
 
 use composition::Composition;
 use config::Config;
+use dictionary::Dictionary;
+use std::collections::HashSet;
 use std::rc::Rc;
 use transformers::TransformerTypes;
 
@@ -13,6 +16,7 @@ pub struct RSKK {
     config: Rc<Config>,
     compositions: Vec<Composition>,
     default_composition_type: TransformerTypes,
+    dictionary: Dictionary,
 }
 
 impl RSKK {
@@ -21,7 +25,12 @@ impl RSKK {
             config: Rc::new(Config::default_config()),
             compositions: vec![],
             default_composition_type,
+            dictionary: Dictionary::new(set![]),
         }
+    }
+
+    pub fn parse_dictionary(&mut self, dic: &str) {
+        self.dictionary = Dictionary::parse(dic);
     }
 
     pub fn start_composition(&mut self) -> &mut Composition {
