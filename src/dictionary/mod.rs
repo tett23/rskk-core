@@ -18,6 +18,13 @@ impl Dictionary {
     self.entries.insert(entry);
   }
 
+  pub fn transform(&self, word: &str) -> Option<&DictionaryEntry> {
+    match self.entries.iter().find(|&item| item.read == word) {
+      Some(v) => Some(&v),
+      None => None,
+    }
+  }
+
   pub fn parse(string: &str) -> Self {
     let mut ret = Dictionary::new(HashSet::new());
     for item in string.lines() {
@@ -35,6 +42,30 @@ mod tests {
   use super::transform_entry::TransformEntry;
   use super::*;
   use crate::set;
+
+  #[test]
+  fn transform() {
+    let kanji = DictionaryEntry::new(
+      "かんじ".to_string(),
+      set![TransformEntry::new("漢字".to_string(), None)],
+    );
+    let kanji2 = kanji.clone();
+    let okuri = DictionaryEntry::new(
+      "おくr".to_string(),
+      set![TransformEntry::new("送".to_string(), None)],
+    );
+    let okuri2 = okuri.clone();
+    let dic = Dictionary::new(set![kanji2, okuri2]);
+
+    let entry = dic.transform("かんじ");
+    assert_eq!(entry, Some(&kanji));
+
+    let entry = dic.transform("おくr");
+    assert_eq!(entry, Some(&okuri));
+
+    let entry = dic.transform("みとうろく");
+    assert_eq!(entry, None);
+  }
 
   #[test]
   fn parse() {
