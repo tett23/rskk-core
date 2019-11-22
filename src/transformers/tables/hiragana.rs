@@ -154,7 +154,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<(String, BufferS
     ("", '7') => Some(("7", Stop)),
     ("", '8') => Some(("8", Stop)),
     ("", '9') => Some(("9", Stop)),
-    ("", '0') => Some(("10", Stop)),
+    ("", '0') => Some(("0", Stop)),
 
     // 記号類
     ("", ',') => Some(("、", Stop)),
