@@ -19,6 +19,15 @@ pub enum BufferState {
 pub trait Transformer {
   fn is_stopped(&self) -> bool;
   fn push(&mut self, character: char);
+  fn enter(&mut self) {
+    unimplemented!()
+  }
+  fn space(&mut self) {
+    unimplemented!()
+  }
+  fn tab(&mut self) {
+    unimplemented!()
+  }
   fn cancel(&mut self) -> String;
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
