@@ -34,7 +34,7 @@ impl Transformer for HiraganaTransformer {
     }
   }
 
-  fn exit(&mut self) -> String {
+  fn cancel(&mut self) -> String {
     self.buffer_state = Stop;
 
     std::mem::replace(&mut self.buffer, "".to_string())
