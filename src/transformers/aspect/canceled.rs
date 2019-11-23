@@ -1,18 +1,16 @@
 use super::super::{Transformer, TransformerTypes};
 
-pub struct Stopped {
-  buffer: String,
-}
+pub struct Canceled {}
 
-impl Stopped {
-  pub fn new(buffer: String) -> Self {
-    Stopped { buffer }
+impl Canceled {
+  pub fn new() -> Self {
+    Canceled {}
   }
 }
 
-impl Transformer for Stopped {
+impl Transformer for Canceled {
   fn transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::Stopped
+    TransformerTypes::Canceled
   }
 
   fn is_stopped(&self) -> bool {
@@ -20,30 +18,30 @@ impl Transformer for Stopped {
   }
 
   fn push(&mut self, _: char) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
+    Box::new(Canceled::new())
   }
 
   fn cancel(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new("".to_string()))
+    Box::new(Canceled::new())
   }
 
   fn enter(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
+    Box::new(Canceled::new())
   }
 
   fn tab(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
+    Box::new(Canceled::new())
   }
 
   fn space(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
+    Box::new(Canceled::new())
   }
 
   fn buffer_content(&self) -> String {
-    self.buffer.clone()
+    "".to_string()
   }
 
   fn display_string(&self) -> String {
-    self.buffer.clone()
+    "".to_string()
   }
 }

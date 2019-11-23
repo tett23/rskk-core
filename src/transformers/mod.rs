@@ -8,8 +8,9 @@ use crate::set;
 use std::collections::HashSet;
 use std::fmt;
 
-pub type DirectTransformer = direct::DirectTransformer;
-pub type HiraganaTransformer = hiragana::HiraganaTransformer;
+pub use aspect::{Aspect, Canceled, SelectCandidate, Stopped, Yomi};
+pub use direct::DirectTransformer;
+pub use hiragana::HiraganaTransformer;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum BufferState {
@@ -18,6 +19,9 @@ pub enum BufferState {
 }
 
 pub trait Transformer {
+  fn transformer_type(&self) -> TransformerTypes {
+    unimplemented!()
+  }
   fn is_stopped(&self) -> bool;
   fn push(&mut self, character: char) -> Box<dyn Transformer>;
   fn enter(&mut self) -> Box<dyn Transformer> {
@@ -27,6 +31,9 @@ pub trait Transformer {
     unimplemented!()
   }
   fn tab(&mut self) -> Box<dyn Transformer> {
+    unimplemented!()
+  }
+  fn delete(&mut self) -> Box<dyn Transformer> {
     unimplemented!()
   }
   fn cancel(&mut self) -> Box<dyn Transformer>;
@@ -58,6 +65,10 @@ pub enum TransformerTypes {
   Abbr,
   EmEisu,
   EnKatakana,
+  Yomi,
+  Canceled,
+  Stopped,
+  SelectCandidate,
 }
 
 impl TransformerTypes {
@@ -71,6 +82,7 @@ impl TransformerTypes {
       TransformerTypes::Abbr => Box::new(DirectTransformer::new()),
       TransformerTypes::EmEisu => Box::new(DirectTransformer::new()),
       TransformerTypes::EnKatakana => Box::new(DirectTransformer::new()),
+      _ => unreachable!(),
     }
   }
 
@@ -105,6 +117,7 @@ impl TransformerTypes {
       ],
       TransformerTypes::EmEisu => set![TransformerTypes::Hiragana],
       TransformerTypes::Abbr => set![],
+      _ => unreachable!(),
     }
   }
 
@@ -118,6 +131,7 @@ impl TransformerTypes {
       TransformerTypes::EnKatakana => &key_config.enter_en_katakana_transformer,
       TransformerTypes::EmEisu => &key_config.enter_em_eisu_transformer,
       TransformerTypes::Abbr => &key_config.enter_abbr_transformer,
+      _ => unreachable!(),
     }
   }
 }

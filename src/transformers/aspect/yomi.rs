@@ -39,6 +39,10 @@ impl Yomi {
 }
 
 impl Transformer for Yomi {
+  fn transformer_type(&self) -> TransformerTypes {
+    TransformerTypes::Yomi
+  }
+
   fn is_stopped(&self) -> bool {
     self.buffer_state == BufferState::Stop
   }
