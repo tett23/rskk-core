@@ -1,7 +1,9 @@
+use super::aspect::Stopped;
 use super::tables::hiragana_convert;
 use super::BufferState::*;
 use super::{BufferState, Transformer};
 
+#[derive(Clone, Debug)]
 pub struct HiraganaTransformer {
   buffer: String,
   buffer_state: BufferState,
@@ -14,6 +16,13 @@ impl HiraganaTransformer {
       buffer_state: Continue,
     }
   }
+
+  pub fn new_from(buffer: String, buffer_state: BufferState) -> Self {
+    HiraganaTransformer {
+      buffer,
+      buffer_state,
+    }
+  }
 }
 
 impl Transformer for HiraganaTransformer {
@@ -21,23 +30,26 @@ impl Transformer for HiraganaTransformer {
     self.buffer_state == Stop
   }
 
-  fn push(&mut self, character: char) {
+  fn push(&mut self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
-      return;
+      return Box::new(Self::new_from(
+        self.buffer.clone(),
+        self.buffer_state.clone(),
+      ));
     }
 
-    if let Some((c, cont)) = hiragana_convert(&self.buffer, character) {
-      self.buffer_state = cont;
-      std::mem::replace(&mut self.buffer, c);
+    if let Some((new_buffer, new_buffer_state)) = hiragana_convert(&self.buffer, character) {
+      Box::new(Self::new_from(new_buffer, new_buffer_state))
     } else {
-      std::mem::replace(&mut self.buffer, character.to_string());
+      self.cancel()
     }
   }
 
-  fn cancel(&mut self) -> String {
+  fn cancel(&mut self) -> Box<dyn Transformer> {
     self.buffer_state = Stop;
+    self.buffer = "".to_string();
 
-    std::mem::replace(&mut self.buffer, "".to_string())
+    Box::new(Stopped::new("".to_string()))
   }
 
   fn buffer_content(&self) -> String {

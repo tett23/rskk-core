@@ -1,6 +1,8 @@
+use super::aspect::Stopped;
 use super::BufferState::*;
 use super::{BufferState, Transformer};
 
+#[derive(Clone, Debug)]
 pub struct DirectTransformer {
   buffer: String,
   buffer_state: BufferState,
@@ -20,19 +22,22 @@ impl Transformer for DirectTransformer {
     self.buffer_state == Stop
   }
 
-  fn push(&mut self, character: char) {
+  fn push(&mut self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
-      return;
+      return Box::new(Stopped::new(self.buffer.clone()));
     }
 
     self.buffer_state = Stop;
     self.buffer.push(character);
+
+    return Box::new(Stopped::new(self.buffer.clone()));
   }
 
-  fn cancel(&mut self) -> String {
+  fn cancel(&mut self) -> Box<dyn Transformer> {
     self.buffer_state = Stop;
+    self.buffer = "".to_string();
 
-    std::mem::replace(&mut self.buffer, "".to_string())
+    return Box::new(Stopped::new("".to_string()));
   }
 
   fn buffer_content(&self) -> String {

@@ -6,11 +6,12 @@ use crate::config::KeyConfig;
 use crate::keyboards::KeyCode;
 use crate::set;
 use std::collections::HashSet;
+use std::fmt;
 
 pub type DirectTransformer = direct::DirectTransformer;
 pub type HiraganaTransformer = hiragana::HiraganaTransformer;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum BufferState {
   Continue,
   Stop,
@@ -18,19 +19,33 @@ pub enum BufferState {
 
 pub trait Transformer {
   fn is_stopped(&self) -> bool;
-  fn push(&mut self, character: char);
-  fn enter(&mut self) {
+  fn push(&mut self, character: char) -> Box<dyn Transformer>;
+  fn enter(&mut self) -> Box<dyn Transformer> {
     unimplemented!()
   }
-  fn space(&mut self) {
+  fn space(&mut self) -> Box<dyn Transformer> {
     unimplemented!()
   }
-  fn tab(&mut self) {
+  fn tab(&mut self) -> Box<dyn Transformer> {
     unimplemented!()
   }
-  fn cancel(&mut self) -> String;
+  fn cancel(&mut self) -> Box<dyn Transformer>;
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
+}
+
+impl fmt::Debug for Box<dyn Transformer> {
+  fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
+    unimplemented!()
+  }
+}
+
+impl Clone for Box<dyn Transformer> {
+  fn clone(&self) -> Box<dyn Transformer> {
+    unimplemented!();
+    #[allow(unreachable_code)]
+    (*self).clone()
+  }
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
