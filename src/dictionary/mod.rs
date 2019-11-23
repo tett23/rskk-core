@@ -1,8 +1,10 @@
 mod dictionary_entry;
 mod transform_entry;
 
-use dictionary_entry::DictionaryEntry;
 use std::collections::HashSet;
+
+pub use dictionary_entry::DictionaryEntry;
+pub use transform_entry::TransformEntry;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Dictionary {
@@ -19,6 +21,8 @@ impl Dictionary {
   }
 
   pub fn transform(&self, word: &str) -> Option<&DictionaryEntry> {
+    // TODO: wordがカタカナの場合があるので正規化する
+    // abbrの場合もある
     match self.entries.iter().find(|&item| item.read == word) {
       Some(v) => Some(&v),
       None => None,
@@ -47,12 +51,12 @@ mod tests {
   fn transform() {
     let kanji = DictionaryEntry::new(
       "かんじ".to_string(),
-      set![TransformEntry::new("漢字".to_string(), None)],
+      vec![TransformEntry::new("漢字".to_string(), None)],
     );
     let kanji2 = kanji.clone();
     let okuri = DictionaryEntry::new(
       "おくr".to_string(),
-      set![TransformEntry::new("送".to_string(), None)],
+      vec![TransformEntry::new("送".to_string(), None)],
     );
     let okuri2 = okuri.clone();
     let dic = Dictionary::new(set![kanji2, okuri2]);
@@ -74,7 +78,7 @@ mod tests {
       item,
       Dictionary::new(set![DictionaryEntry::new(
         "a".to_string(),
-        set![
+        vec![
           TransformEntry::new("b".to_string(), Some("c".to_string())),
           TransformEntry::new("d".to_string(), None)
         ],
@@ -87,11 +91,11 @@ mod tests {
       Dictionary::new(set![
         DictionaryEntry::new(
           "a".to_string(),
-          set![TransformEntry::new("b".to_string(), None)],
+          vec![TransformEntry::new("b".to_string(), None)],
         ),
         DictionaryEntry::new(
           "c".to_string(),
-          set![TransformEntry::new("d".to_string(), None)],
+          vec![TransformEntry::new("d".to_string(), None)],
         )
       ]),
     );
@@ -102,11 +106,11 @@ mod tests {
       Dictionary::new(set![
         DictionaryEntry::new(
           "a".to_string(),
-          set![TransformEntry::new("b".to_string(), None)],
+          vec![TransformEntry::new("b".to_string(), None)],
         ),
         DictionaryEntry::new(
           "c".to_string(),
-          set![TransformEntry::new("d".to_string(), None)],
+          vec![TransformEntry::new("d".to_string(), None)],
         )
       ]),
     );

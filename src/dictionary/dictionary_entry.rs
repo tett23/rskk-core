@@ -1,11 +1,10 @@
 use super::transform_entry::TransformEntry;
-use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct DictionaryEntry {
   pub read: String,
-  pub transforms: HashSet<TransformEntry>,
+  pub transforms: Vec<TransformEntry>,
 }
 
 impl Hash for DictionaryEntry {
@@ -15,7 +14,7 @@ impl Hash for DictionaryEntry {
 }
 
 impl DictionaryEntry {
-  pub fn new(read: String, transforms: HashSet<TransformEntry>) -> Self {
+  pub fn new(read: String, transforms: Vec<TransformEntry>) -> Self {
     DictionaryEntry { read, transforms }
   }
 
@@ -32,10 +31,10 @@ impl DictionaryEntry {
     let mut items = items.iter().filter(|&item| item.len() != 0);
 
     let read = items.next()?.trim().to_string();
-    let mut transforms = HashSet::new();
+    let mut transforms = Vec::new();
     items.for_each(|&item| {
       if let Some(item) = TransformEntry::parse(item) {
-        transforms.insert(item);
+        transforms.push(item);
       }
     });
     if transforms.len() == 0 {
@@ -49,7 +48,6 @@ impl DictionaryEntry {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::set;
 
   #[test]
   fn parse() {
@@ -58,7 +56,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        set![
+        vec![
           TransformEntry::new("b".to_string(), Some("c".to_string()),),
           TransformEntry::new("d".to_string(), None,)
         ],
@@ -70,7 +68,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        set![TransformEntry::new("b".to_string(), None,)],
+        vec![TransformEntry::new("b".to_string(), None,)],
       ))
     );
 
@@ -79,7 +77,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        set![TransformEntry::new("b".to_string(), None,)],
+        vec![TransformEntry::new("b".to_string(), None,)],
       ))
     );
 
@@ -88,7 +86,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        set![TransformEntry::new("b".to_string(), None,)],
+        vec![TransformEntry::new("b".to_string(), None,)],
       ))
     );
 
