@@ -22,7 +22,7 @@ impl Transformer for DirectTransformer {
     self.buffer_state == Stop
   }
 
-  fn push(&mut self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
       return Box::new(Stopped::new(self.buffer.clone()));
     }

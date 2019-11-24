@@ -20,7 +20,7 @@ impl Transformer for Stopped {
     true
   }
 
-  fn push(&mut self, _: char) -> Box<dyn Transformer> {
+  fn push_character(&mut self, _: char) -> Box<dyn Transformer> {
     Box::new(Stopped::new(self.buffer_content()))
   }
 

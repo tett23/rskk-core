@@ -77,7 +77,7 @@ impl Composition {
   }
 
   pub fn push_character(&mut self, character: char) {
-    self.transformer = self.transformer.push(character);
+    self.transformer = self.transformer.push_character(character);
     if !self.transformer.is_stopped() {
       return;
     }

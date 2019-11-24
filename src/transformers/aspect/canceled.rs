@@ -18,7 +18,7 @@ impl Transformer for Canceled {
     true
   }
 
-  fn push(&mut self, _: char) -> Box<dyn Transformer> {
+  fn push_character(&mut self, _: char) -> Box<dyn Transformer> {
     Box::new(Canceled::new())
   }
 

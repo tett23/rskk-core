@@ -30,7 +30,7 @@ impl Transformer for HiraganaTransformer {
     self.buffer_state == Stop
   }
 
-  fn push(&mut self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
       return Box::new(Self::new_from(
         self.buffer.clone(),

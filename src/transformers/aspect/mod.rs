@@ -65,12 +65,12 @@ impl Transformer for AspectTransformer {
     }
   }
 
-  fn push(&mut self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
     let new_aspect = match &mut self.aspect {
-      Aspect::Yomi(t) => t.push(character),
-      Aspect::SelectCandidate(t) => t.push(character),
-      Aspect::Stopped(t) => t.push(character),
-      Aspect::Canceled(t) => t.push(character),
+      Aspect::Yomi(t) => t.push_character(character),
+      Aspect::SelectCandidate(t) => t.push_character(character),
+      Aspect::Stopped(t) => t.push_character(character),
+      Aspect::Canceled(t) => t.push_character(character),
     };
     self.aspect = match new_aspect.transformer_type() {
       TransformerTypes::Yomi => Aspect::Yomi(new_aspect),

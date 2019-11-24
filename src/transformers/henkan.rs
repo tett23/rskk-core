@@ -36,8 +36,8 @@ impl Transformer for HenkanTransformer {
     self.transformer.is_stopped()
   }
 
-  fn push(&mut self, character: char) -> Box<dyn Transformer> {
-    self.transformer.push(character)
+  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
+    self.transformer.push_character(character)
   }
 
   fn cancel(&mut self) -> Box<dyn Transformer> {

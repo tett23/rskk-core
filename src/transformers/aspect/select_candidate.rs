@@ -30,7 +30,7 @@ impl Transformer for SelectCandidate {
     self.buffer_state == BufferState::Stop
   }
 
-  fn push(&mut self, _: char) -> Box<dyn Transformer> {
+  fn push_character(&mut self, _: char) -> Box<dyn Transformer> {
     Box::new(self.clone())
   }
 

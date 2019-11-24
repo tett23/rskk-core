@@ -143,6 +143,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<(String, BufferS
     ("xy", 'o') => Some(("ぉ", Stop)),
 
     // TODO: 「って」のような促音の入力がまだできない
+    // TODO: kanjiをかんじにするように、nでのんの入力に未対応
 
     // 数字類
     ("", '1') => Some(("1", Stop)),
