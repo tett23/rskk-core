@@ -7,6 +7,7 @@ mod tables;
 use crate::config::KeyConfig;
 use crate::keyboards::KeyCombinations;
 use crate::{set, Config, Dictionary};
+use objekt;
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
@@ -22,7 +23,7 @@ pub enum BufferState {
   Stop,
 }
 
-pub trait Transformer {
+pub trait Transformer: objekt::Clone {
   fn transformer_type(&self) -> TransformerTypes {
     unimplemented!()
   }
@@ -45,14 +46,10 @@ pub trait Transformer {
   fn display_string(&self) -> String;
 }
 
+objekt::clone_trait_object!(Transformer);
+
 impl fmt::Debug for Box<dyn Transformer> {
   fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-    unimplemented!()
-  }
-}
-
-impl Clone for Box<dyn Transformer> {
-  fn clone(&self) -> Box<dyn Transformer> {
     unimplemented!()
   }
 }
