@@ -1,15 +1,19 @@
+mod aspect;
 mod direct;
+mod henkan;
 mod hiragana;
 mod tables;
 
 use crate::config::KeyConfig;
-use crate::keyboards::KeyCode;
-use crate::set;
+use crate::keyboards::KeyCombinations;
+use crate::{set, Config, Dictionary};
 use std::collections::HashSet;
 use std::fmt;
+use std::rc::Rc;
 
-pub use aspect::{Aspect, Canceled, SelectCandidate, Stopped, Yomi};
+pub use aspect::{Aspect, AspectTransformer, Canceled, SelectCandidate, Stopped, Yomi};
 pub use direct::DirectTransformer;
+pub use henkan::HenkanTransformer;
 pub use hiragana::HiraganaTransformer;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -49,18 +53,16 @@ impl fmt::Debug for Box<dyn Transformer> {
 
 impl Clone for Box<dyn Transformer> {
   fn clone(&self) -> Box<dyn Transformer> {
-    unimplemented!();
-    #[allow(unreachable_code)]
-    (*self).clone()
+    unimplemented!()
   }
 }
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
 pub enum TransformerTypes {
   Direct,
   Hiragana,
   Katakana,
-  Kanji,
+  Henkan,
   Okuri,
   Abbr,
   EmEisu,
@@ -72,10 +74,18 @@ pub enum TransformerTypes {
 }
 
 impl TransformerTypes {
-  pub fn to_transformer(&self) -> Box<dyn Transformer> {
+  pub fn to_transformer(
+    &self,
+    config: Rc<Config>,
+    dictionary: Rc<Dictionary>,
+  ) -> Box<dyn Transformer> {
     match self {
       TransformerTypes::Direct => Box::new(DirectTransformer::new()),
-      TransformerTypes::Kanji => Box::new(DirectTransformer::new()),
+      TransformerTypes::Henkan => Box::new(HenkanTransformer::new(
+        config,
+        dictionary,
+        TransformerTypes::Hiragana,
+      )),
       TransformerTypes::Okuri => Box::new(DirectTransformer::new()),
       TransformerTypes::Hiragana => Box::new(HiraganaTransformer::new()),
       TransformerTypes::Katakana => Box::new(DirectTransformer::new()),
@@ -91,18 +101,18 @@ impl TransformerTypes {
       TransformerTypes::Direct => set![TransformerTypes::Hiragana],
       TransformerTypes::Hiragana => set![
         TransformerTypes::Direct,
-        TransformerTypes::Kanji,
+        TransformerTypes::Henkan,
         TransformerTypes::Abbr,
         TransformerTypes::Katakana,
         TransformerTypes::EnKatakana,
         TransformerTypes::EmEisu
       ],
-      TransformerTypes::Kanji => set![TransformerTypes::Okuri],
+      TransformerTypes::Henkan => set![TransformerTypes::Okuri],
       TransformerTypes::Okuri => set![],
       TransformerTypes::Katakana => set![
         TransformerTypes::Direct,
         TransformerTypes::Hiragana,
-        TransformerTypes::Kanji,
+        TransformerTypes::Henkan,
         TransformerTypes::Abbr,
         TransformerTypes::EnKatakana,
         TransformerTypes::EmEisu
@@ -110,7 +120,7 @@ impl TransformerTypes {
       TransformerTypes::EnKatakana => set![
         TransformerTypes::Direct,
         TransformerTypes::Hiragana,
-        TransformerTypes::Kanji,
+        TransformerTypes::Henkan,
         TransformerTypes::Abbr,
         TransformerTypes::Katakana,
         TransformerTypes::EmEisu
@@ -121,10 +131,10 @@ impl TransformerTypes {
     }
   }
 
-  pub fn get_key_combination<'a>(&self, key_config: &'a KeyConfig) -> &'a HashSet<KeyCode> {
+  pub fn get_key_combination<'a>(&self, key_config: &'a KeyConfig) -> &'a KeyCombinations {
     match self {
       TransformerTypes::Direct => &key_config.enter_direct_transformer,
-      TransformerTypes::Kanji => &key_config.enter_kanji_transformer,
+      TransformerTypes::Henkan => &key_config.enter_kanji_transformer,
       TransformerTypes::Okuri => &key_config.enter_okuri_transformer,
       TransformerTypes::Hiragana => &key_config.enter_hiragana_transformer,
       TransformerTypes::Katakana => &key_config.enter_katakana_transformer,

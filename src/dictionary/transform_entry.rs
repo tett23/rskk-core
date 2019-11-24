@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct TransformEntry {
   pub entry: String,
   pub annotation: Option<String>,

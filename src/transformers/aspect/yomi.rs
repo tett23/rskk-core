@@ -1,8 +1,12 @@
 use super::super::{BufferState, Transformer, TransformerTypes};
 use super::Stopped;
+use crate::{Config, Dictionary};
+use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub struct Yomi {
+  config: Rc<Config>,
+  dictionary: Rc<Dictionary>,
   buffer: String,
   buffer_state: BufferState,
   transformer_type: TransformerTypes,
@@ -10,26 +14,38 @@ pub struct Yomi {
 }
 
 impl Yomi {
-  pub fn new(transformer_type: TransformerTypes) -> Self {
+  pub fn new(
+    config: Rc<Config>,
+    dictionary: Rc<Dictionary>,
+    transformer_type: TransformerTypes,
+  ) -> Self {
     Yomi {
+      config: config.clone(),
+      dictionary: dictionary.clone(),
       buffer: "".to_string(),
       buffer_state: BufferState::Continue,
       transformer_type,
-      transformer: transformer_type.to_transformer(),
+      transformer: transformer_type.to_transformer(config.clone(), dictionary.clone()),
     }
   }
 
   pub fn new_from_buffer(yomi: &Self, buffer: String) -> Self {
     Yomi {
+      config: yomi.config.clone(),
+      dictionary: yomi.dictionary.clone(),
       buffer: buffer.clone(),
       buffer_state: yomi.buffer_state.clone(),
       transformer_type: yomi.transformer_type.clone(),
-      transformer: yomi.transformer_type.to_transformer(),
+      transformer: yomi
+        .transformer_type
+        .to_transformer(yomi.config.clone(), yomi.dictionary.clone()),
     }
   }
 
   pub fn new_from_transformer(yomi: &Self, transformer: Box<dyn Transformer>) -> Self {
     Yomi {
+      config: yomi.config.clone(),
+      dictionary: yomi.dictionary.clone(),
       buffer: yomi.buffer.clone(),
       buffer_state: yomi.buffer_state.clone(),
       transformer_type: yomi.transformer_type.clone(),
@@ -90,10 +106,13 @@ impl Transformer for Yomi {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::collections::HashSet;
 
   #[test]
   fn push() {
-    let mut yomi = Yomi::new(TransformerTypes::Hiragana);
+    let config = Rc::new(Config::default_config());
+    let dictionary = Rc::new(Dictionary::new(HashSet::new()));
+    let mut yomi = Yomi::new(config, dictionary, TransformerTypes::Hiragana);
 
     let mut yomi = yomi.push('a');
     assert_eq!(yomi.buffer_content(), "あ");

@@ -9,7 +9,8 @@ pub struct DictionaryEntry {
 
 impl Hash for DictionaryEntry {
   fn hash<H: Hasher>(&self, state: &mut H) {
-    self.read.hash(state)
+    self.read.hash(state);
+    state.finish();
   }
 }
 

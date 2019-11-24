@@ -1,10 +1,11 @@
-use super::config::Config;
 use super::keyboards::{KeyEvents, Keyboard};
 use super::transformers::{Transformer, TransformerTypes};
+use crate::{Config, Dictionary};
 use std::rc::Rc;
 
 pub struct Composition {
   config: Rc<Config>,
+  dictionary: Rc<Dictionary>,
   transformer: Box<dyn Transformer>,
   current_transformer_type: TransformerTypes,
   compositioned_buffer: String,
@@ -12,12 +13,17 @@ pub struct Composition {
 }
 
 impl Composition {
-  pub fn new(config: Rc<Config>, transformer_types: TransformerTypes) -> Self {
+  pub fn new(
+    config: Rc<Config>,
+    dictionary: Rc<Dictionary>,
+    transformer_types: TransformerTypes,
+  ) -> Self {
     let keyboard = config.keyboard_type.to_keyboard();
 
     Composition {
-      config,
-      transformer: transformer_types.to_transformer(),
+      config: config.clone(),
+      dictionary: dictionary.clone(),
+      transformer: transformer_types.to_transformer(config.clone(), dictionary.clone()),
       current_transformer_type: transformer_types,
       compositioned_buffer: "".to_string(),
       keyboard: keyboard,
@@ -64,7 +70,10 @@ impl Composition {
     );
 
     self.current_transformer_type = replace_to;
-    std::mem::replace(&mut self.transformer, replace_to.to_transformer());
+    std::mem::replace(
+      &mut self.transformer,
+      replace_to.to_transformer(self.config.clone(), self.dictionary.clone()),
+    );
   }
 
   pub fn push_character(&mut self, character: char) {

@@ -5,7 +5,7 @@ use crate::config::KeyConfig;
 use crate::TransformerTypes;
 use std::collections::HashSet;
 
-pub type KeyCode = keycodes::KeyCode;
+pub use keycodes::{KeyCode, KeyCombination, KeyCombinations};
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum Keyboards {
@@ -68,8 +68,7 @@ pub trait Keyboard {
       .find(|&&transformer| {
         transformer
           .get_key_combination(key_config)
-          .iter()
-          .all(|&k| self.is_pressing(&k))
+          .fulfilled(&self.pressing_keys())
       })
     {
       Some(ret.clone())

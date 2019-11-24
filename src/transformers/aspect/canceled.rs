@@ -1,5 +1,6 @@
 use super::super::{Transformer, TransformerTypes};
 
+#[derive(Clone, Debug)]
 pub struct Canceled {}
 
 impl Canceled {

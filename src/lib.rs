@@ -6,31 +6,33 @@ mod tests;
 mod transformers;
 
 use composition::Composition;
-use config::Config;
-use dictionary::Dictionary;
+use keyboards::{KeyCombination, KeyCombinations};
 use std::collections::HashSet;
 use std::rc::Rc;
 use transformers::TransformerTypes;
 
+pub use config::Config;
+pub use dictionary::{Dictionary, DictionaryEntry};
+
 pub struct RSKK {
     config: Rc<Config>,
+    dictionary: Rc<Dictionary>,
     compositions: Vec<Composition>,
     default_composition_type: TransformerTypes,
-    dictionary: Dictionary,
 }
 
 impl RSKK {
     pub fn new(default_composition_type: TransformerTypes) -> Self {
         RSKK {
             config: Rc::new(Config::default_config()),
+            dictionary: Rc::new(Dictionary::new(set![])),
             compositions: vec![],
             default_composition_type,
-            dictionary: Dictionary::new(set![]),
         }
     }
 
     pub fn parse_dictionary(&mut self, dic: &str) {
-        self.dictionary = Dictionary::parse(dic);
+        self.dictionary = Rc::new(Dictionary::parse(dic));
     }
 
     pub fn start_composition(&mut self) -> &mut Composition {
@@ -38,8 +40,11 @@ impl RSKK {
     }
 
     pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> &mut Composition {
-        self.compositions
-            .push(Composition::new(Rc::clone(&self.config), composition_type));
+        self.compositions.push(Composition::new(
+            self.config.clone(),
+            self.dictionary.clone(),
+            composition_type,
+        ));
 
         self.compositions.last_mut().unwrap()
     }
@@ -59,6 +64,36 @@ macro_rules! set {
   };
 }
 
+#[macro_export]
+macro_rules! combo {
+  ( $( $x:expr ),* ) => {
+      {
+          #[allow(unused_mut)]
+          let mut temp_set = HashSet::new();
+          $(
+              temp_set.insert($x);
+          )*
+
+          KeyCombination::new(temp_set)
+      }
+  };
+}
+
+#[macro_export]
+macro_rules! combos {
+  ( $( $x:expr ),* ) => {
+      {
+          #[allow(unused_mut)]
+          let mut temp_set = HashSet::new();
+          $(
+              temp_set.insert($x);
+          )*
+
+          KeyCombinations::new(temp_set)
+      }
+  };
+}
+
 #[cfg(test)]
 mod lib_tests {
     use super::*;
@@ -67,6 +102,7 @@ mod lib_tests {
     #[test]
     fn it_works() {
         let mut skk = RSKK::new(TransformerTypes::Direct);
+        skk.parse_dictionary("かんじ/漢字/");
         let composition = skk.start_composition();
         composition.push_key_events(&str_to_key_code_vector("abc"));
         assert_eq!(composition.display_string(), "abc");
@@ -98,5 +134,9 @@ mod lib_tests {
         let composition = skk.start_composition_as(TransformerTypes::Direct);
         composition.push_key_events(&str_to_key_code_vector("a[down:ctrl]j[up:ctrl]ala"));
         assert_eq!(composition.display_string(), "aあa");
+
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Kanji"));
+        assert_eq!(composition.display_string(), "漢字");
     }
 }
