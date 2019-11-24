@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::key;
 use crate::keyboards::keycodes::KeyCode::*;
 use crate::keyboards::{KeyCode, KeyEvents};
 use KeyEvents::*;
@@ -94,7 +95,7 @@ fn parse_meta_token(token: &str) -> Option<KeyToken> {
 
   let key_code = to_key_code(key);
 
-  Some(KeyToken::Meta(key_code?, manipulation?))
+  Some(KeyToken::Meta(key_code, manipulation?))
 }
 
 fn build_events(key: &KeyCode, with_shift: bool) -> Vec<KeyEvents> {
@@ -114,54 +115,11 @@ fn to_key_events(character: char) -> Option<Vec<KeyEvents>> {
   let lowercase = character.to_lowercase().to_string();
   let key = to_key_code(&*lowercase);
 
-  Some(build_events(&key?, character.is_ascii_uppercase()))
+  Some(build_events(&key, character.is_ascii_uppercase()))
 }
 
-fn to_key_code(character: &str) -> Option<KeyCode> {
-  match character {
-    "a" => Some(KeyA),
-    "b" => Some(KeyB),
-    "c" => Some(KeyC),
-    "d" => Some(KeyD),
-    "e" => Some(KeyE),
-    "f" => Some(KeyF),
-    "g" => Some(KeyG),
-    "h" => Some(KeyH),
-    "i" => Some(KeyI),
-    "j" => Some(KeyJ),
-    "k" => Some(KeyK),
-    "l" => Some(KeyL),
-    "m" => Some(KeyM),
-    "n" => Some(KeyN),
-    "o" => Some(KeyO),
-    "p" => Some(KeyP),
-    "q" => Some(KeyQ),
-    "r" => Some(KeyR),
-    "s" => Some(KeyS),
-    "t" => Some(KeyT),
-    "u" => Some(KeyU),
-    "w" => Some(KeyW),
-    "x" => Some(KeyX),
-    "y" => Some(KeyY),
-    "z" => Some(KeyZ),
-    "0" => Some(Key0),
-    "1" => Some(Key1),
-    "2" => Some(Key2),
-    "3" => Some(Key3),
-    "4" => Some(Key4),
-    "5" => Some(Key5),
-    "6" => Some(Key6),
-    "7" => Some(Key7),
-    "8" => Some(Key8),
-    "9" => Some(Key9),
-    "ctrl" => Some(Ctrl),
-    "shift" => Some(Shift),
-    "alt" => Some(Alt),
-    "super" => Some(Super),
-    "slash" => Some(Slash),
-    "enter" => Some(Enter),
-    _ => None,
-  }
+fn to_key_code(character: &str) -> KeyCode {
+  key!(character)
 }
 
 fn to_meta_events(key: KeyCode, manipulation: KeyManipulation) -> Vec<KeyEvents> {
@@ -183,12 +141,12 @@ mod tests {
       events,
       vec![
         KeyDown(Shift),
-        KeyDown(KeyA),
-        KeyUp(KeyA),
+        KeyDown(Printable('a')),
+        KeyUp(Printable('a')),
         KeyUp(Shift),
         KeyDown(Shift),
-        KeyDown(KeyB),
-        KeyUp(KeyB),
+        KeyDown(Printable('b')),
+        KeyUp(Printable('b')),
         KeyUp(Shift)
       ]
     );

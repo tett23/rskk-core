@@ -91,14 +91,37 @@ macro_rules! combos {
           KeyCombinations::new(temp_set)
       }
   };
+
+}
+#[macro_export]
+macro_rules! key {
+    ( $v:expr ) => {
+        match $v {
+            "ctrl" => KeyCode::Ctrl,
+            "shift" => KeyCode::Shift,
+            "alt" => KeyCode::Alt,
+            "super" => KeyCode::Super,
+            "enter" => KeyCode::Enter,
+            "space" => KeyCode::Space,
+            "tab" => KeyCode::Tab,
+            "escape" => KeyCode::Escape,
+            "delete" => KeyCode::Delete,
+            "backspace" => KeyCode::Backspace,
+            "arrow_right" => KeyCode::ArrowRight,
+            "arrow_donw" => KeyCode::ArrowDown,
+            "arrow_left" => KeyCode::ArrowLeft,
+            "arrow_up" => KeyCode::ArrowUp,
+            "null" => KeyCode::Null,
+            string if string == "" => KeyCode::Null,
+            string => KeyCode::Printable(string.chars().next().unwrap()),
+        }
+    };
 }
 
 #[cfg(test)]
 mod lib_tests {
     use super::*;
     use crate::tests::helpers::str_to_key_code_vector;
-    use keyboards::{KeyCode, KeyEvents};
-    use KeyCode::*;
 
     #[test]
     fn it_works() {

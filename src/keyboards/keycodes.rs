@@ -4,49 +4,22 @@ use std::iter::Iterator;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum KeyCode {
-  KeyA,
-  KeyB,
-  KeyC,
-  KeyD,
-  KeyE,
-  KeyF,
-  KeyG,
-  KeyH,
-  KeyI,
-  KeyJ,
-  KeyK,
-  KeyL,
-  KeyM,
-  KeyN,
-  KeyO,
-  KeyP,
-  KeyQ,
-  KeyR,
-  KeyS,
-  KeyT,
-  KeyU,
-  KeyW,
-  KeyX,
-  KeyY,
-  KeyZ,
-  Key1,
-  Key2,
-  Key3,
-  Key4,
-  Key5,
-  Key6,
-  Key7,
-  Key8,
-  Key9,
-  Key0,
-  Semicolon,
-  Slash,
+  Null,
+  Printable(char),
   Ctrl,
   Shift,
   Alt,
   Super,
   Enter,
   Space,
+  Tab,
+  Escape,
+  Delete,
+  Backspace,
+  ArrowRight,
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -91,19 +64,19 @@ impl KeyCombinations {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::key;
   use crate::set;
   use crate::{combo, combos};
-  use KeyCode::*;
 
   mod key_combination {
     use super::*;
 
     #[test]
     fn fulfilled() {
-      let combination = combo![Ctrl, KeyJ];
+      let combination = combo![key!("ctrl"), key!("j")];
 
-      assert!(combination.fulfilled(&set![Ctrl, KeyJ]));
-      assert!(!combination.fulfilled(&set![KeyA]));
+      assert!(combination.fulfilled(&set![key!("ctrl"), key!("j")]));
+      assert!(!combination.fulfilled(&set![key!("a")]));
     }
   }
 
@@ -113,11 +86,11 @@ mod tests {
     #[test]
 
     fn fulfilled() {
-      let combination = combos![combo![KeyA], combo![Ctrl, KeyJ]];
+      let combination = combos![combo![key!("a")], combo![key!("ctrl"), key!("j")]];
 
-      assert!(combination.fulfilled(&set![KeyA]));
-      assert!(combination.fulfilled(&set![Ctrl, KeyJ]));
-      assert!(!combination.fulfilled(&set![KeyB]));
+      assert!(combination.fulfilled(&set![key!("a")]));
+      assert!(combination.fulfilled(&set![key!("ctrl"), key!("j")]));
+      assert!(!combination.fulfilled(&set![key!("b")]));
     }
   }
 }
