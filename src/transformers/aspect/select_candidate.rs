@@ -1,6 +1,8 @@
 use super::super::{BufferState, Transformer, TransformerTypes};
 use super::{Canceled, Stopped};
 use crate::dictionary::{DictionaryEntry, TransformEntry};
+use crate::keyboards::KeyCode;
+use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidate {
@@ -34,41 +36,36 @@ impl Transformer for SelectCandidate {
     Box::new(self.clone())
   }
 
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    self.buffer_state = BufferState::Stop;
-    self.buffer = "".to_string();
+  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+    match key_code {
+      KeyCode::Escape => Box::new(Canceled::new()),
+      KeyCode::Enter => {
+        let buffer = match self.candidates.current() {
+          Some(candidate) => candidate.entry.clone(),
+          None => "".to_string(),
+        };
 
-    Box::new(Canceled::new())
-  }
-
-  fn enter(&mut self) -> Box<dyn Transformer> {
-    self.buffer_state = BufferState::Stop;
-    self.buffer = if let Some(candidate) = self.candidates.current() {
-      candidate.entry.clone()
-    } else {
-      "".to_string()
-    };
-
-    Box::new(Stopped::new(self.buffer.clone()))
-  }
-
-  fn space(&mut self) -> Box<dyn Transformer> {
-    let candidate = self.candidates.next();
-    if candidate.is_none() {
-      // TODO; 単語登録
-      unimplemented!();
+        Box::new(Stopped::new(buffer))
+      }
+      KeyCode::Space => {
+        let mut new_state = self.clone();
+        match new_state.candidates.next() {
+          Some(_) => Box::new(new_state),
+          None => {
+            // TODO: 単語登録に遷移
+            unimplemented!()
+          }
+        }
+      }
+      KeyCode::Backspace | KeyCode::Delete => {
+        let mut new_state = self.clone();
+        match new_state.candidates.prev() {
+          Some(_) => Box::new(new_state),
+          None => Box::new(Canceled::new()),
+        }
+      }
+      _ => Box::new(self.clone()),
     }
-
-    Box::new(self.clone())
-  }
-
-  fn delete(&mut self) -> Box<dyn Transformer> {
-    let candidate = self.candidates.prev();
-    if candidate.is_none() {
-      return Box::new(Canceled::new());
-    }
-
-    Box::new(self.clone())
   }
 
   fn buffer_content(&self) -> String {
@@ -131,6 +128,7 @@ impl Candidates {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::{key, set};
 
   #[test]
   fn space() {
@@ -138,10 +136,15 @@ mod tests {
     let candidate2 = TransformEntry::new("b".to_string(), None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
-    let mut select_candidate = SelectCandidate::new(&dictionary_entry);
+    let select_candidate = SelectCandidate::new(&dictionary_entry);
 
     assert_eq!(select_candidate.buffer_content(), "a");
-    assert_eq!(select_candidate.space().buffer_content(), "b");
+    assert_eq!(
+      select_candidate
+        .push_key_code(set![], &key!("space"))
+        .buffer_content(),
+      "b"
+    );
     // TODO: 単語登録のテスト
   }
 
@@ -150,9 +153,9 @@ mod tests {
     let candidate1 = TransformEntry::new("a".to_string(), None);
     let vec = vec![candidate1.clone()];
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
-    let mut select_candidate = SelectCandidate::new(&dictionary_entry);
+    let select_candidate = SelectCandidate::new(&dictionary_entry);
 
-    let stopped = select_candidate.enter();
+    let stopped = select_candidate.push_key_code(set![], &key!("enter"));
     assert_eq!(stopped.transformer_type(), TransformerTypes::Stopped);
     assert_eq!(stopped.buffer_content(), "a");
   }
@@ -163,13 +166,13 @@ mod tests {
     let candidate2 = TransformEntry::new("b".to_string(), None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
-    let mut select_candidate = SelectCandidate::new(&dictionary_entry);
+    let select_candidate = SelectCandidate::new(&dictionary_entry);
 
-    let mut select_candidate = select_candidate.space();
-    let mut select_candidate = select_candidate.delete();
+    let select_candidate = select_candidate.push_key_code(set![], &key!("space"));
+    let select_candidate = select_candidate.push_key_code(set![], &key!("delete"));
     assert_eq!(select_candidate.buffer_content(), "a");
 
-    let canceled = select_candidate.delete();
+    let canceled = select_candidate.push_key_code(set![], &key!("delete"));
     assert_eq!(canceled.transformer_type(), TransformerTypes::Canceled);
   }
 

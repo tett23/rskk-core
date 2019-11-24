@@ -1,6 +1,8 @@
 use super::super::{BufferState, Transformer, TransformerTypes};
-use super::Stopped;
+use super::{Canceled, Stopped};
+use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
@@ -77,17 +79,24 @@ impl Transformer for Yomi {
     Box::new(Self::new_from_transformer(self, new_transformer))
   }
 
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    self.buffer_state = BufferState::Stop;
-    self.buffer = "".to_string();
-
-    Box::new(Stopped::new("".to_string()))
-  }
-
-  fn enter(&mut self) -> Box<dyn Transformer> {
-    self.buffer_state = BufferState::Stop;
-
-    Box::new(Stopped::new(self.buffer_content()))
+  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+    match key_code {
+      KeyCode::Escape => Box::new(Canceled::new()),
+      KeyCode::Enter => Box::new(Stopped::new(self.buffer.clone())),
+      KeyCode::Space => {
+        // TODO: SelectCandidateに遷移
+        unimplemented!()
+      }
+      KeyCode::Backspace | KeyCode::Delete => {
+        // TODO: bufferかtransformerから文字を削除
+        unimplemented!();
+      }
+      KeyCode::Tab => {
+        // TODO: 補完して新しいYomiTransformerを返す
+        unimplemented!()
+      }
+      _ => Box::new(self.clone()),
+    }
   }
 
   fn buffer_content(&self) -> String {

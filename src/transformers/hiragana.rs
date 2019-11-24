@@ -1,7 +1,8 @@
-use super::aspect::Stopped;
 use super::tables::hiragana_convert;
-use super::BufferState::*;
-use super::{BufferState, Transformer};
+use super::{BufferState, Canceled, Stopped, Transformer};
+use crate::keyboards::KeyCode;
+use std::collections::HashSet;
+use BufferState::*;
 
 #[derive(Clone, Debug)]
 pub struct HiraganaTransformer {
@@ -41,15 +42,15 @@ impl Transformer for HiraganaTransformer {
     if let Some((new_buffer, new_buffer_state)) = hiragana_convert(&self.buffer, character) {
       Box::new(Self::new_from(new_buffer, new_buffer_state))
     } else {
-      self.cancel()
+      Box::new(Stopped::new("".to_string()))
     }
   }
 
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    self.buffer_state = Stop;
-    self.buffer = "".to_string();
-
-    Box::new(Stopped::new("".to_string()))
+  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+    match key_code {
+      KeyCode::Escape => Box::new(Canceled::new()),
+      _ => Box::new(Stopped::new("".to_string())),
+    }
   }
 
   fn buffer_content(&self) -> String {

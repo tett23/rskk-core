@@ -1,4 +1,6 @@
 use super::super::{Transformer, TransformerTypes};
+use crate::keyboards::KeyCode;
+use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct Stopped {
@@ -24,19 +26,7 @@ impl Transformer for Stopped {
     Box::new(Stopped::new(self.buffer_content()))
   }
 
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new("".to_string()))
-  }
-
-  fn enter(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
-  }
-
-  fn tab(&mut self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
-  }
-
-  fn space(&mut self) -> Box<dyn Transformer> {
+  fn push_key_code(&self, _: HashSet<KeyCode>, _: &KeyCode) -> Box<dyn Transformer> {
     Box::new(Stopped::new(self.buffer_content()))
   }
 

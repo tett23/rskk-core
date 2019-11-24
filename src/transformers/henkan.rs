@@ -1,5 +1,7 @@
 use super::{AspectTransformer, Transformer, TransformerTypes};
+use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
@@ -40,24 +42,12 @@ impl Transformer for HenkanTransformer {
     self.transformer.push_character(character)
   }
 
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    self.transformer.cancel()
-  }
-
-  fn enter(&mut self) -> Box<dyn Transformer> {
-    self.transformer.enter()
-  }
-
-  fn space(&mut self) -> Box<dyn Transformer> {
-    self.transformer.space()
-  }
-
-  fn tab(&mut self) -> Box<dyn Transformer> {
-    self.transformer.tab()
-  }
-
-  fn delete(&mut self) -> Box<dyn Transformer> {
-    self.transformer.delete()
+  fn push_key_code(
+    &self,
+    pressing_keys: HashSet<KeyCode>,
+    key_code: &KeyCode,
+  ) -> Box<dyn Transformer> {
+    self.transformer.push_key_code(pressing_keys, key_code)
   }
 
   fn buffer_content(&self) -> String {

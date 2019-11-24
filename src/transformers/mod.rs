@@ -5,7 +5,7 @@ mod hiragana;
 mod tables;
 
 use crate::config::KeyConfig;
-use crate::keyboards::KeyCombinations;
+use crate::keyboards::{KeyCode, KeyCombinations};
 use crate::{set, Config, Dictionary};
 use objekt;
 use std::collections::HashSet;
@@ -29,19 +29,11 @@ pub trait Transformer: objekt::Clone {
   }
   fn is_stopped(&self) -> bool;
   fn push_character(&mut self, character: char) -> Box<dyn Transformer>;
-  fn enter(&mut self) -> Box<dyn Transformer> {
-    unimplemented!()
-  }
-  fn space(&mut self) -> Box<dyn Transformer> {
-    unimplemented!()
-  }
-  fn tab(&mut self) -> Box<dyn Transformer> {
-    unimplemented!()
-  }
-  fn delete(&mut self) -> Box<dyn Transformer> {
-    unimplemented!()
-  }
-  fn cancel(&mut self) -> Box<dyn Transformer>;
+  fn push_key_code(
+    &self,
+    pressing_keys: HashSet<KeyCode>,
+    key_code: &KeyCode,
+  ) -> Box<dyn Transformer>;
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
 }

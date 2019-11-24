@@ -1,6 +1,7 @@
-use super::aspect::Stopped;
-use super::BufferState::*;
-use super::{BufferState, Transformer};
+use super::{BufferState, Canceled, Stopped, Transformer};
+use crate::keyboards::KeyCode;
+use std::collections::HashSet;
+use BufferState::*;
 
 #[derive(Clone, Debug)]
 pub struct DirectTransformer {
@@ -32,12 +33,11 @@ impl Transformer for DirectTransformer {
 
     return Box::new(Stopped::new(self.buffer.clone()));
   }
-
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    self.buffer_state = Stop;
-    self.buffer = "".to_string();
-
-    return Box::new(Stopped::new("".to_string()));
+  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+    match key_code {
+      KeyCode::Escape => Box::new(Canceled::new()),
+      _ => Box::new(self.clone()),
+    }
   }
 
   fn buffer_content(&self) -> String {

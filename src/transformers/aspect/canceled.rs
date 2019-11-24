@@ -1,4 +1,6 @@
 use super::super::{Transformer, TransformerTypes};
+use crate::keyboards::KeyCode;
+use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct Canceled {}
@@ -22,20 +24,10 @@ impl Transformer for Canceled {
     Box::new(Canceled::new())
   }
 
-  fn cancel(&mut self) -> Box<dyn Transformer> {
-    Box::new(Canceled::new())
-  }
-
-  fn enter(&mut self) -> Box<dyn Transformer> {
-    Box::new(Canceled::new())
-  }
-
-  fn tab(&mut self) -> Box<dyn Transformer> {
-    Box::new(Canceled::new())
-  }
-
-  fn space(&mut self) -> Box<dyn Transformer> {
-    Box::new(Canceled::new())
+  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+    Box::new(match key_code {
+      _ => Canceled::new(),
+    })
   }
 
   fn buffer_content(&self) -> String {
