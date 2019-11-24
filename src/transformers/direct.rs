@@ -23,16 +23,18 @@ impl Transformer for DirectTransformer {
     self.buffer_state == Stop
   }
 
-  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
       return Box::new(Stopped::new(self.buffer.clone()));
     }
 
-    self.buffer_state = Stop;
-    self.buffer.push(character);
+    let mut new_state = self.clone();
+    new_state.buffer_state = Stop;
+    new_state.buffer.push(character);
 
-    return Box::new(Stopped::new(self.buffer.clone()));
+    return Box::new(new_state);
   }
+
   fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
       KeyCode::Escape => Box::new(Canceled::new()),

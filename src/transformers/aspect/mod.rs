@@ -67,14 +67,15 @@ impl Transformer for AspectTransformer {
     }
   }
 
-  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
-    let new_aspect = match &mut self.aspect {
+  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+    let new_aspect = match &self.aspect {
       Aspect::Yomi(t) => t.push_character(character),
       Aspect::SelectCandidate(t) => t.push_character(character),
       Aspect::Stopped(t) => t.push_character(character),
       Aspect::Canceled(t) => t.push_character(character),
     };
-    self.aspect = match new_aspect.transformer_type() {
+    let mut new_state = self.clone();
+    new_state.aspect = match new_aspect.transformer_type() {
       TransformerTypes::Yomi => Aspect::Yomi(new_aspect),
       TransformerTypes::SelectCandidate => Aspect::SelectCandidate(new_aspect),
       TransformerTypes::Canceled => Aspect::Canceled(new_aspect),
@@ -82,7 +83,7 @@ impl Transformer for AspectTransformer {
       _ => unreachable!(),
     };
 
-    Box::new(self.clone())
+    Box::new(new_state)
   }
 
   fn push_key_code(

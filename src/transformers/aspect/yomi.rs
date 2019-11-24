@@ -65,7 +65,7 @@ impl Transformer for Yomi {
     self.buffer_state == BufferState::Stop
   }
 
-  fn push_character(&mut self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == BufferState::Stop {
       return Box::new(Stopped::new(self.buffer.clone()));
     }
@@ -121,12 +121,12 @@ mod tests {
   fn push() {
     let config = Rc::new(Config::default_config());
     let dictionary = Rc::new(Dictionary::new(HashSet::new()));
-    let mut yomi = Yomi::new(config, dictionary, TransformerTypes::Hiragana);
+    let yomi = Yomi::new(config, dictionary, TransformerTypes::Hiragana);
 
-    let mut yomi = yomi.push_character('a');
+    let yomi = yomi.push_character('a');
     assert_eq!(yomi.buffer_content(), "あ");
 
-    let mut yomi = yomi.push_character('k');
+    let yomi = yomi.push_character('k');
     assert_eq!(yomi.buffer_content(), "あk");
 
     let yomi = yomi.push_character('a');

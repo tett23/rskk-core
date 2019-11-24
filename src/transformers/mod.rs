@@ -28,7 +28,7 @@ pub trait Transformer: objekt::Clone {
     unimplemented!()
   }
   fn is_stopped(&self) -> bool;
-  fn push_character(&mut self, character: char) -> Box<dyn Transformer>;
+  fn push_character(&self, character: char) -> Box<dyn Transformer>;
   fn push_key_code(
     &self,
     pressing_keys: HashSet<KeyCode>,
