@@ -1,4 +1,4 @@
-use super::super::{BufferState, Transformer, TransformerTypes};
+use super::super::{BufferState, Transformer, TransformerState, TransformerTypes};
 use super::{Canceled, Stopped};
 use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
@@ -56,13 +56,15 @@ impl Yomi {
   }
 }
 
+impl TransformerState for Yomi {
+  fn is_stopped(&self) -> bool {
+    false
+  }
+}
+
 impl Transformer for Yomi {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Yomi
-  }
-
-  fn is_stopped(&self) -> bool {
-    self.buffer_state == BufferState::Stop
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
@@ -100,7 +102,7 @@ impl Transformer for Yomi {
   }
 
   fn buffer_content(&self) -> String {
-    self.buffer.clone() + &self.transformer.buffer_content()
+    self.buffer.clone()
   }
 
   fn display_string(&self) -> String {
@@ -127,7 +129,7 @@ mod tests {
     assert_eq!(yomi.buffer_content(), "あ");
 
     let yomi = yomi.push_character('k');
-    assert_eq!(yomi.buffer_content(), "あk");
+    assert_eq!(yomi.display_string(), "▽あk");
 
     let yomi = yomi.push_character('a');
     assert_eq!(yomi.buffer_content(), "あか");

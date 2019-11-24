@@ -1,4 +1,4 @@
-use super::super::{BufferState, Transformer, TransformerTypes};
+use super::super::{BufferState, Transformer, TransformerState, TransformerTypes};
 use super::{Canceled, Stopped};
 use crate::dictionary::{DictionaryEntry, TransformEntry};
 use crate::keyboards::KeyCode;
@@ -23,13 +23,15 @@ impl SelectCandidate {
   }
 }
 
+impl TransformerState for SelectCandidate {
+  fn is_stopped(&self) -> bool {
+    false
+  }
+}
+
 impl Transformer for SelectCandidate {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::SelectCandidate
-  }
-
-  fn is_stopped(&self) -> bool {
-    self.buffer_state == BufferState::Stop
   }
 
   fn push_character(&self, _: char) -> Box<dyn Transformer> {

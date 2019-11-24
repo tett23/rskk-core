@@ -1,4 +1,4 @@
-use super::{BufferState, Canceled, Stopped, Transformer};
+use super::{BufferState, Canceled, Stopped, Transformer, TransformerState};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 use BufferState::*;
@@ -18,11 +18,13 @@ impl DirectTransformer {
   }
 }
 
-impl Transformer for DirectTransformer {
+impl TransformerState for DirectTransformer {
   fn is_stopped(&self) -> bool {
     self.buffer_state == Stop
   }
+}
 
+impl Transformer for DirectTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
       return Box::new(Stopped::new(self.buffer.clone()));

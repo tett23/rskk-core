@@ -1,4 +1,4 @@
-use super::super::{Transformer, TransformerTypes};
+use super::super::{Transformer, TransformerState, TransformerTypes};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
@@ -13,13 +13,15 @@ impl Stopped {
   }
 }
 
+impl TransformerState for Stopped {
+  fn is_stopped(&self) -> bool {
+    true
+  }
+}
+
 impl Transformer for Stopped {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Stopped
-  }
-
-  fn is_stopped(&self) -> bool {
-    true
   }
 
   fn push_character(&self, _: char) -> Box<dyn Transformer> {

@@ -23,11 +23,14 @@ pub enum BufferState {
   Stop,
 }
 
-pub trait Transformer: objekt::Clone {
+pub trait TransformerState {
+  fn is_stopped(&self) -> bool;
+}
+
+pub trait Transformer: TransformerState + objekt::Clone {
   fn transformer_type(&self) -> TransformerTypes {
     unimplemented!()
   }
-  fn is_stopped(&self) -> bool;
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
   fn push_key_code(
     &self,

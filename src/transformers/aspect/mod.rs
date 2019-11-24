@@ -3,7 +3,7 @@ mod select_candidate;
 mod stopped;
 mod yomi;
 
-use super::{Transformer, TransformerTypes};
+use super::{Transformer, TransformerState, TransformerTypes};
 use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
 use std::collections::HashSet;
@@ -57,16 +57,16 @@ impl AspectTransformer {
   }
 }
 
-impl Transformer for AspectTransformer {
+impl TransformerState for AspectTransformer {
   fn is_stopped(&self) -> bool {
     match &self.aspect {
-      Aspect::Yomi(t) => t.is_stopped(),
-      Aspect::SelectCandidate(t) => t.is_stopped(),
-      Aspect::Stopped(t) => t.is_stopped(),
-      Aspect::Canceled(t) => t.is_stopped(),
+      Aspect::Stopped(_) | Aspect::Canceled(_) => true,
+      _ => false,
     }
   }
+}
 
+impl Transformer for AspectTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
     let new_aspect = match &self.aspect {
       Aspect::Yomi(t) => t.push_character(character),

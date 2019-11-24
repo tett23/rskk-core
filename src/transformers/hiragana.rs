@@ -1,5 +1,5 @@
 use super::tables::hiragana_convert;
-use super::{BufferState, Canceled, Stopped, Transformer};
+use super::{BufferState, Canceled, Stopped, Transformer, TransformerState};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 use BufferState::*;
@@ -26,11 +26,13 @@ impl HiraganaTransformer {
   }
 }
 
-impl Transformer for HiraganaTransformer {
+impl TransformerState for HiraganaTransformer {
   fn is_stopped(&self) -> bool {
-    self.buffer_state == Stop
+    self.buffer_state == BufferState::Stop
   }
+}
 
+impl Transformer for HiraganaTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
     if self.buffer_state == Stop {
       return Box::new(Self::new_from(

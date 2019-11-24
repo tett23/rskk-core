@@ -1,4 +1,4 @@
-use super::{AspectTransformer, Transformer, TransformerTypes};
+use super::{AspectTransformer, Transformer, TransformerState, TransformerTypes};
 use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
 use std::collections::HashSet;
@@ -28,14 +28,15 @@ impl HenkanTransformer {
     }
   }
 }
+impl TransformerState for HenkanTransformer {
+  fn is_stopped(&self) -> bool {
+    self.is_stopped()
+  }
+}
 
 impl Transformer for HenkanTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Henkan
-  }
-
-  fn is_stopped(&self) -> bool {
-    self.transformer.is_stopped()
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
