@@ -1,7 +1,5 @@
-use super::KeyCode;
-use super::Keyboard;
+use super::{KeyCode, Keyboard};
 use std::collections::HashSet;
-use KeyCode::*;
 
 pub struct US {
   pressing_keys: HashSet<KeyCode>,
@@ -17,9 +15,9 @@ impl US {
   }
 
   fn convert(key: &KeyCode, is_shift_down: bool) -> Option<char> {
-    match (key, is_shift_down) {
-      (Printable(character), false) => Some(character.clone()),
-      (Printable(character), true) => Some(match character {
+    match (key.printable_key(), is_shift_down) {
+      (Some(character), false) => Some(character.clone()),
+      (Some(character), true) => Some(match character {
         'a' => 'A',
         'b' => 'B',
         'c' => 'C',

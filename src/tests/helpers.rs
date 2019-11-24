@@ -1,8 +1,7 @@
 #![cfg(test)]
 
 use crate::key;
-use crate::keyboards::keycodes::KeyCode::*;
-use crate::keyboards::{KeyCode, KeyEvents};
+use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
 use KeyEvents::*;
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -101,10 +100,10 @@ fn parse_meta_token(token: &str) -> Option<KeyToken> {
 fn build_events(key: &KeyCode, with_shift: bool) -> Vec<KeyEvents> {
   if with_shift {
     vec![
-      KeyDown(Shift),
+      KeyDown(KeyCode::Meta(MetaKey::Shift)),
       KeyDown(key.clone()),
       KeyUp(key.clone()),
-      KeyUp(Shift),
+      KeyUp(KeyCode::Meta(MetaKey::Shift)),
     ]
   } else {
     vec![KeyDown(key.clone()), KeyUp(key.clone())]
@@ -140,14 +139,14 @@ mod tests {
     assert_eq!(
       events,
       vec![
-        KeyDown(Shift),
-        KeyDown(Printable('a')),
-        KeyUp(Printable('a')),
-        KeyUp(Shift),
-        KeyDown(Shift),
-        KeyDown(Printable('b')),
-        KeyUp(Printable('b')),
-        KeyUp(Shift)
+        KeyDown(key!("shift")),
+        KeyDown(key!("a")),
+        KeyUp(key!("a")),
+        KeyUp(key!("shift")),
+        KeyDown(key!("shift")),
+        KeyDown(key!("b")),
+        KeyUp(key!("b")),
+        KeyUp(key!("shift")),
       ]
     );
   }

@@ -5,7 +5,7 @@ use crate::config::KeyConfig;
 use crate::TransformerTypes;
 use std::collections::HashSet;
 
-pub use keycodes::{KeyCode, KeyCombination, KeyCombinations};
+pub use keycodes::{KeyCode, KeyCombination, KeyCombinations, MetaKey};
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum Keyboards {
@@ -46,11 +46,11 @@ pub trait Keyboard {
   }
 
   fn is_pressing_shift(&self) -> bool {
-    self.is_pressing(&KeyCode::Shift)
+    self.is_pressing(&KeyCode::Meta(MetaKey::Shift))
   }
 
   fn is_pressing_ctrl(&self) -> bool {
-    self.is_pressing(&KeyCode::Ctrl)
+    self.is_pressing(&KeyCode::Meta(MetaKey::Ctrl))
   }
 
   fn is_pressing(&self, key: &KeyCode) -> bool {

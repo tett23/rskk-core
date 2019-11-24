@@ -97,23 +97,27 @@ macro_rules! combos {
 macro_rules! key {
     ( $v:expr ) => {
         match $v {
-            "ctrl" => KeyCode::Ctrl,
-            "shift" => KeyCode::Shift,
-            "alt" => KeyCode::Alt,
-            "super" => KeyCode::Super,
-            "enter" => KeyCode::Enter,
-            "space" => KeyCode::Space,
-            "tab" => KeyCode::Tab,
-            "escape" => KeyCode::Escape,
-            "delete" => KeyCode::Delete,
-            "backspace" => KeyCode::Backspace,
-            "arrow_right" => KeyCode::ArrowRight,
-            "arrow_donw" => KeyCode::ArrowDown,
-            "arrow_left" => KeyCode::ArrowLeft,
-            "arrow_up" => KeyCode::ArrowUp,
-            "null" => KeyCode::Null,
-            string if string == "" => KeyCode::Null,
-            string => KeyCode::Printable(string.chars().next().unwrap()),
+            "ctrl" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Ctrl),
+            "shift" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Shift),
+            "alt" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Alt),
+            "super" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Super),
+            "enter" => {
+                crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Enter, '\n')
+            }
+            "space" => {
+                crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Space, ' ')
+            }
+            "tab" => crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Tab, '\t'),
+            "escape" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Escape),
+            "delete" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Delete),
+            "backspace" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Backspace),
+            "arrow_right" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowRight),
+            "arrow_down" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowDown),
+            "arrow_left" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowLeft),
+            "arrow_up" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowUp),
+            "null" => crate::keyboards::KeyCode::Null,
+            string if string == "" => crate::keyboards::KeyCode::Null,
+            string => crate::keyboards::KeyCode::Printable(string.chars().next().unwrap()),
         }
     };
 }

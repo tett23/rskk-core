@@ -1,6 +1,6 @@
 use super::super::{BufferState, Transformer, TransformerState, TransformerTypes};
 use super::{Canceled, Stopped};
-use crate::keyboards::KeyCode;
+use crate::keyboards::{KeyCode, MetaKey};
 use crate::{Config, Dictionary};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -83,17 +83,16 @@ impl Transformer for Yomi {
 
   fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
-      KeyCode::Escape => Box::new(Canceled::new()),
-      KeyCode::Enter => Box::new(Stopped::new(self.buffer.clone())),
-      KeyCode::Space => {
-        // TODO: SelectCandidateに遷移
+      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
+      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
+        // TODO: たぶんstop
         unimplemented!()
       }
-      KeyCode::Backspace | KeyCode::Delete => {
+      KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
         // TODO: bufferかtransformerから文字を削除
         unimplemented!();
       }
-      KeyCode::Tab => {
+      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => {
         // TODO: 補完して新しいYomiTransformerを返す
         unimplemented!()
       }

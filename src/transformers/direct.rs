@@ -1,5 +1,5 @@
 use super::{BufferState, Canceled, Stopped, Transformer, TransformerState};
-use crate::keyboards::KeyCode;
+use crate::keyboards::{KeyCode, MetaKey};
 use std::collections::HashSet;
 use BufferState::*;
 
@@ -39,7 +39,7 @@ impl Transformer for DirectTransformer {
 
   fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
-      KeyCode::Escape => Box::new(Canceled::new()),
+      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
       _ => Box::new(self.clone()),
     }
   }

@@ -4,9 +4,14 @@ use std::iter::Iterator;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum KeyCode {
-  // FIXME metaかつprintableなキーがある。enterとか
   Null,
+  Meta(MetaKey),
   Printable(char),
+  PrintableMeta(MetaKey, char),
+}
+
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+pub enum MetaKey {
   Ctrl,
   Shift,
   Alt,
@@ -24,9 +29,18 @@ pub enum KeyCode {
 }
 
 impl KeyCode {
+  pub fn printable_key(&self) -> Option<char> {
+    match self {
+      KeyCode::Printable(character) => Some(*character),
+      KeyCode::PrintableMeta(_, character) => Some(*character),
+      _ => None,
+    }
+  }
+
   pub fn is_printable(&self) -> bool {
     match self {
-      KeyCode::Printable(_) => true,
+      KeyCode::Printable(character) => true,
+      KeyCode::PrintableMeta(_, character) => true,
       _ => false,
     }
   }

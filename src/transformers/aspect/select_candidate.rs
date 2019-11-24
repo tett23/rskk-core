@@ -1,7 +1,7 @@
 use super::super::{BufferState, Transformer, TransformerState, TransformerTypes};
 use super::{Canceled, Stopped};
 use crate::dictionary::{DictionaryEntry, TransformEntry};
-use crate::keyboards::KeyCode;
+use crate::keyboards::{KeyCode, MetaKey};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -40,8 +40,8 @@ impl Transformer for SelectCandidate {
 
   fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
-      KeyCode::Escape => Box::new(Canceled::new()),
-      KeyCode::Enter => {
+      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
+      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
         let buffer = match self.candidates.current() {
           Some(candidate) => candidate.entry.clone(),
           None => "".to_string(),
@@ -49,7 +49,7 @@ impl Transformer for SelectCandidate {
 
         Box::new(Stopped::new(buffer))
       }
-      KeyCode::Space => {
+      KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
         let mut new_state = self.clone();
         match new_state.candidates.next() {
           Some(_) => Box::new(new_state),
@@ -59,7 +59,10 @@ impl Transformer for SelectCandidate {
           }
         }
       }
-      KeyCode::Backspace | KeyCode::Delete => {
+      KeyCode::PrintableMeta(MetaKey::Backspace, _)
+      | KeyCode::Meta(MetaKey::Backspace)
+      | KeyCode::PrintableMeta(MetaKey::Delete, _)
+      | KeyCode::Meta(MetaKey::Delete) => {
         let mut new_state = self.clone();
         match new_state.candidates.prev() {
           Some(_) => Box::new(new_state),
