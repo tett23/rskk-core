@@ -45,7 +45,7 @@ impl Transformer for HenkanTransformer {
 
   fn push_key_code(
     &self,
-    pressing_keys: HashSet<KeyCode>,
+    pressing_keys: &HashSet<KeyCode>,
     key_code: &KeyCode,
   ) -> Box<dyn Transformer> {
     self.transformer.push_key_code(pressing_keys, key_code)

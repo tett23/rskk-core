@@ -34,7 +34,7 @@ pub trait Transformer: TransformerState + objekt::Clone {
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
   fn push_key_code(
     &self,
-    pressing_keys: HashSet<KeyCode>,
+    pressing_keys: &HashSet<KeyCode>,
     key_code: &KeyCode,
   ) -> Box<dyn Transformer>;
   fn buffer_content(&self) -> String;

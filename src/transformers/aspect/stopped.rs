@@ -28,7 +28,7 @@ impl Transformer for Stopped {
     Box::new(Stopped::new(self.buffer_content()))
   }
 
-  fn push_key_code(&self, _: HashSet<KeyCode>, _: &KeyCode) -> Box<dyn Transformer> {
+  fn push_key_code(&self, _: &HashSet<KeyCode>, _: &KeyCode) -> Box<dyn Transformer> {
     Box::new(Stopped::new(self.buffer_content()))
   }
 

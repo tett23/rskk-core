@@ -81,7 +81,7 @@ impl Transformer for Yomi {
     Box::new(Self::new_from_transformer(self, new_transformer))
   }
 
-  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_key_code(&self, _: &HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
       KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {

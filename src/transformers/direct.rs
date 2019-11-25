@@ -37,7 +37,7 @@ impl Transformer for DirectTransformer {
     return Box::new(new_state);
   }
 
-  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_key_code(&self, _: &HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
       KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
       _ => Box::new(self.clone()),

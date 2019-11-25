@@ -26,7 +26,7 @@ impl Transformer for Canceled {
     Box::new(Canceled::new())
   }
 
-  fn push_key_code(&self, _: HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_key_code(&self, _: &HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
     Box::new(match key_code {
       _ => Canceled::new(),
     })

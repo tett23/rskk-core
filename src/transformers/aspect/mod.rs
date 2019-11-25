@@ -88,7 +88,7 @@ impl Transformer for AspectTransformer {
 
   fn push_key_code(
     &self,
-    pressing_keys: HashSet<KeyCode>,
+    pressing_keys: &HashSet<KeyCode>,
     key_code: &KeyCode,
   ) -> Box<dyn Transformer> {
     let new_aspect = match &self.aspect {
