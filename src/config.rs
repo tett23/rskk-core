@@ -1,4 +1,5 @@
-use crate::keyboards::{KeyCombination, KeyCombinations, Keyboards};
+use crate::keyboards::{KeyCode, KeyCombination, KeyCombinations, Keyboards};
+use crate::transformers::TransformerTypes;
 use crate::{combo, combos, key};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -23,7 +24,7 @@ impl Config {
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct KeyConfig {
   pub enter: KeyCombinations,
-  pub enter_kanji_transformer: KeyCombinations,
+  pub enter_henkan_transformer: KeyCombinations,
   pub enter_okuri_transformer: KeyCombinations,
   pub enter_hiragana_transformer: KeyCombinations,
   pub enter_katakana_transformer: KeyCombinations,
@@ -34,11 +35,57 @@ pub struct KeyConfig {
   pub sticky_key: KeyCombinations,
 }
 
+impl KeyConfig {}
+
 impl KeyConfig {
+  pub fn try_change_transformer(
+    &self,
+    allow: &HashSet<TransformerTypes>,
+    pressing_keys: &HashSet<KeyCode>,
+  ) -> Option<TransformerTypes> {
+    if allow.contains(&TransformerTypes::Henkan)
+      && self.enter_henkan_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::Henkan);
+    }
+    if allow.contains(&TransformerTypes::Okuri)
+      && self.enter_okuri_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::Okuri);
+    }
+    if allow.contains(&TransformerTypes::Hiragana)
+      && self.enter_hiragana_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::Hiragana);
+    }
+    if allow.contains(&TransformerTypes::EnKatakana)
+      && self.enter_en_katakana_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::EnKatakana);
+    }
+    if allow.contains(&TransformerTypes::EmEisu)
+      && self.enter_em_eisu_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::EmEisu);
+    }
+    if allow.contains(&TransformerTypes::Abbr)
+      && self.enter_abbr_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::Abbr);
+    }
+    if allow.contains(&TransformerTypes::Direct)
+      && self.enter_direct_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::Direct);
+    }
+
+    None
+  }
+
   pub fn default_config() -> Self {
     KeyConfig {
       enter: combos![combo![key!("enter")]],
-      enter_kanji_transformer: combos![
+      enter_henkan_transformer: combos![
         combo![key!("shift"), key!("a")],
         combo![key!("shift"), key!("b")],
         combo![key!("shift"), key!("c")],

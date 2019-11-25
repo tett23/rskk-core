@@ -34,11 +34,15 @@ impl Transformer for SelectCandidate {
     TransformerTypes::SelectCandidate
   }
 
+  fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+    None
+  }
+
   fn push_character(&self, _: char) -> Box<dyn Transformer> {
     Box::new(self.clone())
   }
 
-  fn push_key_code(&self, _: &HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
       KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
@@ -133,7 +137,7 @@ impl Candidates {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{key, set};
+  use crate::key;
 
   #[test]
   fn space() {
@@ -146,7 +150,7 @@ mod tests {
     assert_eq!(select_candidate.buffer_content(), "a");
     assert_eq!(
       select_candidate
-        .push_key_code(&set![], &key!("space"))
+        .push_key_code(&key!("space"))
         .buffer_content(),
       "b"
     );
@@ -160,7 +164,7 @@ mod tests {
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
     let select_candidate = SelectCandidate::new(&dictionary_entry);
 
-    let stopped = select_candidate.push_key_code(&set![], &key!("enter"));
+    let stopped = select_candidate.push_key_code(&key!("enter"));
     assert_eq!(stopped.transformer_type(), TransformerTypes::Stopped);
     assert_eq!(stopped.buffer_content(), "a");
   }
@@ -173,11 +177,11 @@ mod tests {
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
     let select_candidate = SelectCandidate::new(&dictionary_entry);
 
-    let select_candidate = select_candidate.push_key_code(&set![], &key!("space"));
-    let select_candidate = select_candidate.push_key_code(&set![], &key!("delete"));
+    let select_candidate = select_candidate.push_key_code(&key!("space"));
+    let select_candidate = select_candidate.push_key_code(&key!("delete"));
     assert_eq!(select_candidate.buffer_content(), "a");
 
-    let canceled = select_candidate.push_key_code(&set![], &key!("delete"));
+    let canceled = select_candidate.push_key_code(&key!("delete"));
     assert_eq!(canceled.transformer_type(), TransformerTypes::Canceled);
   }
 

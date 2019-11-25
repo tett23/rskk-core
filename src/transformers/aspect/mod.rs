@@ -67,13 +67,24 @@ impl TransformerState for AspectTransformer {
 }
 
 impl Transformer for AspectTransformer {
+  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+    match &self.aspect {
+      Aspect::Yomi(t) => t.try_change_transformer(pressing_keys),
+      Aspect::SelectCandidate(t) => t.try_change_transformer(pressing_keys),
+      Aspect::Stopped(t) => t.try_change_transformer(pressing_keys),
+      Aspect::Canceled(t) => t.try_change_transformer(pressing_keys),
+    }
+  }
+
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
+    println!("push character {}", character);
     let new_aspect = match &self.aspect {
       Aspect::Yomi(t) => t.push_character(character),
       Aspect::SelectCandidate(t) => t.push_character(character),
       Aspect::Stopped(t) => t.push_character(character),
       Aspect::Canceled(t) => t.push_character(character),
     };
+    println!("new_aspect {:?}", new_aspect.buffer_content());
     let mut new_state = self.clone();
     new_state.aspect = match new_aspect.transformer_type() {
       TransformerTypes::Yomi => Aspect::Yomi(new_aspect),
@@ -82,20 +93,17 @@ impl Transformer for AspectTransformer {
       TransformerTypes::Stopped => Aspect::Stopped(new_aspect),
       _ => unreachable!(),
     };
+    println!("new_state {:?}", new_state.buffer_content());
 
     Box::new(new_state)
   }
 
-  fn push_key_code(
-    &self,
-    pressing_keys: &HashSet<KeyCode>,
-    key_code: &KeyCode,
-  ) -> Box<dyn Transformer> {
+  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
     let new_aspect = match &self.aspect {
-      Aspect::Yomi(t) => t.push_key_code(pressing_keys, key_code),
-      Aspect::SelectCandidate(t) => t.push_key_code(pressing_keys, key_code),
-      Aspect::Stopped(t) => t.push_key_code(pressing_keys, key_code),
-      Aspect::Canceled(t) => t.push_key_code(pressing_keys, key_code),
+      Aspect::Yomi(t) => t.push_key_code(key_code),
+      Aspect::SelectCandidate(t) => t.push_key_code(key_code),
+      Aspect::Stopped(t) => t.push_key_code(key_code),
+      Aspect::Canceled(t) => t.push_key_code(key_code),
     };
     let mut new_state = self.clone();
     new_state.aspect = match new_aspect.transformer_type() {

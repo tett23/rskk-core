@@ -22,14 +22,16 @@ impl Transformer for Canceled {
     TransformerTypes::Canceled
   }
 
+  fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+    None
+  }
+
   fn push_character(&self, _: char) -> Box<dyn Transformer> {
     Box::new(Canceled::new())
   }
 
-  fn push_key_code(&self, _: &HashSet<KeyCode>, key_code: &KeyCode) -> Box<dyn Transformer> {
-    Box::new(match key_code {
-      _ => Canceled::new(),
-    })
+  fn push_key_code(&self, _: &KeyCode) -> Box<dyn Transformer> {
+    Box::new(Canceled::new())
   }
 
   fn buffer_content(&self) -> String {

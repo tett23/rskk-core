@@ -30,7 +30,7 @@ impl HenkanTransformer {
 }
 impl TransformerState for HenkanTransformer {
   fn is_stopped(&self) -> bool {
-    self.is_stopped()
+    self.transformer.is_stopped()
   }
 }
 
@@ -39,16 +39,16 @@ impl Transformer for HenkanTransformer {
     TransformerTypes::Henkan
   }
 
+  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+    self.transformer.try_change_transformer(pressing_keys)
+  }
+
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
     self.transformer.push_character(character)
   }
 
-  fn push_key_code(
-    &self,
-    pressing_keys: &HashSet<KeyCode>,
-    key_code: &KeyCode,
-  ) -> Box<dyn Transformer> {
-    self.transformer.push_key_code(pressing_keys, key_code)
+  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+    self.transformer.push_key_code(key_code)
   }
 
   fn buffer_content(&self) -> String {

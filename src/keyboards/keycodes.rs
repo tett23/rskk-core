@@ -39,8 +39,8 @@ impl KeyCode {
 
   pub fn is_printable(&self) -> bool {
     match self {
-      KeyCode::Printable(character) => true,
-      KeyCode::PrintableMeta(_, character) => true,
+      KeyCode::Printable(_) => true,
+      KeyCode::PrintableMeta(_, _) => true,
       _ => false,
     }
   }

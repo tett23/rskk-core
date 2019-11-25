@@ -27,27 +27,18 @@ pub trait TransformerState {
   fn is_stopped(&self) -> bool;
 }
 
-pub trait Transformer: TransformerState + objekt::Clone {
+pub trait Transformer: TransformerState + fmt::Debug + objekt::Clone {
   fn transformer_type(&self) -> TransformerTypes {
     unimplemented!()
   }
+  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
+  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer>;
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
-  fn push_key_code(
-    &self,
-    pressing_keys: &HashSet<KeyCode>,
-    key_code: &KeyCode,
-  ) -> Box<dyn Transformer>;
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
 }
 
 objekt::clone_trait_object!(Transformer);
-
-impl fmt::Debug for Box<dyn Transformer> {
-  fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-    unimplemented!()
-  }
-}
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
 pub enum TransformerTypes {
@@ -72,18 +63,32 @@ impl TransformerTypes {
     dictionary: Rc<Dictionary>,
   ) -> Box<dyn Transformer> {
     match self {
-      TransformerTypes::Direct => Box::new(DirectTransformer::new()),
+      TransformerTypes::Direct => {
+        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      }
       TransformerTypes::Henkan => Box::new(HenkanTransformer::new(
         config,
         dictionary,
         TransformerTypes::Hiragana,
       )),
-      TransformerTypes::Okuri => Box::new(DirectTransformer::new()),
-      TransformerTypes::Hiragana => Box::new(HiraganaTransformer::new()),
-      TransformerTypes::Katakana => Box::new(DirectTransformer::new()),
-      TransformerTypes::Abbr => Box::new(DirectTransformer::new()),
-      TransformerTypes::EmEisu => Box::new(DirectTransformer::new()),
-      TransformerTypes::EnKatakana => Box::new(DirectTransformer::new()),
+      TransformerTypes::Okuri => {
+        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      }
+      TransformerTypes::Hiragana => {
+        Box::new(HiraganaTransformer::new(config.clone(), dictionary.clone()))
+      }
+      TransformerTypes::Katakana => {
+        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      }
+      TransformerTypes::Abbr => {
+        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      }
+      TransformerTypes::EmEisu => {
+        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      }
+      TransformerTypes::EnKatakana => {
+        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      }
       _ => unreachable!(),
     }
   }
@@ -126,7 +131,7 @@ impl TransformerTypes {
   pub fn get_key_combination<'a>(&self, key_config: &'a KeyConfig) -> &'a KeyCombinations {
     match self {
       TransformerTypes::Direct => &key_config.enter_direct_transformer,
-      TransformerTypes::Henkan => &key_config.enter_kanji_transformer,
+      TransformerTypes::Henkan => &key_config.enter_henkan_transformer,
       TransformerTypes::Okuri => &key_config.enter_okuri_transformer,
       TransformerTypes::Hiragana => &key_config.enter_hiragana_transformer,
       TransformerTypes::Katakana => &key_config.enter_katakana_transformer,

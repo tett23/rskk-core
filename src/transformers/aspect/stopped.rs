@@ -11,6 +11,12 @@ impl Stopped {
   pub fn new(buffer: String) -> Self {
     Stopped { buffer }
   }
+
+  pub fn empty() -> Self {
+    Stopped {
+      buffer: "".to_string(),
+    }
+  }
 }
 
 impl TransformerState for Stopped {
@@ -24,12 +30,16 @@ impl Transformer for Stopped {
     TransformerTypes::Stopped
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
+  fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+    None
   }
 
-  fn push_key_code(&self, _: &HashSet<KeyCode>, _: &KeyCode) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.buffer_content()))
+  fn push_character(&self, _: char) -> Box<dyn Transformer> {
+    Box::new(self.clone())
+  }
+
+  fn push_key_code(&self, _: &KeyCode) -> Box<dyn Transformer> {
+    Box::new(self.clone())
   }
 
   fn buffer_content(&self) -> String {

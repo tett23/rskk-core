@@ -135,7 +135,7 @@ mod lib_tests {
         composition.push_key_events(&str_to_key_code_vector("abc"));
         assert_eq!(composition.display_string(), "abc");
 
-        let composition = skk.start_composition();
+        let composition = skk.start_composition_as(TransformerTypes::Direct);
         composition.push_key_events(&str_to_key_code_vector("[down:shift]a[up:shift]b"));
         assert_eq!(composition.display_string(), "Ab");
 
@@ -163,13 +163,12 @@ mod lib_tests {
         composition.push_key_events(&str_to_key_code_vector("a[down:ctrl]j[up:ctrl]ala"));
         assert_eq!(composition.display_string(), "aあa");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("K"));
-        // assert_eq!(composition.display_string(), "k");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("[up:ctrl]jK"));
+        assert_eq!(composition.display_string(), "▽k");
 
         // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("Kanji"));
-        // composition.push_key_event(&KeyEvents::KeyDown(Space));
+        // composition.push_key_events(&str_to_key_code_vector("Kanji[down:space]"));
         // assert_eq!(composition.display_string(), "漢字");
     }
 }
