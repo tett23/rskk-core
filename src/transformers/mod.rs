@@ -27,15 +27,23 @@ pub trait TransformerState {
   fn is_stopped(&self) -> bool;
 }
 
-pub trait Transformer: TransformerState + fmt::Debug + objekt::Clone {
-  fn transformer_type(&self) -> TransformerTypes {
-    unimplemented!()
-  }
+pub trait Displayable {
+  fn buffer_content(&self) -> String;
+  fn display_string(&self) -> String;
+}
+
+pub trait KeyImputtable {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer>;
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
-  fn buffer_content(&self) -> String;
-  fn display_string(&self) -> String;
+}
+
+pub trait Transformer:
+  TransformerState + KeyImputtable + Displayable + fmt::Debug + objekt::Clone
+{
+  fn transformer_type(&self) -> TransformerTypes {
+    unimplemented!()
+  }
 }
 
 objekt::clone_trait_object!(Transformer);

@@ -1,4 +1,6 @@
-use super::super::{BufferState, Transformer, TransformerState, TransformerTypes};
+use super::super::{
+  BufferState, Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes,
+};
 use super::{Canceled, Stopped};
 use crate::dictionary::{DictionaryEntry, TransformEntry};
 use crate::keyboards::{KeyCode, MetaKey};
@@ -33,7 +35,9 @@ impl Transformer for SelectCandidate {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::SelectCandidate
   }
+}
 
+impl KeyImputtable for SelectCandidate {
   fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     None
   }
@@ -76,7 +80,9 @@ impl Transformer for SelectCandidate {
       _ => Box::new(self.clone()),
     }
   }
+}
 
+impl Displayable for SelectCandidate {
   fn buffer_content(&self) -> String {
     match self.candidates.current() {
       Some(v) => v.entry.clone(),

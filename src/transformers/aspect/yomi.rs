@@ -1,4 +1,6 @@
-use super::super::{SelectCandidate, Transformer, TransformerState, TransformerTypes};
+use super::super::{
+  Displayable, KeyImputtable, SelectCandidate, Transformer, TransformerState, TransformerTypes,
+};
 use super::Canceled;
 use crate::keyboards::{KeyCode, MetaKey};
 use crate::{Config, Dictionary};
@@ -54,7 +56,9 @@ impl Transformer for Yomi {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Yomi
   }
+}
 
+impl KeyImputtable for Yomi {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
@@ -104,7 +108,9 @@ impl Transformer for Yomi {
       _ => Box::new(self.clone()),
     }
   }
+}
 
+impl Displayable for Yomi {
   fn buffer_content(&self) -> String {
     self.buffer.clone() + &self.transformer.buffer_content()
   }

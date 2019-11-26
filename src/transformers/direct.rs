@@ -1,4 +1,6 @@
-use super::{Canceled, Stopped, Transformer, TransformerState, TransformerTypes};
+use super::{
+  Canceled, Displayable, KeyImputtable, Stopped, Transformer, TransformerState, TransformerTypes,
+};
 use crate::keyboards::{KeyCode, MetaKey};
 use crate::{set, Config, Dictionary};
 use std::collections::HashSet;
@@ -35,7 +37,9 @@ impl Transformer for DirectTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Direct
   }
+}
 
+impl KeyImputtable for DirectTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self
       .config
@@ -53,7 +57,9 @@ impl Transformer for DirectTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
     return Box::new(Stopped::new(character.to_string()));
   }
+}
 
+impl Displayable for DirectTransformer {
   fn buffer_content(&self) -> String {
     self.buffer.clone()
   }

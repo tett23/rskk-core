@@ -1,5 +1,8 @@
 use super::tables::hiragana_convert;
-use super::{BufferState, Canceled, Stopped, Transformer, TransformerState, TransformerTypes};
+use super::{
+  BufferState, Canceled, Displayable, KeyImputtable, Stopped, Transformer, TransformerState,
+  TransformerTypes,
+};
 use crate::keyboards::{KeyCode, MetaKey};
 use crate::{set, Config, Dictionary};
 use std::collections::HashSet;
@@ -48,6 +51,12 @@ impl TransformerState for HiraganaTransformer {
 }
 
 impl Transformer for HiraganaTransformer {
+  fn transformer_type(&self) -> TransformerTypes {
+    TransformerTypes::Hiragana
+  }
+}
+
+impl KeyImputtable for HiraganaTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self
       .config
@@ -69,7 +78,9 @@ impl Transformer for HiraganaTransformer {
       _ => Box::new(Stopped::empty()),
     }
   }
+}
 
+impl Displayable for HiraganaTransformer {
   fn buffer_content(&self) -> String {
     self.buffer.clone()
   }

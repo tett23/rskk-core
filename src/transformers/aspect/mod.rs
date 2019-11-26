@@ -3,7 +3,7 @@ mod select_candidate;
 mod stopped;
 mod yomi;
 
-use super::{Transformer, TransformerState, TransformerTypes};
+use super::{Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes};
 use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
 use std::collections::HashSet;
@@ -66,7 +66,9 @@ impl TransformerState for AspectTransformer {
   }
 }
 
-impl Transformer for AspectTransformer {
+impl Transformer for AspectTransformer {}
+
+impl KeyImputtable for AspectTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     match &self.aspect {
       Aspect::Yomi(t) => t.try_change_transformer(pressing_keys),
@@ -116,7 +118,9 @@ impl Transformer for AspectTransformer {
 
     Box::new(new_state)
   }
+}
 
+impl Displayable for AspectTransformer {
   fn buffer_content(&self) -> String {
     match &self.aspect {
       Aspect::Yomi(t) => t.buffer_content(),

@@ -1,4 +1,6 @@
-use super::{AspectTransformer, Transformer, TransformerState, TransformerTypes};
+use super::{
+  AspectTransformer, Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes,
+};
 use crate::keyboards::KeyCode;
 use crate::{Config, Dictionary};
 use std::collections::HashSet;
@@ -38,7 +40,9 @@ impl Transformer for HenkanTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Henkan
   }
+}
 
+impl KeyImputtable for HenkanTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
@@ -50,7 +54,9 @@ impl Transformer for HenkanTransformer {
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
     self.transformer.push_key_code(key_code)
   }
+}
 
+impl Displayable for HenkanTransformer {
   fn buffer_content(&self) -> String {
     self.transformer.buffer_content()
   }
