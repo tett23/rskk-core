@@ -1,8 +1,8 @@
 use super::{
-  Canceled, Config, Displayable, KeyInputtable, Stopped, Transformer, TransformerState,
+  AsTransformerTrait, Canceled, Config, Displayable, Stopped, Transformer, TransformerState,
   TransformerTypes, WithConfig,
 };
-use crate::keyboards::{KeyCode, MetaKey};
+use crate::keyboards::KeyCode;
 use crate::set;
 use std::collections::HashSet;
 
@@ -41,9 +41,7 @@ impl Transformer for DirectTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Direct
   }
-}
 
-impl KeyInputtable for DirectTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self
       .config
@@ -51,15 +49,12 @@ impl KeyInputtable for DirectTransformer {
       .try_change_transformer(&Self::allow_transformers(), pressing_keys)
   }
 
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    match key_code {
-      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new(self.config())),
-      _ => Box::new(self.clone()),
-    }
-  }
-
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
     return Box::new(Stopped::new(self.config(), character.to_string()));
+  }
+
+  fn push_escape(&self) -> Box<dyn Transformer> {
+    Box::new(Canceled::new(self.config()))
   }
 }
 
@@ -70,5 +65,11 @@ impl Displayable for DirectTransformer {
 
   fn display_string(&self) -> String {
     self.buffer.clone()
+  }
+}
+
+impl AsTransformerTrait for DirectTransformer {
+  fn as_trait(&self) -> Box<dyn Transformer> {
+    Box::new(self.clone())
   }
 }

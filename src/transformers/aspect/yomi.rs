@@ -1,9 +1,9 @@
 use super::super::{
-  Canceled, Config, Displayable, KeyInputtable, SelectCandidate, Stopped, Transformer,
+  AsTransformerTrait, Canceled, Config, Displayable, SelectCandidate, Stopped, Transformer,
   TransformerState, TransformerTypes, UnknownWord, WithConfig,
 };
 use super::unknown_word::Word;
-use crate::keyboards::{KeyCode, MetaKey};
+use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -56,9 +56,7 @@ impl Transformer for Yomi {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Yomi
   }
-}
 
-impl KeyInputtable for Yomi {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
@@ -76,35 +74,36 @@ impl KeyInputtable for Yomi {
     }
   }
 
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    // MetaAcceptable traitに移譲する
-    match key_code {
-      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new(self.config())),
-      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        Box::new(Stopped::new(self.config(), self.buffer_content()))
-      }
-      KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
-        match self.config().dictionary.transform(&self.buffer_content()) {
-          Some(entry) => Box::new(SelectCandidate::new(self.config(), entry)),
-          None => Box::new(UnknownWord::new(
-            self.config(),
-            Word::new(self.buffer_content(), None),
-          )),
-        }
-      }
-      KeyCode::PrintableMeta(MetaKey::Backspace, _)
-      | KeyCode::Meta(MetaKey::Backspace)
-      | KeyCode::PrintableMeta(MetaKey::Delete, _)
-      | KeyCode::Meta(MetaKey::Delete) => {
-        // TODO: bufferかtransformerから文字を削除
-        unimplemented!();
-      }
-      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => {
-        // TODO: 補完して新しいYomiTransformerを返す
-        unimplemented!()
-      }
-      _ => Box::new(self.clone()),
+  fn push_escape(&self) -> Box<dyn Transformer> {
+    Box::new(Canceled::new(self.config()))
+  }
+
+  fn push_enter(&self) -> Box<dyn Transformer> {
+    Box::new(Stopped::new(self.config(), self.buffer_content()))
+  }
+
+  fn push_space(&self) -> Box<dyn Transformer> {
+    match self.config().dictionary.transform(&self.buffer_content()) {
+      Some(entry) => Box::new(SelectCandidate::new(self.config(), entry)),
+      None => Box::new(UnknownWord::new(
+        self.config(),
+        Word::new(self.buffer_content(), None),
+      )),
     }
+  }
+
+  fn push_delete(&self) -> Box<dyn Transformer> {
+    // TODO: bufferかtransformerから文字を削除
+    unimplemented!();
+  }
+
+  fn push_backspace(&self) -> Box<dyn Transformer> {
+    self.push_delete()
+  }
+
+  fn push_tab(&self) -> Box<dyn Transformer> {
+    // TODO: 補完して新しいYomiTransformerを返す
+    unimplemented!()
   }
 }
 
@@ -115,6 +114,12 @@ impl Displayable for Yomi {
 
   fn display_string(&self) -> String {
     "▽".to_string() + &self.buffer_content()
+  }
+}
+
+impl AsTransformerTrait for Yomi {
+  fn as_trait(&self) -> Box<dyn Transformer> {
+    Box::new(self.clone())
   }
 }
 

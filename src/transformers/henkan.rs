@@ -1,5 +1,5 @@
 use super::{
-  AspectTransformer, Config, Displayable, KeyInputtable, Transformer, TransformerState,
+  AsTransformerTrait, AspectTransformer, Config, Displayable, Transformer, TransformerState,
   TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -43,9 +43,7 @@ impl Transformer for HenkanTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Henkan
   }
-}
 
-impl KeyInputtable for HenkanTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
@@ -59,8 +57,8 @@ impl KeyInputtable for HenkanTransformer {
     Box::new(self.new_from_transformer(new_transformer))
   }
 
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    let new_transformer = self.transformer.push_key_code(key_code);
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+    let new_transformer = self.transformer.push_meta_key(key_code);
     if new_transformer.is_stopped() {
       return new_transformer;
     }
@@ -76,5 +74,11 @@ impl Displayable for HenkanTransformer {
 
   fn display_string(&self) -> String {
     self.transformer.display_string()
+  }
+}
+
+impl AsTransformerTrait for HenkanTransformer {
+  fn as_trait(&self) -> Box<dyn Transformer> {
+    Box::new(self.clone())
   }
 }

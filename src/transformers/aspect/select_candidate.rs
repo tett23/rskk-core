@@ -1,10 +1,10 @@
 use super::super::{
-  BufferState, Config, Displayable, KeyInputtable, Transformer, TransformerState, TransformerTypes,
-  WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, Transformer, TransformerState,
+  TransformerTypes, WithConfig,
 };
 use super::{Canceled, Stopped};
 use crate::dictionary::{Candidate, DictionaryEntry};
-use crate::keyboards::{KeyCode, MetaKey};
+use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -44,9 +44,7 @@ impl Transformer for SelectCandidate {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::SelectCandidate
   }
-}
 
-impl KeyInputtable for SelectCandidate {
   fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     None
   }
@@ -55,39 +53,40 @@ impl KeyInputtable for SelectCandidate {
     Box::new(self.clone())
   }
 
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    match key_code {
-      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new(self.config())),
-      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        let buffer = match self.candidates.current() {
-          Some(candidate) => candidate.entry.clone(),
-          None => "".to_string(),
-        };
+  fn push_escape(&self) -> Box<dyn Transformer> {
+    Box::new(Canceled::new(self.config()))
+  }
 
-        Box::new(Stopped::new(self.config(), buffer))
+  fn push_enter(&self) -> Box<dyn Transformer> {
+    let buffer = match self.candidates.current() {
+      Some(candidate) => candidate.entry.clone(),
+      None => "".to_string(),
+    };
+
+    Box::new(Stopped::new(self.config(), buffer))
+  }
+
+  fn push_space(&self) -> Box<dyn Transformer> {
+    let mut new_state = self.clone();
+    match new_state.candidates.next() {
+      Some(_) => Box::new(new_state),
+      None => {
+        // TODO: 単語登録に遷移
+        unimplemented!()
       }
-      KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
-        let mut new_state = self.clone();
-        match new_state.candidates.next() {
-          Some(_) => Box::new(new_state),
-          None => {
-            // TODO: 単語登録に遷移
-            unimplemented!()
-          }
-        }
-      }
-      KeyCode::PrintableMeta(MetaKey::Backspace, _)
-      | KeyCode::Meta(MetaKey::Backspace)
-      | KeyCode::PrintableMeta(MetaKey::Delete, _)
-      | KeyCode::Meta(MetaKey::Delete) => {
-        let mut new_state = self.clone();
-        match new_state.candidates.prev() {
-          Some(_) => Box::new(new_state),
-          None => Box::new(Canceled::new(self.config())),
-        }
-      }
-      _ => Box::new(self.clone()),
     }
+  }
+
+  fn push_delete(&self) -> Box<dyn Transformer> {
+    let mut new_state = self.clone();
+    match new_state.candidates.prev() {
+      Some(_) => Box::new(new_state),
+      None => Box::new(Canceled::new(self.config())),
+    }
+  }
+
+  fn push_backspace(&self) -> Box<dyn Transformer> {
+    self.push_delete()
   }
 }
 
@@ -149,6 +148,12 @@ impl Candidates {
   }
 }
 
+impl AsTransformerTrait for SelectCandidate {
+  fn as_trait(&self) -> Box<dyn Transformer> {
+    Box::new(self.clone())
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -170,7 +175,7 @@ mod tests {
     assert_eq!(select_candidate.buffer_content(), "a");
     assert_eq!(
       select_candidate
-        .push_key_code(&key!("space"))
+        .push_meta_key(&key!("space"))
         .buffer_content(),
       "b"
     );
@@ -188,7 +193,7 @@ mod tests {
     let dictionary_entry = DictionaryEntry::new("test", vec);
     let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry);
 
-    let stopped = select_candidate.push_key_code(&key!("enter"));
+    let stopped = select_candidate.push_meta_key(&key!("enter"));
     assert_eq!(stopped.transformer_type(), TransformerTypes::Stopped);
     assert_eq!(stopped.buffer_content(), "a");
   }
@@ -205,11 +210,11 @@ mod tests {
     let dictionary_entry = DictionaryEntry::new("test", vec);
     let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry);
 
-    let select_candidate = select_candidate.push_key_code(&key!("space"));
-    let select_candidate = select_candidate.push_key_code(&key!("delete"));
+    let select_candidate = select_candidate.push_meta_key(&key!("space"));
+    let select_candidate = select_candidate.push_meta_key(&key!("delete"));
     assert_eq!(select_candidate.buffer_content(), "a");
 
-    let canceled = select_candidate.push_key_code(&key!("delete"));
+    let canceled = select_candidate.push_meta_key(&key!("delete"));
     assert_eq!(canceled.transformer_type(), TransformerTypes::Canceled);
   }
 

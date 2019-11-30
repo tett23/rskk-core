@@ -4,7 +4,7 @@ mod henkan;
 mod hiragana;
 mod tables;
 
-use crate::keyboards::{KeyCode, KeyCombinations, KeyEvents};
+use crate::keyboards::{KeyCode, KeyCombinations, KeyEvents, MetaKey};
 use crate::{set, Dictionary, KeyConfig, RSKKConfig};
 use objekt;
 use std::collections::HashSet;
@@ -64,7 +64,13 @@ pub trait WithConfig {
   fn config(&self) -> Config;
 }
 
-pub trait KeyInputtable: WithConfig + objekt::Clone {
+pub trait Transformer:
+  AsTransformerTrait + WithConfig + TransformerState + Displayable + fmt::Debug + objekt::Clone
+{
+  fn transformer_type(&self) -> TransformerTypes {
+    unimplemented!()
+  }
+
   fn push_key_event(
     &self,
     pressing_keys: &HashSet<KeyCode>,
@@ -77,6 +83,7 @@ pub trait KeyInputtable: WithConfig + objekt::Clone {
       KeyEvents::KeyRepeat(_) => unimplemented!(),
     }
   }
+
   fn key_down(
     &self,
     pressing_keys: &HashSet<KeyCode>,
@@ -100,7 +107,7 @@ pub trait KeyInputtable: WithConfig + objekt::Clone {
       return new_transformer;
     };
 
-    let new_transformer = self.push_key_code(key);
+    let new_transformer = self.push_meta_key(key);
     let new_transformer = match last_character {
       Some(character) => new_transformer.push_character(character),
       None => new_transformer,
@@ -108,18 +115,73 @@ pub trait KeyInputtable: WithConfig + objekt::Clone {
 
     new_transformer
   }
+
   fn key_up(&self) -> Box<dyn Transformer> {
-    self.push_key_code(&KeyCode::Null)
+    self.push_meta_key(&KeyCode::Null)
   }
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer>;
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+    match key_code {
+      KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
+      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
+        self.push_enter()
+      }
+      KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
+        self.push_space()
+      }
+      KeyCode::PrintableMeta(MetaKey::Backspace, _) | KeyCode::Meta(MetaKey::Backspace) => {
+        self.push_backspace()
+      }
+      KeyCode::PrintableMeta(MetaKey::Delete, _) | KeyCode::Meta(MetaKey::Delete) => {
+        self.push_delete()
+      }
+      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => self.push_tab(),
+      KeyCode::Meta(MetaKey::ArrowRight) => self.push_arrow_right(),
+      KeyCode::Meta(MetaKey::ArrowDown) => self.push_arrow_down(),
+      KeyCode::Meta(MetaKey::ArrowLeft) => self.push_arrow_left(),
+      KeyCode::Meta(MetaKey::ArrowUp) => self.push_arrow_up(),
+      _ => self.push_null(),
+    }
+  }
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
+
+  fn push_escape(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_enter(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_space(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_backspace(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_delete(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_tab(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_null(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_arrow_right(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_arrow_down(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_arrow_left(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
+  fn push_arrow_up(&self) -> Box<dyn Transformer> {
+    self.as_trait()
+  }
 }
 
-pub trait Transformer: TransformerState + KeyInputtable + Displayable + fmt::Debug {
-  fn transformer_type(&self) -> TransformerTypes {
-    unimplemented!()
-  }
+pub trait AsTransformerTrait {
+  fn as_trait(&self) -> Box<dyn Transformer>;
 }
 
 objekt::clone_trait_object!(Transformer);

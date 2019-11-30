@@ -1,5 +1,5 @@
 use super::super::{
-  AspectTransformer, Config, Displayable, KeyInputtable, Transformer, TransformerState,
+  AsTransformerTrait, AspectTransformer, Config, Displayable, Transformer, TransformerState,
   TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -67,9 +67,7 @@ impl Transformer for UnknownWord {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::UnknownWord
   }
-}
 
-impl KeyInputtable for UnknownWord {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
@@ -78,8 +76,8 @@ impl KeyInputtable for UnknownWord {
     Box::new(self.new_from_transformer(self.transformer.push_character(character)))
   }
 
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    Box::new(self.new_from_transformer(self.transformer.push_key_code(key_code)))
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+    Box::new(self.new_from_transformer(self.transformer.push_meta_key(key_code)))
   }
 }
 
@@ -90,6 +88,12 @@ impl Displayable for UnknownWord {
 
   fn display_string(&self) -> String {
     "[登録: ".to_string() + &self.word.display_string() + "]" + &self.transformer.display_string()
+  }
+}
+
+impl AsTransformerTrait for UnknownWord {
+  fn as_trait(&self) -> Box<dyn Transformer> {
+    Box::new(self.clone())
   }
 }
 

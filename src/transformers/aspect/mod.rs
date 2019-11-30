@@ -5,7 +5,8 @@ mod unknown_word;
 mod yomi;
 
 use super::{
-  Config, Displayable, KeyInputtable, Transformer, TransformerState, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, Transformer, TransformerState, TransformerTypes,
+  WithConfig,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -88,9 +89,7 @@ impl Transformer for AspectTransformer {
       Aspect::Canceled(t) => t.transformer_type(),
     }
   }
-}
 
-impl KeyInputtable for AspectTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     match &self.aspect {
       Aspect::Yomi(t) => t.try_change_transformer(pressing_keys),
@@ -113,13 +112,13 @@ impl KeyInputtable for AspectTransformer {
     Box::new(self.new_from_transformer(new_aspect))
   }
 
-  fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
     let new_aspect = match &self.aspect {
-      Aspect::Yomi(t) => t.push_key_code(key_code),
-      Aspect::SelectCandidate(t) => t.push_key_code(key_code),
-      Aspect::UnknownWord(t) => t.push_key_code(key_code),
-      Aspect::Stopped(t) => t.push_key_code(key_code),
-      Aspect::Canceled(t) => t.push_key_code(key_code),
+      Aspect::Yomi(t) => t.push_meta_key(key_code),
+      Aspect::SelectCandidate(t) => t.push_meta_key(key_code),
+      Aspect::UnknownWord(t) => t.push_meta_key(key_code),
+      Aspect::Stopped(t) => t.push_meta_key(key_code),
+      Aspect::Canceled(t) => t.push_meta_key(key_code),
     };
 
     Box::new(self.new_from_transformer(new_aspect))
@@ -145,5 +144,11 @@ impl Displayable for AspectTransformer {
       Aspect::Stopped(t) => t.display_string(),
       Aspect::Canceled(t) => t.display_string(),
     }
+  }
+}
+
+impl AsTransformerTrait for AspectTransformer {
+  fn as_trait(&self) -> Box<dyn Transformer> {
+    Box::new(self.clone())
   }
 }
