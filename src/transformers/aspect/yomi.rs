@@ -1,5 +1,6 @@
 use super::super::{
-  Displayable, KeyImputtable, SelectCandidate, Transformer, TransformerState, TransformerTypes,
+  Displayable, KeyImputtable, SelectCandidate, Stopped, Transformer, TransformerState,
+  TransformerTypes,
 };
 use super::Canceled;
 use crate::keyboards::{KeyCode, MetaKey};
@@ -83,8 +84,7 @@ impl KeyImputtable for Yomi {
     match key_code {
       KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        // TODO: たぶんstop
-        unimplemented!()
+        Box::new(Stopped::new(self.buffer_content()))
       }
       KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
         match self.dictionary.transform(&self.buffer_content()) {
@@ -143,7 +143,7 @@ mod tests {
     let yomi = yomi.push_character('k');
     assert_eq!(yomi.display_string(), "▽あk");
 
-    // let yomi = yomi.push_character('a');
-    // assert_eq!(yomi.buffer_content(), "あか");
+    let yomi = yomi.push_character('a');
+    assert_eq!(yomi.buffer_content(), "あか");
   }
 }

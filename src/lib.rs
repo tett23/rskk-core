@@ -131,44 +131,52 @@ mod lib_tests {
     fn it_works() {
         let mut skk = RSKK::new(TransformerTypes::Direct);
         skk.parse_dictionary("かんじ/漢字/");
-        // let composition = skk.start_composition();
-        // composition.push_key_events(&str_to_key_code_vector("a"));
-        // assert_eq!(composition.display_string(), "a");
+        let composition = skk.start_composition();
+        composition.push_key_events(&str_to_key_code_vector("a"));
+        assert_eq!(composition.display_string(), "a");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Direct);
-        // composition.push_key_events(&str_to_key_code_vector("A"));
-        // assert_eq!(composition.display_string(), "A");
+        let composition = skk.start_composition_as(TransformerTypes::Direct);
+        composition.push_key_events(&str_to_key_code_vector("A"));
+        assert_eq!(composition.display_string(), "A");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("a"));
-        // assert_eq!(composition.display_string(), "あ");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("a"));
+        assert_eq!(composition.display_string(), "あ");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("ka"));
-        // assert_eq!(composition.display_string(), "か");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("ka"));
+        assert_eq!(composition.display_string(), "か");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("ts"));
-        // assert_eq!(composition.display_string(), "ts");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("ts"));
+        assert_eq!(composition.display_string(), "ts");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("tsu"));
-        // assert_eq!(composition.display_string(), "つ");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("tsu"));
+        assert_eq!(composition.display_string(), "つ");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Direct);
-        // composition.push_key_events(&str_to_key_code_vector("[down:ctrl]j[up:ctrl]a"));
-        // assert_eq!(composition.display_string(), "あ");
+        let composition = skk.start_composition_as(TransformerTypes::Direct);
+        composition.push_key_events(&str_to_key_code_vector("[down:ctrl]j[up:ctrl]a"));
+        assert_eq!(composition.display_string(), "あ");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("K"));
-        // assert_eq!(composition.display_string(), "▽k");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("K"));
+        assert_eq!(composition.display_string(), "▽k");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
         composition.push_key_events(&str_to_key_code_vector("Kannji"));
         assert_eq!(composition.display_string(), "▽かんじ");
 
-        // let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        // composition.push_key_events(&str_to_key_code_vector("Kanji[down:space]"));
-        // assert_eq!(composition.display_string(), "漢字");
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Kannji[down:enter]"));
+        assert_eq!(composition.display_string(), "かんじ");
+
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Kannji[down:space]"));
+        assert_eq!(composition.display_string(), "▼漢字");
+
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Kannji[down:space][down:enter]"));
+        assert_eq!(composition.display_string(), "漢字");
     }
 }
