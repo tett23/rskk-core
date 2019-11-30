@@ -72,35 +72,44 @@ pub trait KeyInputtable: WithConfig + objekt::Clone {
     last_character: Option<char>,
   ) -> Box<dyn Transformer> {
     match event {
-      KeyEvents::KeyDown(key) => {
-        if let Some(new_transformer_type) = self.try_change_transformer(pressing_keys) {
-          let new_transformer = new_transformer_type.to_transformer(self.config());
-
-          match new_transformer_type {
-            TransformerTypes::Henkan => {
-              match key.printable_key() {
-                Some(character) => {
-                  return new_transformer.push_character(character);
-                }
-                None => {}
-              };
-            }
-            _ => {}
-          };
-          return new_transformer;
-        };
-
-        let new_transformer = self.push_key_code(key);
-        let new_transformer = match last_character {
-          Some(character) => new_transformer.push_character(character),
-          None => new_transformer,
-        };
-
-        new_transformer
-      }
-      KeyEvents::KeyUp(_) => self.push_key_code(&KeyCode::Null),
+      KeyEvents::KeyDown(key) => self.key_down(pressing_keys, key, last_character),
+      KeyEvents::KeyUp(_) => self.key_up(),
       KeyEvents::KeyRepeat(_) => unimplemented!(),
     }
+  }
+  fn key_down(
+    &self,
+    pressing_keys: &HashSet<KeyCode>,
+    key: &KeyCode,
+    last_character: Option<char>,
+  ) -> Box<dyn Transformer> {
+    if let Some(new_transformer_type) = self.try_change_transformer(pressing_keys) {
+      let new_transformer = new_transformer_type.to_transformer(self.config());
+
+      match new_transformer_type {
+        TransformerTypes::Henkan => {
+          match key.printable_key() {
+            Some(character) => {
+              return new_transformer.push_character(character);
+            }
+            None => {}
+          };
+        }
+        _ => {}
+      };
+      return new_transformer;
+    };
+
+    let new_transformer = self.push_key_code(key);
+    let new_transformer = match last_character {
+      Some(character) => new_transformer.push_character(character),
+      None => new_transformer,
+    };
+
+    new_transformer
+  }
+  fn key_up(&self) -> Box<dyn Transformer> {
+    self.push_key_code(&KeyCode::Null)
   }
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer>;
