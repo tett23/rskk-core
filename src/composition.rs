@@ -46,7 +46,6 @@ impl Composition {
         if let Some(new_transformer_type) = self.try_change_transformer() {
           self.current_transformer_type = new_transformer_type;
           self.replace_new_transformer();
-          println!("new_transformer_type {:?}", new_transformer_type);
 
           match new_transformer_type {
             TransformerTypes::Henkan => {
@@ -70,47 +69,25 @@ impl Composition {
   }
 
   fn try_change_transformer(&mut self) -> Option<TransformerTypes> {
-    let new_transformer_type = self
+    self
       .transformer
-      .try_change_transformer(self.keyboard.pressing_keys());
-    if new_transformer_type.is_none() {
-      return None;
-    }
-    let new_transformer_type = new_transformer_type.unwrap();
-
-    self.current_transformer_type = new_transformer_type;
-
-    Some(new_transformer_type)
+      .try_change_transformer(self.keyboard.pressing_keys())
   }
 
   fn push_meta_key(&mut self, key_code: &KeyCode) {
     self.transformer = self.transformer.push_key_code(key_code);
-    if self.transformer.is_stopped() {
-      self.replace_new_transformer();
-    }
   }
 
   fn push_character(&mut self, character: char) {
     self.transformer = self.transformer.push_character(character);
-    println!(
-      "push_character result {:?}",
-      self.transformer.buffer_content()
-    );
-    println!(
-      "push_character result {:?}",
-      self.transformer.display_string()
-    );
-    if self.transformer.is_stopped() {
-      self.replace_new_transformer();
-    }
   }
 
   pub fn buffer_content(&self) -> String {
-    self.buffer.clone() + &self.transformer.buffer_content()
+    self.transformer.buffer_content()
   }
 
   pub fn display_string(&self) -> String {
-    self.buffer.clone() + &self.transformer.display_string()
+    self.transformer.display_string()
   }
 
   fn replace_new_transformer(&mut self) {

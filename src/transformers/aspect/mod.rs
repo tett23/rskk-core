@@ -79,14 +79,12 @@ impl KeyImputtable for AspectTransformer {
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
-    println!("push character {}", character);
     let new_aspect = match &self.aspect {
       Aspect::Yomi(t) => t.push_character(character),
       Aspect::SelectCandidate(t) => t.push_character(character),
       Aspect::Stopped(t) => t.push_character(character),
       Aspect::Canceled(t) => t.push_character(character),
     };
-    println!("new_aspect {:?}", new_aspect.buffer_content());
     let mut new_state = self.clone();
     new_state.aspect = match new_aspect.transformer_type() {
       TransformerTypes::Yomi => Aspect::Yomi(new_aspect),
@@ -95,7 +93,6 @@ impl KeyImputtable for AspectTransformer {
       TransformerTypes::Stopped => Aspect::Stopped(new_aspect),
       _ => unreachable!(),
     };
-    println!("new_state {:?}", new_state.buffer_content());
 
     Box::new(new_state)
   }

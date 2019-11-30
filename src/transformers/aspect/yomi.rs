@@ -34,6 +34,9 @@ impl Yomi {
   pub fn new_from_buffer(&self, buffer: String) -> Self {
     let mut ret = self.clone();
     ret.buffer = buffer;
+    ret.transformer = self
+      .transformer_type
+      .to_transformer(self.config.clone(), self.dictionary.clone());
 
     ret
   }
@@ -64,18 +67,16 @@ impl KeyImputtable for Yomi {
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
-    println!("push yomi {}", character);
     // ここらへんCompositionの再利用でよさそう
     let new_transformer = self.transformer.push_character(character);
-    if new_transformer.is_stopped() {
-      let new_buffer = self.buffer.clone() + &new_transformer.buffer_content();
-      return Box::new(self.new_from_buffer(new_buffer));
-    }
 
-    println!("new_transformer {:?}", new_transformer.buffer_content());
-    let ret = Box::new(self.new_from_transformer(new_transformer));
-    println!("new_transformer {:?}", ret.buffer_content());
-    ret
+    match new_transformer.is_stopped() {
+      true => {
+        let new_buffer = self.buffer.clone() + &new_transformer.buffer_content();
+        Box::new(self.new_from_buffer(new_buffer))
+      }
+      false => Box::new(self.new_from_transformer(new_transformer)),
+    }
   }
 
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
