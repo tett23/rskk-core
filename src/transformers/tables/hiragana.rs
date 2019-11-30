@@ -108,6 +108,20 @@ pub fn convert(current_buffer: &str, character: char) -> Option<(String, BufferS
     ("y", 'e') => Some(("いぇ", Stop)),
     ("y", 'o') => Some(("よ", Stop)),
 
+    ("", 'j') => Some(("j", Continue)),
+    ("j", 'a') => Some(("じゃ", Stop)),
+    ("j", 'i') => Some(("じ", Stop)),
+    ("j", 'u') => Some(("じゅ", Stop)),
+    ("j", 'e') => Some(("じぇ", Stop)),
+    ("j", 'o') => Some(("じょ", Stop)),
+
+    ("j", 'y') => Some(("jy", Continue)),
+    ("jy", 'a') => Some(("じゃ", Stop)),
+    ("jy", 'i') => Some(("じぃ", Stop)),
+    ("jy", 'u') => Some(("じゅ", Stop)),
+    ("jy", 'e') => Some(("じぇ", Stop)),
+    ("jy", 'o') => Some(("じょ", Stop)),
+
     ("", 'r') => Some(("r", Continue)),
     ("r", 'a') => Some(("ら", Stop)),
     ("r", 'i') => Some(("り", Stop)),
@@ -129,6 +143,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<(String, BufferS
     ("v", 'e') => Some(("う゛ぇ", Stop)),
     ("v", 'o') => Some(("ぼ", Stop)),
 
+    ("", 'x') => Some(("x", Continue)),
     ("x", 'a') => Some(("ぁ", Stop)),
     ("x", 'i') => Some(("ぃ", Stop)),
     ("x", 'u') => Some(("ぅ", Stop)),
