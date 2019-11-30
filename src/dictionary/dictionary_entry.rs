@@ -1,10 +1,10 @@
-use super::transform_entry::TransformEntry;
+use super::Candidate;
 use std::hash::{Hash, Hasher};
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct DictionaryEntry {
   pub read: String,
-  pub transforms: Vec<TransformEntry>,
+  pub candidates: Vec<Candidate>,
 }
 
 impl Hash for DictionaryEntry {
@@ -15,8 +15,8 @@ impl Hash for DictionaryEntry {
 }
 
 impl DictionaryEntry {
-  pub fn new(read: String, transforms: Vec<TransformEntry>) -> Self {
-    DictionaryEntry { read, transforms }
+  pub fn new(read: String, candidates: Vec<Candidate>) -> Self {
+    DictionaryEntry { read, candidates }
   }
 
   pub fn parse(string: &str) -> Option<Self> {
@@ -34,7 +34,7 @@ impl DictionaryEntry {
     let read = items.next()?.trim().to_string();
     let mut transforms = Vec::new();
     items.for_each(|&item| {
-      if let Some(item) = TransformEntry::parse(item) {
+      if let Some(item) = Candidate::parse(item) {
         transforms.push(item);
       }
     });
@@ -58,8 +58,8 @@ mod tests {
       Some(DictionaryEntry::new(
         "a".to_string(),
         vec![
-          TransformEntry::new("b".to_string(), Some("c".to_string()),),
-          TransformEntry::new("d".to_string(), None,)
+          Candidate::new("b".to_string(), Some("c".to_string()),),
+          Candidate::new("d".to_string(), None,)
         ],
       ))
     );
@@ -69,7 +69,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        vec![TransformEntry::new("b".to_string(), None,)],
+        vec![Candidate::new("b".to_string(), None,)],
       ))
     );
 
@@ -78,7 +78,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        vec![TransformEntry::new("b".to_string(), None,)],
+        vec![Candidate::new("b".to_string(), None,)],
       ))
     );
 
@@ -87,7 +87,7 @@ mod tests {
       item,
       Some(DictionaryEntry::new(
         "a".to_string(),
-        vec![TransformEntry::new("b".to_string(), None,)],
+        vec![Candidate::new("b".to_string(), None,)],
       ))
     );
 

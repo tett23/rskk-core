@@ -1,12 +1,12 @@
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct TransformEntry {
+pub struct Candidate {
   pub entry: String,
   pub annotation: Option<String>,
 }
 
-impl TransformEntry {
+impl Candidate {
   pub fn new(entry: String, annotation: Option<String>) -> Self {
-    TransformEntry { entry, annotation }
+    Candidate { entry, annotation }
   }
   pub fn parse(string: &str) -> Option<Self> {
     let pair: Vec<_> = string.trim().splitn(2, ";").collect();
@@ -16,7 +16,7 @@ impl TransformEntry {
     }
     let annotation = pair.get(1);
 
-    Some(TransformEntry::new(
+    Some(Candidate::new(
       entry,
       match annotation {
         Some(v) => Some(v.to_string()),
@@ -32,19 +32,19 @@ mod tests {
 
   #[test]
   fn parse() {
-    let item = TransformEntry::parse("a;b");
+    let item = Candidate::parse("a;b");
     assert_eq!(
       item,
-      Some(TransformEntry::new("a".to_string(), Some("b".to_string())))
+      Some(Candidate::new("a".to_string(), Some("b".to_string())))
     );
 
-    let item = TransformEntry::parse("a");
-    assert_eq!(item, Some(TransformEntry::new("a".to_string(), None)));
+    let item = Candidate::parse("a");
+    assert_eq!(item, Some(Candidate::new("a".to_string(), None)));
 
-    let item = TransformEntry::parse("");
+    let item = Candidate::parse("");
     assert_eq!(item, None);
 
-    let item = TransformEntry::parse(" ");
+    let item = Candidate::parse(" ");
     assert_eq!(item, None);
   }
 }

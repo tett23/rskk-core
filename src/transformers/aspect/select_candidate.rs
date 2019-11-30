@@ -2,7 +2,7 @@ use super::super::{
   BufferState, Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes,
 };
 use super::{Canceled, Stopped};
-use crate::dictionary::{DictionaryEntry, TransformEntry};
+use crate::dictionary::{Candidate, DictionaryEntry};
 use crate::keyboards::{KeyCode, MetaKey};
 use std::collections::HashSet;
 
@@ -20,7 +20,7 @@ impl SelectCandidate {
       buffer: "".to_string(),
       buffer_state: BufferState::Continue,
       dictionary_entry: dictionary_entry.clone(),
-      candidates: Candidates::new(&dictionary_entry.transforms),
+      candidates: Candidates::new(&dictionary_entry.candidates),
     }
   }
 }
@@ -100,12 +100,12 @@ impl Displayable for SelectCandidate {
 
 #[derive(Clone, Debug)]
 struct Candidates {
-  candidates: Vec<TransformEntry>,
+  candidates: Vec<Candidate>,
   pos: usize,
 }
 
 impl Candidates {
-  pub fn new(candidates: &Vec<TransformEntry>) -> Self {
+  pub fn new(candidates: &Vec<Candidate>) -> Self {
     let mut items = Vec::new();
     for item in candidates.iter() {
       items.push(item.clone());
@@ -117,7 +117,7 @@ impl Candidates {
     }
   }
 
-  pub fn next(&mut self) -> Option<&TransformEntry> {
+  pub fn next(&mut self) -> Option<&Candidate> {
     if self.pos >= self.candidates.len() {
       return None;
     }
@@ -126,7 +126,7 @@ impl Candidates {
     self.candidates.get(self.pos)
   }
 
-  pub fn prev(&mut self) -> Option<&TransformEntry> {
+  pub fn prev(&mut self) -> Option<&Candidate> {
     if self.pos <= 0 {
       return None;
     }
@@ -135,7 +135,7 @@ impl Candidates {
     self.candidates.get(self.pos)
   }
 
-  pub fn current(&self) -> Option<&TransformEntry> {
+  pub fn current(&self) -> Option<&Candidate> {
     self.candidates.get(self.pos)
   }
 }
@@ -147,8 +147,8 @@ mod tests {
 
   #[test]
   fn space() {
-    let candidate1 = TransformEntry::new("a".to_string(), None);
-    let candidate2 = TransformEntry::new("b".to_string(), None);
+    let candidate1 = Candidate::new("a".to_string(), None);
+    let candidate2 = Candidate::new("b".to_string(), None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
     let select_candidate = SelectCandidate::new(&dictionary_entry);
@@ -160,12 +160,12 @@ mod tests {
         .buffer_content(),
       "b"
     );
-    // TODO: 単語登録のテスト
+    // TODO: 単語登録のテストCandidate
   }
 
   #[test]
   fn enter() {
-    let candidate1 = TransformEntry::new("a".to_string(), None);
+    let candidate1 = Candidate::new("a".to_string(), None);
     let vec = vec![candidate1.clone()];
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
     let select_candidate = SelectCandidate::new(&dictionary_entry);
@@ -177,8 +177,8 @@ mod tests {
 
   #[test]
   fn delete() {
-    let candidate1 = TransformEntry::new("a".to_string(), None);
-    let candidate2 = TransformEntry::new("b".to_string(), None);
+    let candidate1 = Candidate::new("a".to_string(), None);
+    let candidate2 = Candidate::new("b".to_string(), None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
     let select_candidate = SelectCandidate::new(&dictionary_entry);
@@ -196,8 +196,8 @@ mod tests {
 
     #[test]
     fn prev() {
-      let candidate1 = TransformEntry::new("a".to_string(), None);
-      let candidate2 = TransformEntry::new("b".to_string(), None);
+      let candidate1 = Candidate::new("a".to_string(), None);
+      let candidate2 = Candidate::new("b".to_string(), None);
       let vec = vec![candidate1.clone(), candidate2.clone()];
       let mut candidates = Candidates::new(&vec);
 
