@@ -4,15 +4,16 @@ mod henkan;
 mod hiragana;
 mod tables;
 
-use crate::config::KeyConfig;
-use crate::keyboards::{KeyCode, KeyCombinations};
-use crate::{set, Config, Dictionary};
+use crate::keyboards::{KeyCode, KeyCombinations, KeyEvents};
+use crate::{set, Dictionary, KeyConfig, RSKKConfig};
 use objekt;
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
-pub use aspect::{Aspect, AspectTransformer, Canceled, SelectCandidate, Stopped, Yomi};
+pub use aspect::{
+  Aspect, AspectTransformer, Canceled, SelectCandidate, Stopped, UnknownWord, Yomi,
+};
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
 pub use hiragana::HiraganaTransformer;
@@ -32,15 +33,81 @@ pub trait Displayable {
   fn display_string(&self) -> String;
 }
 
-pub trait KeyImputtable {
+#[derive(Clone, Debug)]
+pub struct Config {
+  rskk_config: Rc<RSKKConfig>,
+  dictionary: Rc<Dictionary>,
+}
+
+impl Config {
+  pub fn new(rskk_config: Rc<RSKKConfig>, dictionary: Rc<Dictionary>) -> Self {
+    Config {
+      rskk_config,
+      dictionary,
+    }
+  }
+
+  pub fn rskk_config(&self) -> &RSKKConfig {
+    &self.rskk_config
+  }
+
+  pub fn dictionary(&self) -> &Dictionary {
+    &self.dictionary
+  }
+
+  pub fn key_config(&self) -> &KeyConfig {
+    &self.rskk_config.key_config
+  }
+}
+
+pub trait WithConfig {
+  fn config(&self) -> Config;
+}
+
+pub trait KeyInputtable: WithConfig + objekt::Clone {
+  fn push_key_event(
+    &self,
+    pressing_keys: &HashSet<KeyCode>,
+    event: &KeyEvents,
+    last_character: Option<char>,
+  ) -> Box<dyn Transformer> {
+    match event {
+      KeyEvents::KeyDown(key) => {
+        if let Some(new_transformer_type) = self.try_change_transformer(pressing_keys) {
+          let new_transformer = new_transformer_type.to_transformer(self.config());
+
+          match new_transformer_type {
+            TransformerTypes::Henkan => {
+              match key.printable_key() {
+                Some(character) => {
+                  return new_transformer.push_character(character);
+                }
+                None => {}
+              };
+            }
+            _ => {}
+          };
+          return new_transformer;
+        };
+
+        let new_transformer = self.push_key_code(key);
+        let new_transformer = match last_character {
+          Some(character) => new_transformer.push_character(character),
+          None => new_transformer,
+        };
+
+        new_transformer
+      }
+      KeyEvents::KeyUp(_) => self.push_key_code(&KeyCode::Null),
+      KeyEvents::KeyRepeat(_) => unimplemented!(),
+    }
+  }
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer>;
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
 }
 
-pub trait Transformer:
-  TransformerState + KeyImputtable + Displayable + fmt::Debug + objekt::Clone
-{
+pub trait Transformer: TransformerState + KeyInputtable + Displayable + fmt::Debug {
   fn transformer_type(&self) -> TransformerTypes {
     unimplemented!()
   }
@@ -62,41 +129,22 @@ pub enum TransformerTypes {
   Canceled,
   Stopped,
   SelectCandidate,
+  UnknownWord,
 }
 
 impl TransformerTypes {
-  pub fn to_transformer(
-    &self,
-    config: Rc<Config>,
-    dictionary: Rc<Dictionary>,
-  ) -> Box<dyn Transformer> {
+  pub fn to_transformer(&self, config: Config) -> Box<dyn Transformer> {
     match self {
-      TransformerTypes::Direct => {
-        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
+      TransformerTypes::Direct => Box::new(DirectTransformer::new(config)),
+      TransformerTypes::Henkan => {
+        Box::new(HenkanTransformer::new(config, TransformerTypes::Hiragana))
       }
-      TransformerTypes::Henkan => Box::new(HenkanTransformer::new(
-        config,
-        dictionary,
-        TransformerTypes::Hiragana,
-      )),
-      TransformerTypes::Okuri => {
-        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
-      }
-      TransformerTypes::Hiragana => {
-        Box::new(HiraganaTransformer::new(config.clone(), dictionary.clone()))
-      }
-      TransformerTypes::Katakana => {
-        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
-      }
-      TransformerTypes::Abbr => {
-        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
-      }
-      TransformerTypes::EmEisu => {
-        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
-      }
-      TransformerTypes::EnKatakana => {
-        Box::new(DirectTransformer::new(config.clone(), dictionary.clone()))
-      }
+      TransformerTypes::Okuri => Box::new(DirectTransformer::new(config)),
+      TransformerTypes::Hiragana => Box::new(HiraganaTransformer::new(config)),
+      TransformerTypes::Katakana => Box::new(DirectTransformer::new(config)),
+      TransformerTypes::Abbr => Box::new(DirectTransformer::new(config)),
+      TransformerTypes::EmEisu => Box::new(DirectTransformer::new(config)),
+      TransformerTypes::EnKatakana => Box::new(DirectTransformer::new(config)),
       _ => unreachable!(),
     }
   }

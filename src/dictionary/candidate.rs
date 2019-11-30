@@ -5,9 +5,16 @@ pub struct Candidate {
 }
 
 impl Candidate {
-  pub fn new(entry: String, annotation: Option<String>) -> Self {
-    Candidate { entry, annotation }
+  pub fn new<S: Into<String>>(entry: S, annotation: Option<S>) -> Self {
+    Candidate {
+      entry: entry.into(),
+      annotation: match annotation {
+        Some(s) => Some(s.into()),
+        None => None,
+      },
+    }
   }
+
   pub fn parse(string: &str) -> Option<Self> {
     let pair: Vec<_> = string.trim().splitn(2, ";").collect();
     let entry = pair.get(0)?.to_string();

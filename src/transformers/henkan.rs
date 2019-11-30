@@ -1,35 +1,38 @@
 use super::{
-  AspectTransformer, Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes,
+  AspectTransformer, Config, Displayable, KeyInputtable, Transformer, TransformerState,
+  TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
-use crate::{Config, Dictionary};
 use std::collections::HashSet;
-use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub struct HenkanTransformer {
-  config: Rc<Config>,
-  dictionary: Rc<Dictionary>,
+  config: Config,
   transformer: Box<dyn Transformer>,
 }
 
 impl HenkanTransformer {
-  pub fn new(
-    config: Rc<Config>,
-    dictionary: Rc<Dictionary>,
-    transformer_type: TransformerTypes,
-  ) -> Self {
+  pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
     HenkanTransformer {
-      transformer: Box::new(AspectTransformer::new(
-        config.clone(),
-        dictionary.clone(),
-        transformer_type,
-      )),
+      transformer: Box::new(AspectTransformer::new(config.clone(), transformer_type)),
       config,
-      dictionary,
     }
   }
+
+  fn new_from_transformer(&self, transformer: Box<dyn Transformer>) -> Self {
+    let mut ret = self.clone();
+    ret.transformer = transformer;
+
+    ret
+  }
 }
+
+impl WithConfig for HenkanTransformer {
+  fn config(&self) -> Config {
+    self.config.clone()
+  }
+}
+
 impl TransformerState for HenkanTransformer {
   fn is_stopped(&self) -> bool {
     self.transformer.is_stopped()
@@ -42,17 +45,27 @@ impl Transformer for HenkanTransformer {
   }
 }
 
-impl KeyImputtable for HenkanTransformer {
+impl KeyInputtable for HenkanTransformer {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
-    self.transformer.push_character(character)
+    let new_transformer = self.transformer.push_character(character);
+    if new_transformer.is_stopped() {
+      return new_transformer;
+    }
+
+    Box::new(self.new_from_transformer(new_transformer))
   }
 
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    self.transformer.push_key_code(key_code)
+    let new_transformer = self.transformer.push_key_code(key_code);
+    if new_transformer.is_stopped() {
+      return new_transformer;
+    }
+
+    Box::new(self.new_from_transformer(new_transformer))
   }
 }
 

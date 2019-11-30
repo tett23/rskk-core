@@ -1,5 +1,6 @@
 use super::super::{
-  BufferState, Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes,
+  BufferState, Config, Displayable, KeyInputtable, Transformer, TransformerState, TransformerTypes,
+  WithConfig,
 };
 use super::{Canceled, Stopped};
 use crate::dictionary::{Candidate, DictionaryEntry};
@@ -8,6 +9,7 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidate {
+  config: Config,
   buffer: String,
   buffer_state: BufferState,
   dictionary_entry: DictionaryEntry,
@@ -15,13 +17,20 @@ pub struct SelectCandidate {
 }
 
 impl SelectCandidate {
-  pub fn new(dictionary_entry: &DictionaryEntry) -> Self {
+  pub fn new(config: Config, dictionary_entry: &DictionaryEntry) -> Self {
     SelectCandidate {
+      config,
       buffer: "".to_string(),
       buffer_state: BufferState::Continue,
       dictionary_entry: dictionary_entry.clone(),
       candidates: Candidates::new(&dictionary_entry.candidates),
     }
+  }
+}
+
+impl WithConfig for SelectCandidate {
+  fn config(&self) -> Config {
+    self.config.clone()
   }
 }
 
@@ -37,7 +46,7 @@ impl Transformer for SelectCandidate {
   }
 }
 
-impl KeyImputtable for SelectCandidate {
+impl KeyInputtable for SelectCandidate {
   fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     None
   }
@@ -48,14 +57,14 @@ impl KeyImputtable for SelectCandidate {
 
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
     match key_code {
-      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
+      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new(self.config())),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
         let buffer = match self.candidates.current() {
           Some(candidate) => candidate.entry.clone(),
           None => "".to_string(),
         };
 
-        Box::new(Stopped::new(buffer))
+        Box::new(Stopped::new(self.config(), buffer))
       }
       KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
         let mut new_state = self.clone();
@@ -74,7 +83,7 @@ impl KeyImputtable for SelectCandidate {
         let mut new_state = self.clone();
         match new_state.candidates.prev() {
           Some(_) => Box::new(new_state),
-          None => Box::new(Canceled::new()),
+          None => Box::new(Canceled::new(self.config())),
         }
       }
       _ => Box::new(self.clone()),
@@ -143,15 +152,20 @@ impl Candidates {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::key;
+  use crate::{key, set, Dictionary, RSKKConfig};
+  use std::rc::Rc;
 
   #[test]
   fn space() {
-    let candidate1 = Candidate::new("a".to_string(), None);
-    let candidate2 = Candidate::new("b".to_string(), None);
+    let config = Config::new(
+      Rc::new(RSKKConfig::default_config()),
+      Rc::new(Dictionary::new(set![])),
+    );
+    let candidate1 = Candidate::new("a", None);
+    let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
-    let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
-    let select_candidate = SelectCandidate::new(&dictionary_entry);
+    let dictionary_entry = DictionaryEntry::new("test", vec);
+    let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry);
 
     assert_eq!(select_candidate.buffer_content(), "a");
     assert_eq!(
@@ -165,10 +179,14 @@ mod tests {
 
   #[test]
   fn enter() {
-    let candidate1 = Candidate::new("a".to_string(), None);
+    let config = Config::new(
+      Rc::new(RSKKConfig::default_config()),
+      Rc::new(Dictionary::new(set![])),
+    );
+    let candidate1 = Candidate::new("a", None);
     let vec = vec![candidate1.clone()];
-    let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
-    let select_candidate = SelectCandidate::new(&dictionary_entry);
+    let dictionary_entry = DictionaryEntry::new("test", vec);
+    let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry);
 
     let stopped = select_candidate.push_key_code(&key!("enter"));
     assert_eq!(stopped.transformer_type(), TransformerTypes::Stopped);
@@ -177,11 +195,15 @@ mod tests {
 
   #[test]
   fn delete() {
-    let candidate1 = Candidate::new("a".to_string(), None);
-    let candidate2 = Candidate::new("b".to_string(), None);
+    let config = Config::new(
+      Rc::new(RSKKConfig::default_config()),
+      Rc::new(Dictionary::new(set![])),
+    );
+    let candidate1 = Candidate::new("a", None);
+    let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
-    let dictionary_entry = DictionaryEntry::new("test".to_string(), vec);
-    let select_candidate = SelectCandidate::new(&dictionary_entry);
+    let dictionary_entry = DictionaryEntry::new("test", vec);
+    let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry);
 
     let select_candidate = select_candidate.push_key_code(&key!("space"));
     let select_candidate = select_candidate.push_key_code(&key!("delete"));
@@ -196,8 +218,8 @@ mod tests {
 
     #[test]
     fn prev() {
-      let candidate1 = Candidate::new("a".to_string(), None);
-      let candidate2 = Candidate::new("b".to_string(), None);
+      let candidate1 = Candidate::new("a", None);
+      let candidate2 = Candidate::new("b", None);
       let vec = vec![candidate1.clone(), candidate2.clone()];
       let mut candidates = Candidates::new(&vec);
 

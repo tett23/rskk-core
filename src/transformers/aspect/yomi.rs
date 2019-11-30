@@ -1,43 +1,33 @@
 use super::super::{
-  Displayable, KeyImputtable, SelectCandidate, Stopped, Transformer, TransformerState,
-  TransformerTypes,
+  Canceled, Config, Displayable, KeyInputtable, SelectCandidate, Stopped, Transformer,
+  TransformerState, TransformerTypes, UnknownWord, WithConfig,
 };
-use super::Canceled;
+use super::unknown_word::Word;
 use crate::keyboards::{KeyCode, MetaKey};
-use crate::{Config, Dictionary};
 use std::collections::HashSet;
-use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub struct Yomi {
-  config: Rc<Config>,
-  dictionary: Rc<Dictionary>,
+  config: Config,
   buffer: String,
   transformer_type: TransformerTypes,
   transformer: Box<dyn Transformer>,
 }
 
 impl Yomi {
-  pub fn new(
-    config: Rc<Config>,
-    dictionary: Rc<Dictionary>,
-    transformer_type: TransformerTypes,
-  ) -> Self {
+  pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
     Yomi {
       config: config.clone(),
-      dictionary: dictionary.clone(),
       buffer: "".to_string(),
       transformer_type,
-      transformer: transformer_type.to_transformer(config.clone(), dictionary.clone()),
+      transformer: transformer_type.to_transformer(config),
     }
   }
 
   pub fn new_from_buffer(&self, buffer: String) -> Self {
     let mut ret = self.clone();
     ret.buffer = buffer;
-    ret.transformer = self
-      .transformer_type
-      .to_transformer(self.config.clone(), self.dictionary.clone());
+    ret.transformer = self.transformer_type.to_transformer(self.config());
 
     ret
   }
@@ -47,6 +37,12 @@ impl Yomi {
     ret.transformer = transformer;
 
     ret
+  }
+}
+
+impl WithConfig for Yomi {
+  fn config(&self) -> Config {
+    self.config.clone()
   }
 }
 
@@ -62,7 +58,7 @@ impl Transformer for Yomi {
   }
 }
 
-impl KeyImputtable for Yomi {
+impl KeyInputtable for Yomi {
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     self.transformer.try_change_transformer(pressing_keys)
   }
@@ -81,18 +77,19 @@ impl KeyImputtable for Yomi {
   }
 
   fn push_key_code(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+    // MetaAcceptable traitに移譲する
     match key_code {
-      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new()),
+      KeyCode::Meta(MetaKey::Escape) => Box::new(Canceled::new(self.config())),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        Box::new(Stopped::new(self.buffer_content()))
+        Box::new(Stopped::new(self.config(), self.buffer_content()))
       }
       KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
-        match self.dictionary.transform(&self.buffer_content()) {
-          Some(entry) => Box::new(SelectCandidate::new(entry)),
-          None => {
-            // TODO: 単語登録
-            unimplemented!()
-          }
+        match self.config().dictionary.transform(&self.buffer_content()) {
+          Some(entry) => Box::new(SelectCandidate::new(self.config(), entry)),
+          None => Box::new(UnknownWord::new(
+            self.config(),
+            Word::new(self.buffer_content(), None),
+          )),
         }
       }
       KeyCode::PrintableMeta(MetaKey::Backspace, _)
@@ -117,33 +114,27 @@ impl Displayable for Yomi {
   }
 
   fn display_string(&self) -> String {
-    let buf = self.buffer.clone() + &self.transformer.display_string();
-    if buf.len() == 0 {
-      return buf;
-    }
-
-    "▽".to_string() + &buf
+    "▽".to_string() + &self.buffer_content()
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use std::collections::HashSet;
+  use crate::tests::dummy_conf;
 
   #[test]
   fn push() {
-    let config = Rc::new(Config::default_config());
-    let dictionary = Rc::new(Dictionary::new(HashSet::new()));
-    let yomi = Yomi::new(config, dictionary, TransformerTypes::Hiragana);
+    let config = dummy_conf();
+    let yomi = Yomi::new(config.clone(), TransformerTypes::Hiragana);
 
     let yomi = yomi.push_character('a');
-    assert_eq!(yomi.buffer_content(), "あ");
+    assert_eq!(yomi.display_string(), "▽あ");
 
     let yomi = yomi.push_character('k');
     assert_eq!(yomi.display_string(), "▽あk");
 
     let yomi = yomi.push_character('a');
-    assert_eq!(yomi.buffer_content(), "あか");
+    assert_eq!(yomi.display_string(), "▽あか");
   }
 }

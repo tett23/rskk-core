@@ -1,20 +1,19 @@
 mod composition;
-mod config;
 mod dictionary;
 mod keyboards;
+mod rskk_config;
 mod tests;
 mod transformers;
 
 use composition::Composition;
-use std::collections::HashSet;
 use std::rc::Rc;
-use transformers::TransformerTypes;
+use transformers::{Config, TransformerTypes};
 
-pub use config::Config;
 pub use dictionary::{Dictionary, DictionaryEntry};
+pub use rskk_config::{KeyConfig, RSKKConfig};
 
 pub struct RSKK {
-    config: Rc<Config>,
+    config: Rc<RSKKConfig>,
     dictionary: Rc<Dictionary>,
     compositions: Vec<Composition>,
     default_composition_type: TransformerTypes,
@@ -23,7 +22,7 @@ pub struct RSKK {
 impl RSKK {
     pub fn new(default_composition_type: TransformerTypes) -> Self {
         RSKK {
-            config: Rc::new(Config::default_config()),
+            config: Rc::new(RSKKConfig::default_config()),
             dictionary: Rc::new(Dictionary::new(set![])),
             compositions: vec![],
             default_composition_type,
@@ -40,8 +39,7 @@ impl RSKK {
 
     pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> &mut Composition {
         self.compositions.push(Composition::new(
-            self.config.clone(),
-            self.dictionary.clone(),
+            Config::new(self.config.clone(), self.dictionary.clone()),
             composition_type,
         ));
 
@@ -54,7 +52,7 @@ macro_rules! set {
   ( $( $x:expr ),* ) => {
       {
           #[allow(unused_mut)]
-          let mut temp_set = HashSet::new();
+          let mut temp_set = std::collections::HashSet::new();
           $(
               temp_set.insert($x);
           )*
@@ -68,7 +66,7 @@ macro_rules! combo {
   ( $( $x:expr ),* ) => {
       {
           #[allow(unused_mut)]
-          let mut temp_set = HashSet::new();
+          let mut temp_set = std::collections::HashSet::new();
           $(
               temp_set.insert($x);
           )*
@@ -83,7 +81,7 @@ macro_rules! combos {
   ( $( $x:expr ),* ) => {
       {
           #[allow(unused_mut)]
-          let mut temp_set = HashSet::new();
+          let mut temp_set = std::collections::HashSet::new();
           $(
               temp_set.insert($x);
           )*
@@ -125,7 +123,7 @@ macro_rules! key {
 #[cfg(test)]
 mod lib_tests {
     use super::*;
-    use crate::tests::helpers::str_to_key_code_vector;
+    use crate::tests::str_to_key_code_vector;
 
     #[test]
     fn it_works() {
@@ -162,6 +160,18 @@ mod lib_tests {
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
         composition.push_key_events(&str_to_key_code_vector("K"));
         assert_eq!(composition.display_string(), "▽k");
+
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Ka"));
+        assert_eq!(composition.display_string(), "▽か");
+
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Kann"));
+        assert_eq!(composition.display_string(), "▽かん");
+
+        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
+        composition.push_key_events(&str_to_key_code_vector("Kannj"));
+        assert_eq!(composition.display_string(), "▽かんj");
 
         let composition = skk.start_composition_as(TransformerTypes::Hiragana);
         composition.push_key_events(&str_to_key_code_vector("Kannji"));

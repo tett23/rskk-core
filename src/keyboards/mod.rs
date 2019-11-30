@@ -1,7 +1,7 @@
 pub mod keycodes;
 pub mod us;
 
-use crate::config::KeyConfig;
+use crate::KeyConfig;
 use crate::TransformerTypes;
 use std::collections::HashSet;
 
@@ -81,8 +81,8 @@ pub trait Keyboard {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::config::KeyConfig;
-  use crate::tests::helpers::str_to_key_code_vector;
+  use crate::tests::str_to_key_code_vector;
+  use crate::KeyConfig;
 
   #[test]
   fn change_transformer() {

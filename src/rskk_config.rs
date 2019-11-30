@@ -5,15 +5,15 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct Config {
+pub struct RSKKConfig {
   pub keyboard_type: Keyboards,
   pub key_config: Rc<KeyConfig>,
   pub is_enable_sticky_shift: bool,
 }
 
-impl Config {
+impl RSKKConfig {
   pub fn default_config() -> Self {
-    Config {
+    RSKKConfig {
       keyboard_type: Keyboards::US,
       key_config: Rc::new(KeyConfig::default_config()),
       is_enable_sticky_shift: false,

@@ -1,3 +1,5 @@
 #![cfg(test)]
 
-pub mod helpers;
+mod helpers;
+
+pub use helpers::*;

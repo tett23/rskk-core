@@ -1,8 +1,17 @@
 #![cfg(test)]
 
-use crate::key;
 use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
+use crate::transformers::Config;
+use crate::{key, set, Dictionary, RSKKConfig};
+use std::rc::Rc;
 use KeyEvents::*;
+
+pub fn dummy_conf() -> Config {
+  Config::new(
+    Rc::new(RSKKConfig::default_config()),
+    Rc::new(Dictionary::new(set![])),
+  )
+}
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum KeyManipulation {

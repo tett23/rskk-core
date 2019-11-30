@@ -15,8 +15,11 @@ impl Hash for DictionaryEntry {
 }
 
 impl DictionaryEntry {
-  pub fn new(read: String, candidates: Vec<Candidate>) -> Self {
-    DictionaryEntry { read, candidates }
+  pub fn new<S: Into<String>>(read: S, candidates: Vec<Candidate>) -> Self {
+    DictionaryEntry {
+      read: read.into(),
+      candidates,
+    }
   }
 
   pub fn parse(string: &str) -> Option<Self> {

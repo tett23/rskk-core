@@ -1,13 +1,23 @@
-use super::super::{Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes};
+use super::super::{
+  Config, Displayable, KeyInputtable, Transformer, TransformerState, TransformerTypes, WithConfig,
+};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Canceled {}
+pub struct Canceled {
+  config: Config,
+}
 
 impl Canceled {
-  pub fn new() -> Self {
-    Canceled {}
+  pub fn new(config: Config) -> Self {
+    Canceled { config }
+  }
+}
+
+impl WithConfig for Canceled {
+  fn config(&self) -> Config {
+    self.config.clone()
   }
 }
 
@@ -23,17 +33,17 @@ impl Transformer for Canceled {
   }
 }
 
-impl KeyImputtable for Canceled {
+impl KeyInputtable for Canceled {
   fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     None
   }
 
   fn push_character(&self, _: char) -> Box<dyn Transformer> {
-    Box::new(Canceled::new())
+    Box::new(Canceled::new(self.config()))
   }
 
   fn push_key_code(&self, _: &KeyCode) -> Box<dyn Transformer> {
-    Box::new(Canceled::new())
+    Box::new(Canceled::new(self.config()))
   }
 }
 

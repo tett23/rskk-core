@@ -1,21 +1,31 @@
-use super::super::{Displayable, KeyImputtable, Transformer, TransformerState, TransformerTypes};
+use super::super::{
+  Config, Displayable, KeyInputtable, Transformer, TransformerState, TransformerTypes, WithConfig,
+};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct Stopped {
+  config: Config,
   buffer: String,
 }
 
 impl Stopped {
-  pub fn new(buffer: String) -> Self {
-    Stopped { buffer }
+  pub fn new(config: Config, buffer: String) -> Self {
+    Stopped { config, buffer }
   }
 
-  pub fn empty() -> Self {
+  pub fn empty(config: Config) -> Self {
     Stopped {
+      config,
       buffer: "".to_string(),
     }
+  }
+}
+
+impl WithConfig for Stopped {
+  fn config(&self) -> Config {
+    self.config.clone()
   }
 }
 
@@ -31,7 +41,7 @@ impl Transformer for Stopped {
   }
 }
 
-impl KeyImputtable for Stopped {
+impl KeyInputtable for Stopped {
   fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
     None
   }
