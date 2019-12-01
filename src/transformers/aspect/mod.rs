@@ -1,4 +1,5 @@
 mod canceled;
+mod continuous;
 mod select_candidate;
 mod stopped;
 mod unknown_word;
@@ -12,9 +13,10 @@ use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 pub use canceled::Canceled;
+pub use continuous::ContinuousTransformer;
 pub use select_candidate::SelectCandidate;
 pub use stopped::Stopped;
-pub use unknown_word::UnknownWord;
+pub use unknown_word::{UnknownWord, Word};
 pub use yomi::Yomi;
 
 #[derive(Clone, Debug)]

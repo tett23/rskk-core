@@ -20,6 +20,20 @@ impl Composition {
     }
   }
 
+  #[cfg(test)]
+  pub fn new_from_transformer(config: Config, transformer: Box<dyn Transformer>) -> Self {
+    let keyboard = config.rskk_config().keyboard_type.to_keyboard();
+
+    Composition {
+      transformer,
+      keyboard: keyboard,
+    }
+  }
+
+  pub fn transformer_type(&self) -> TransformerTypes {
+    self.transformer.transformer_type()
+  }
+
   pub fn push_key_events(&mut self, events: &Vec<KeyEvents>) {
     events.iter().for_each(|e| self.push_key_event(e))
   }

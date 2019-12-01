@@ -76,6 +76,26 @@ impl Transformer for HiraganaTransformer {
   fn push_escape(&self) -> Box<dyn Transformer> {
     Box::new(Canceled::new(self.config()))
   }
+
+  fn transformer_changed(
+    &self,
+    new_transformer: Box<dyn Transformer>,
+    key: Option<char>,
+  ) -> Box<dyn Transformer> {
+    match new_transformer.transformer_type() {
+      TransformerTypes::Henkan => {
+        match key {
+          Some(character) => {
+            return new_transformer.push_character(character);
+          }
+          None => {}
+        };
+      }
+      _ => {}
+    };
+
+    new_transformer
+  }
 }
 
 impl Displayable for HiraganaTransformer {

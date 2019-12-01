@@ -120,73 +120,204 @@ macro_rules! key {
     };
 }
 
+#[macro_export]
+macro_rules! tf {
+    ( $t:expr, $conf:expr ) => {
+        match $t {
+            transformers::TransformerTypes::Direct => {
+                Box::new(transformers::DirectTransformer::new($conf))
+            }
+            transformers::TransformerTypes::Hiragana => {
+                Box::new(transformers::HiraganaTransformer::new($conf))
+            }
+            _ => unreachable!(),
+        }
+    };
+    ( ContinuousTransformer, $conf:expr, $v:expr  ) => {
+        Box::new(transformers::ContinuousTransformer::new($conf, $v))
+    };
+    ( UnknownWordTransformer, $conf:expr, $v:expr ) => {
+        Box::new(transformers::UnknownWord::new($conf, $v))
+    };
+}
+
 #[cfg(test)]
 mod lib_tests {
     use super::*;
-    use crate::tests::str_to_key_code_vector;
+    use crate::tests::{dummy_conf, str_to_key_code_vector};
+    use transformers::Transformer;
+    use transformers::Word;
+    use TransformerTypes::*;
+
+    #[derive(Debug)]
+    struct TestData<S: Into<String>>(Box<dyn Transformer>, S, S, TransformerTypes);
 
     #[test]
-    fn it_works() {
-        let mut skk = RSKK::new(TransformerTypes::Direct);
-        skk.parse_dictionary("かんじ/漢字/");
-        let composition = skk.start_composition();
-        composition.push_key_events(&str_to_key_code_vector("a"));
-        assert_eq!(composition.display_string(), "a");
+    fn it_works2() {
+        let conf = dummy_conf();
+        // conf.dictionary = Dictionary::parse(
+        //     "かんじ/漢字/
+        //     みち/未知/
+        //     ご/語/",
+        // );
 
-        let composition = skk.start_composition_as(TransformerTypes::Direct);
-        composition.push_key_events(&str_to_key_code_vector("A"));
-        assert_eq!(composition.display_string(), "A");
+        let items = vec![
+            TestData(tf!(Direct, conf.clone()), "a", "a", Stopped),
+            TestData(tf!(Direct, conf.clone()), "A", "A", Stopped),
+            TestData(tf!(Hiragana, conf.clone()), "a", "あ", Stopped),
+            TestData(tf!(Hiragana, conf.clone()), "ka", "か", Stopped),
+            TestData(tf!(Hiragana, conf.clone()), "ts", "ts", Hiragana),
+            TestData(tf!(Hiragana, conf.clone()), "tsu", "つ", Stopped),
+            TestData(
+                tf!(Direct, conf.clone()),
+                "[down:ctrl]j[up:ctrl]a",
+                "あ",
+                Stopped,
+            ),
+            TestData(tf!(Hiragana, conf.clone()), "K", "▽k", Henkan),
+            TestData(tf!(Hiragana, conf.clone()), "Ka", "▽か", Henkan),
+            TestData(tf!(Hiragana, conf.clone()), "Kannji", "▽かんじ", Henkan),
+            TestData(
+                tf!(Hiragana, conf.clone()),
+                "Kannji[space]",
+                "▼漢字",
+                Henkan,
+            ),
+            TestData(
+                tf!(Hiragana, conf.clone()),
+                "Kannji[space][enter]",
+                "漢字",
+                Stopped,
+            ),
+            TestData(
+                tf!(ContinuousTransformer, conf.clone(), Hiragana),
+                "hiragana",
+                "ひらがな",
+                ContinuousTransformer,
+            ),
+            TestData(
+                tf!(ContinuousTransformer, conf.clone(), Hiragana),
+                "hiragana[enter]",
+                "ひらがな",
+                Stopped,
+            ),
+            TestData(
+                tf!(ContinuousTransformer, conf.clone(), Hiragana),
+                "hiragana[escape]",
+                "",
+                Canceled,
+            ),
+            TestData(
+                tf!(
+                    UnknownWordTransformer,
+                    conf.clone(),
+                    Word::new("みちご", None)
+                ),
+                "hiragana",
+                "[登録: みちご]ひらがな",
+                UnknownWord,
+            ),
+            TestData(
+                tf!(
+                    UnknownWordTransformer,
+                    conf.clone(),
+                    Word::new("みちご", None)
+                ),
+                "Kannji",
+                "[登録: みちご]▽かんじ",
+                UnknownWord,
+            ),
+            TestData(
+                tf!(
+                    UnknownWordTransformer,
+                    conf.clone(),
+                    Word::new("みちご", None)
+                ),
+                "Kannji[space]",
+                "[登録: みちご]▼漢字",
+                UnknownWord,
+            ),
+            TestData(
+                tf!(
+                    UnknownWordTransformer,
+                    conf.clone(),
+                    Word::new("みちご", None)
+                ),
+                "Kannji[space][enter]",
+                "[登録: みちご]漢字",
+                Stopped,
+            ),
+            // TestData(
+            //     tf!(
+            //         UnknownWordTransformer,
+            //         conf.clone(),
+            //         Word::new("みちご", None)
+            //     ),
+            //     "Michigo[space]Michi[space]",
+            //     "[登録: みちご]▼未知",
+            //     Stopped,
+            // ),
+            TestData(
+                tf!(
+                    UnknownWordTransformer,
+                    conf.clone(),
+                    Word::new("みちご", None)
+                ),
+                "Michi[down:space][down:enter]Go[down:space][down:enter]",
+                "未知語",
+                Stopped,
+            ),
+            TestData(
+                tf!(Hiragana, conf.clone()),
+                "Michigo[space]",
+                "[登録: みちご]",
+                Henkan,
+            ),
+            TestData(
+                tf!(Hiragana, conf.clone()),
+                "Michigo[space][enter]",
+                "",
+                Canceled,
+            ),
+        ];
 
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("a"));
-        assert_eq!(composition.display_string(), "あ");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("ka"));
-        assert_eq!(composition.display_string(), "か");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("ts"));
-        assert_eq!(composition.display_string(), "ts");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("tsu"));
-        assert_eq!(composition.display_string(), "つ");
-
-        let composition = skk.start_composition_as(TransformerTypes::Direct);
-        composition.push_key_events(&str_to_key_code_vector("[down:ctrl]j[up:ctrl]a"));
-        assert_eq!(composition.display_string(), "あ");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("K"));
-        assert_eq!(composition.display_string(), "▽k");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Ka"));
-        assert_eq!(composition.display_string(), "▽か");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Kann"));
-        assert_eq!(composition.display_string(), "▽かん");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Kannj"));
-        assert_eq!(composition.display_string(), "▽かんj");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Kannji"));
-        assert_eq!(composition.display_string(), "▽かんじ");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Kannji[down:enter]"));
-        assert_eq!(composition.display_string(), "かんじ");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Kannji[down:space]"));
-        assert_eq!(composition.display_string(), "▼漢字");
-
-        let composition = skk.start_composition_as(TransformerTypes::Hiragana);
-        composition.push_key_events(&str_to_key_code_vector("Kannji[down:space][down:enter]"));
-        assert_eq!(composition.display_string(), "漢字");
+        items.into_iter().for_each(
+            |TestData(start_transformer, input, output, out_transformer)| {
+                let mut composition =
+                    Composition::new_from_transformer(conf.clone(), start_transformer);
+                composition.push_key_events(&str_to_key_code_vector(input));
+                assert_eq!(
+                    (out_transformer, output.into()),
+                    (composition.transformer_type(), composition.display_string()),
+                    "{}",
+                    input
+                );
+            },
+        );
     }
+
+    // #[test]
+    // fn it_works() {
+    //     let mut skk = RSKK::new(TransformerTypes::Direct);
+    //     skk.parse_dictionary(
+    //         "かんじ/漢字/
+    //     みち/未知/
+    //     ご/語/",
+    //     );
+
+    //     let items = vec![TestData(tf!(Direct, conf), "a", "a", Stopped)];
+
+    //     items.into_iter().for_each(
+    //         |TestData(start_transformer, input, output, out_transformer)| {
+    //             let composition = skk.start_composition_as(start_transformer);
+    //             composition.push_key_events(&str_to_key_code_vector(input));
+    //             assert_eq!(
+    //                 (out_transformer, output.into()),
+    //                 (composition.transformer_type(), composition.display_string()),
+    //                 "{:?}",
+    //                 TestData(start_transformer, input, output, out_transformer)
+    //             );
+    //         },
+    //     );
+    // }
 }

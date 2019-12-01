@@ -12,7 +12,8 @@ use std::fmt;
 use std::rc::Rc;
 
 pub use aspect::{
-  Aspect, AspectTransformer, Canceled, SelectCandidate, Stopped, UnknownWord, Yomi,
+  Aspect, AspectTransformer, Canceled, ContinuousTransformer, SelectCandidate, Stopped,
+  UnknownWord, Word, Yomi,
 };
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
@@ -90,29 +91,35 @@ pub trait Transformer:
     key: &KeyCode,
     last_character: Option<char>,
   ) -> Box<dyn Transformer> {
+    println!("change transformer {:?} {:?}", key, self.transformer_type());
     if let Some(new_transformer_type) = self.try_change_transformer(pressing_keys) {
       let new_transformer = new_transformer_type.to_transformer(self.config());
-
-      match new_transformer_type {
-        TransformerTypes::Henkan => {
-          match key.printable_key() {
-            Some(character) => {
-              return new_transformer.push_character(character);
-            }
-            None => {}
-          };
-        }
-        _ => {}
-      };
-      return new_transformer;
+      return self.transformer_changed(new_transformer, key.printable_key());
     };
 
+    println!("change transformer {:?}", self.transformer_type());
     let new_transformer = self.push_meta_key(key);
+    println!(
+      "change transformer {:?}",
+      new_transformer.transformer_type()
+    );
     let new_transformer = match last_character {
       Some(character) => new_transformer.push_character(character),
       None => new_transformer,
     };
+    println!(
+      "change transformer {:?}",
+      new_transformer.transformer_type()
+    );
+    println!();
 
+    new_transformer
+  }
+  fn transformer_changed(
+    &self,
+    new_transformer: Box<dyn Transformer>,
+    _: Option<char>,
+  ) -> Box<dyn Transformer> {
     new_transformer
   }
 
@@ -121,7 +128,7 @@ pub trait Transformer:
   }
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
   fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
-    match key_code {
+    let new_transformer = match key_code {
       KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
         self.push_enter()
@@ -140,8 +147,13 @@ pub trait Transformer:
       KeyCode::Meta(MetaKey::ArrowDown) => self.push_arrow_down(),
       KeyCode::Meta(MetaKey::ArrowLeft) => self.push_arrow_left(),
       KeyCode::Meta(MetaKey::ArrowUp) => self.push_arrow_up(),
-      _ => self.push_null(),
-    }
+      _ => return self.as_trait(),
+    };
+
+    self.transformer_updated(new_transformer)
+  }
+  fn transformer_updated(&self, new_transformer: Box<dyn Transformer>) -> Box<dyn Transformer> {
+    new_transformer
   }
   fn push_character(&self, character: char) -> Box<dyn Transformer>;
 
@@ -201,6 +213,7 @@ pub enum TransformerTypes {
   Stopped,
   SelectCandidate,
   UnknownWord,
+  ContinuousTransformer,
 }
 
 impl TransformerTypes {
@@ -216,6 +229,10 @@ impl TransformerTypes {
       TransformerTypes::Abbr => Box::new(DirectTransformer::new(config)),
       TransformerTypes::EmEisu => Box::new(DirectTransformer::new(config)),
       TransformerTypes::EnKatakana => Box::new(DirectTransformer::new(config)),
+      TransformerTypes::ContinuousTransformer => Box::new(ContinuousTransformer::new(
+        config,
+        TransformerTypes::Hiragana,
+      )),
       _ => unreachable!(),
     }
   }

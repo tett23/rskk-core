@@ -59,6 +59,11 @@ impl Transformer for HenkanTransformer {
 
   fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
     let new_transformer = self.transformer.push_meta_key(key_code);
+
+    self.transformer_updated(new_transformer)
+  }
+
+  fn transformer_updated(&self, new_transformer: Box<dyn Transformer>) -> Box<dyn Transformer> {
     if new_transformer.is_stopped() {
       return new_transformer;
     }
