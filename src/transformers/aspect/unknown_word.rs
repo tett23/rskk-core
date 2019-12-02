@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, Stopped, Transformer,
+  AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, Stopped, Transformable,
   TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -32,7 +32,7 @@ pub struct UnknownWord {
   config: Config,
   word: Word,
   buffer: String,
-  transformer: Box<dyn Transformer>,
+  transformer: Box<dyn Transformable>,
 }
 
 impl UnknownWord {
@@ -48,7 +48,7 @@ impl UnknownWord {
     }
   }
 
-  fn new_from_transformer(&self, transformer: Box<dyn Transformer>) -> Self {
+  fn new_from_transformer(&self, transformer: Box<dyn Transformable>) -> Self {
     let mut ret = self.clone();
     ret.transformer = transformer;
 
@@ -79,7 +79,7 @@ impl TransformerState for UnknownWord {
   }
 }
 
-impl Transformer for UnknownWord {
+impl Transformable for UnknownWord {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::UnknownWord
   }
@@ -90,9 +90,9 @@ impl Transformer for UnknownWord {
 
   fn transformer_changed(
     &self,
-    new_transformer: Box<dyn Transformer>,
+    new_transformer: Box<dyn Transformable>,
     key: Option<char>,
-  ) -> Box<dyn Transformer> {
+  ) -> Box<dyn Transformable> {
     let new_transformer = match new_transformer.transformer_type() {
       TransformerTypes::Henkan => match key {
         Some(character) => new_transformer.push_character(character),
@@ -104,17 +104,17 @@ impl Transformer for UnknownWord {
     Box::new(self.new_from_transformer(new_transformer))
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     Box::new(self.new_from_transformer(self.transformer.push_character(character)))
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
     let new_transformer = self.transformer.push_meta_key(key_code);
 
     self.transformer_updated(new_transformer)
   }
 
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformer>) -> Box<dyn Transformer> {
+  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     if new_transformer.is_stopped() {
       return new_transformer;
     }
@@ -122,11 +122,11 @@ impl Transformer for UnknownWord {
     Box::new(self.new_from_transformer(new_transformer))
   }
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     return Box::new(Canceled::new(self.config()));
   }
 
-  fn push_enter(&self) -> Box<dyn Transformer> {
+  fn push_enter(&self) -> Box<dyn Transformable> {
     if self.transformer.buffer_content().len() == 0 {
       return Box::new(Canceled::new(self.config()));
     }
@@ -155,7 +155,7 @@ impl Displayable for UnknownWord {
 }
 
 impl AsTransformerTrait for UnknownWord {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

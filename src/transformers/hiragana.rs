@@ -1,6 +1,6 @@
 use super::tables::hiragana_convert;
 use super::{
-  AsTransformerTrait, BufferState, Canceled, Config, Displayable, Stopped, Transformer,
+  AsTransformerTrait, BufferState, Canceled, Config, Displayable, Stopped, Transformable,
   TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -53,7 +53,7 @@ impl TransformerState for HiraganaTransformer {
   }
 }
 
-impl Transformer for HiraganaTransformer {
+impl Transformable for HiraganaTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Hiragana
   }
@@ -65,7 +65,7 @@ impl Transformer for HiraganaTransformer {
       .try_change_transformer(&Self::allow_transformers(), pressing_keys)
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     match hiragana_convert(&self.buffer, character) {
       Some((new_buffer, Continue)) => Box::new(self.new_from(new_buffer)),
       Some((new_buffer, Stop)) => Box::new(Stopped::new(self.config(), new_buffer)),
@@ -73,15 +73,15 @@ impl Transformer for HiraganaTransformer {
     }
   }
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     Box::new(Canceled::new(self.config()))
   }
 
   fn transformer_changed(
     &self,
-    new_transformer: Box<dyn Transformer>,
+    new_transformer: Box<dyn Transformable>,
     key: Option<char>,
-  ) -> Box<dyn Transformer> {
+  ) -> Box<dyn Transformable> {
     match new_transformer.transformer_type() {
       TransformerTypes::Henkan => {
         match key {
@@ -109,7 +109,7 @@ impl Displayable for HiraganaTransformer {
 }
 
 impl AsTransformerTrait for HiraganaTransformer {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

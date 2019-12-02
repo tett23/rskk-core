@@ -1,5 +1,5 @@
 use super::{
-  AsTransformerTrait, AspectTransformer, Config, Displayable, Transformer, TransformerState,
+  AsTransformerTrait, AspectTransformer, Config, Displayable, Transformable, TransformerState,
   TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -8,7 +8,7 @@ use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct HenkanTransformer {
   config: Config,
-  transformer: Box<dyn Transformer>,
+  transformer: Box<dyn Transformable>,
 }
 
 impl HenkanTransformer {
@@ -19,7 +19,7 @@ impl HenkanTransformer {
     }
   }
 
-  fn new_from_transformer(&self, transformer: Box<dyn Transformer>) -> Self {
+  fn new_from_transformer(&self, transformer: Box<dyn Transformable>) -> Self {
     let mut ret = self.clone();
     ret.transformer = transformer;
 
@@ -39,7 +39,7 @@ impl TransformerState for HenkanTransformer {
   }
 }
 
-impl Transformer for HenkanTransformer {
+impl Transformable for HenkanTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Henkan
   }
@@ -48,7 +48,7 @@ impl Transformer for HenkanTransformer {
     self.transformer.try_change_transformer(pressing_keys)
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let new_transformer = self.transformer.push_character(character);
     if new_transformer.is_stopped() {
       return new_transformer;
@@ -57,13 +57,13 @@ impl Transformer for HenkanTransformer {
     Box::new(self.new_from_transformer(new_transformer))
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
     let new_transformer = self.transformer.push_meta_key(key_code);
 
     self.transformer_updated(new_transformer)
   }
 
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformer>) -> Box<dyn Transformer> {
+  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     if new_transformer.is_stopped() {
       return new_transformer;
     }
@@ -83,7 +83,7 @@ impl Displayable for HenkanTransformer {
 }
 
 impl AsTransformerTrait for HenkanTransformer {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

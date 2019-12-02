@@ -1,5 +1,5 @@
 use super::{
-  AsTransformerTrait, Canceled, Config, Displayable, Stopped, Transformer, TransformerState,
+  AsTransformerTrait, Canceled, Config, Displayable, Stopped, Transformable, TransformerState,
   TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -37,7 +37,7 @@ impl TransformerState for DirectTransformer {
   }
 }
 
-impl Transformer for DirectTransformer {
+impl Transformable for DirectTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Direct
   }
@@ -49,11 +49,11 @@ impl Transformer for DirectTransformer {
       .try_change_transformer(&Self::allow_transformers(), pressing_keys)
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     return Box::new(Stopped::new(self.config(), character.to_string()));
   }
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     Box::new(Canceled::new(self.config()))
   }
 }
@@ -69,7 +69,7 @@ impl Displayable for DirectTransformer {
 }
 
 impl AsTransformerTrait for DirectTransformer {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

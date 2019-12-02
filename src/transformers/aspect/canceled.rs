@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, Config, Displayable, Transformer, TransformerState, TransformerTypes,
+  AsTransformerTrait, Config, Displayable, Transformable, TransformerState, TransformerTypes,
   WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -28,7 +28,7 @@ impl TransformerState for Canceled {
   }
 }
 
-impl Transformer for Canceled {
+impl Transformable for Canceled {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Canceled
   }
@@ -37,7 +37,7 @@ impl Transformer for Canceled {
     None
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformer> {
+  fn push_character(&self, _: char) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }
@@ -53,7 +53,7 @@ impl Displayable for Canceled {
 }
 
 impl AsTransformerTrait for Canceled {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

@@ -67,7 +67,7 @@ pub trait WithConfig {
   fn config(&self) -> Config;
 }
 
-pub trait Transformer:
+pub trait Transformable:
   AsTransformerTrait + WithConfig + TransformerState + Displayable + fmt::Debug + objekt::Clone
 {
   fn transformer_type(&self) -> TransformerTypes {
@@ -79,7 +79,7 @@ pub trait Transformer:
     pressing_keys: &HashSet<KeyCode>,
     event: &KeyEvents,
     last_character: Option<char>,
-  ) -> Box<dyn Transformer> {
+  ) -> Box<dyn Transformable> {
     match event {
       KeyEvents::KeyDown(key) => self.key_down(pressing_keys, key, last_character),
       KeyEvents::KeyUp(_) => self.key_up(),
@@ -92,7 +92,7 @@ pub trait Transformer:
     pressing_keys: &HashSet<KeyCode>,
     key: &KeyCode,
     last_character: Option<char>,
-  ) -> Box<dyn Transformer> {
+  ) -> Box<dyn Transformable> {
     println!("change transformer {:?} {:?}", key, self.transformer_type());
     if let Some(new_transformer_type) = self.try_change_transformer(pressing_keys) {
       let new_transformer = new_transformer_type.to_transformer(self.config());
@@ -119,17 +119,17 @@ pub trait Transformer:
   }
   fn transformer_changed(
     &self,
-    new_transformer: Box<dyn Transformer>,
+    new_transformer: Box<dyn Transformable>,
     _: Option<char>,
-  ) -> Box<dyn Transformer> {
+  ) -> Box<dyn Transformable> {
     new_transformer
   }
 
-  fn key_up(&self) -> Box<dyn Transformer> {
+  fn key_up(&self) -> Box<dyn Transformable> {
     self.push_meta_key(&KeyCode::Null)
   }
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
     let new_transformer = match key_code {
       KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
@@ -154,51 +154,51 @@ pub trait Transformer:
 
     self.transformer_updated(new_transformer)
   }
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformer>) -> Box<dyn Transformer> {
+  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     new_transformer
   }
-  fn push_character(&self, character: char) -> Box<dyn Transformer>;
+  fn push_character(&self, character: char) -> Box<dyn Transformable>;
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_enter(&self) -> Box<dyn Transformer> {
+  fn push_enter(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_space(&self) -> Box<dyn Transformer> {
+  fn push_space(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_backspace(&self) -> Box<dyn Transformer> {
+  fn push_backspace(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_delete(&self) -> Box<dyn Transformer> {
+  fn push_delete(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_tab(&self) -> Box<dyn Transformer> {
+  fn push_tab(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_null(&self) -> Box<dyn Transformer> {
+  fn push_null(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_arrow_right(&self) -> Box<dyn Transformer> {
+  fn push_arrow_right(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_arrow_down(&self) -> Box<dyn Transformer> {
+  fn push_arrow_down(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_arrow_left(&self) -> Box<dyn Transformer> {
+  fn push_arrow_left(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_arrow_up(&self) -> Box<dyn Transformer> {
+  fn push_arrow_up(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
 }
 
 pub trait AsTransformerTrait {
-  fn as_trait(&self) -> Box<dyn Transformer>;
+  fn as_trait(&self) -> Box<dyn Transformable>;
 }
 
-objekt::clone_trait_object!(Transformer);
+objekt::clone_trait_object!(Transformable);
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
 pub enum TransformerTypes {
@@ -219,7 +219,7 @@ pub enum TransformerTypes {
 }
 
 impl TransformerTypes {
-  pub fn to_transformer(&self, config: Config) -> Box<dyn Transformer> {
+  pub fn to_transformer(&self, config: Config) -> Box<dyn Transformable> {
     match self {
       TransformerTypes::Direct => Box::new(DirectTransformer::new(config)),
       TransformerTypes::Henkan => {

@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, BufferState, Config, Displayable, Transformer, TransformerState,
+  AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerState,
   TransformerTypes, WithConfig,
 };
 use super::{Canceled, Stopped};
@@ -40,7 +40,7 @@ impl TransformerState for SelectCandidate {
   }
 }
 
-impl Transformer for SelectCandidate {
+impl Transformable for SelectCandidate {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::SelectCandidate
   }
@@ -49,15 +49,15 @@ impl Transformer for SelectCandidate {
     None
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformer> {
+  fn push_character(&self, _: char) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     Box::new(Canceled::new(self.config()))
   }
 
-  fn push_enter(&self) -> Box<dyn Transformer> {
+  fn push_enter(&self) -> Box<dyn Transformable> {
     let buffer = match self.candidates.current() {
       Some(candidate) => candidate.entry.clone(),
       None => "".to_string(),
@@ -66,7 +66,7 @@ impl Transformer for SelectCandidate {
     Box::new(Stopped::new(self.config(), buffer))
   }
 
-  fn push_space(&self) -> Box<dyn Transformer> {
+  fn push_space(&self) -> Box<dyn Transformable> {
     let mut new_state = self.clone();
     match new_state.candidates.next() {
       Some(_) => Box::new(new_state),
@@ -77,7 +77,7 @@ impl Transformer for SelectCandidate {
     }
   }
 
-  fn push_delete(&self) -> Box<dyn Transformer> {
+  fn push_delete(&self) -> Box<dyn Transformable> {
     let mut new_state = self.clone();
     match new_state.candidates.prev() {
       Some(_) => Box::new(new_state),
@@ -85,7 +85,7 @@ impl Transformer for SelectCandidate {
     }
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformer> {
+  fn push_backspace(&self) -> Box<dyn Transformable> {
     self.push_delete()
   }
 }
@@ -149,7 +149,7 @@ impl Candidates {
 }
 
 impl AsTransformerTrait for SelectCandidate {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

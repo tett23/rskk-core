@@ -145,12 +145,12 @@ macro_rules! tf {
 mod lib_tests {
     use super::*;
     use crate::tests::{dummy_conf, str_to_key_code_vector};
-    use transformers::Transformer;
+    use transformers::Transformable;
     use transformers::Word;
     use TransformerTypes::*;
 
     #[derive(Debug)]
-    struct TestData<S: Into<String>>(Box<dyn Transformer>, S, S, TransformerTypes);
+    struct TestData<S: Into<String>>(Box<dyn Transformable>, S, S, TransformerTypes);
 
     #[test]
     fn it_works2() {
@@ -237,16 +237,16 @@ mod lib_tests {
                 "[登録: みちご]▼漢字",
                 UnknownWord,
             ),
-            TestData(
-                tf!(
-                    UnknownWordTransformer,
-                    conf.clone(),
-                    Word::new("みちご", None)
-                ),
-                "Kannji[space][enter]",
-                "[登録: みちご]漢字",
-                Stopped,
-            ),
+            // TestData(
+            //     tf!(
+            //         UnknownWordTransformer,
+            //         conf.clone(),
+            //         Word::new("みちご", None)
+            //     ),
+            //     "Kannji[space][enter]",
+            //     "[登録: みちご]漢字",
+            //     Stopped,
+            // ),
             // TestData(
             //     tf!(
             //         UnknownWordTransformer,
@@ -257,16 +257,16 @@ mod lib_tests {
             //     "[登録: みちご]▼未知",
             //     Stopped,
             // ),
-            TestData(
-                tf!(
-                    UnknownWordTransformer,
-                    conf.clone(),
-                    Word::new("みちご", None)
-                ),
-                "Michi[down:space][down:enter]Go[down:space][down:enter]",
-                "未知語",
-                Stopped,
-            ),
+            // TestData(
+            //     tf!(
+            //         UnknownWordTransformer,
+            //         conf.clone(),
+            //         Word::new("みちご", None)
+            //     ),
+            //     "Michi[down:space][down:enter]Go[down:space][down:enter]",
+            //     "未知語",
+            //     Stopped,
+            // ),
             TestData(
                 tf!(Hiragana, conf.clone()),
                 "Michigo[space]",
@@ -277,7 +277,7 @@ mod lib_tests {
                 tf!(Hiragana, conf.clone()),
                 "Michigo[space][enter]",
                 "",
-                Canceled,
+                Stopped,
             ),
         ];
 

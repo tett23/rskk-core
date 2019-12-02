@@ -1,7 +1,7 @@
-use super::Transformer;
+use super::Transformable;
 
-pub trait Stackable: Transformer {
-  fn push(&self, item: Box<dyn Transformer>) -> Box<dyn Transformer>;
-  fn pop(&self) -> (Box<dyn Transformer>, Option<Box<dyn Transformer>>);
-  fn replace_last_element(&self, item: Box<dyn Transformer>) -> Box<dyn Transformer>;
+pub trait Stackable: Transformable {
+  fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable>;
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>);
+  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable>;
 }

@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, Canceled, Config, Displayable, SelectCandidate, Stopped, Transformer,
+  AsTransformerTrait, Canceled, Config, Displayable, SelectCandidate, Stopped, Transformable,
   TransformerState, TransformerTypes, UnknownWord, WithConfig,
 };
 use super::unknown_word::Word;
@@ -11,7 +11,7 @@ pub struct Yomi {
   config: Config,
   buffer: String,
   transformer_type: TransformerTypes,
-  transformer: Box<dyn Transformer>,
+  transformer: Box<dyn Transformable>,
 }
 
 impl Yomi {
@@ -32,7 +32,7 @@ impl Yomi {
     ret
   }
 
-  pub fn new_from_transformer(&self, transformer: Box<dyn Transformer>) -> Self {
+  pub fn new_from_transformer(&self, transformer: Box<dyn Transformable>) -> Self {
     let mut ret = self.clone();
     ret.transformer = transformer;
 
@@ -52,7 +52,7 @@ impl TransformerState for Yomi {
   }
 }
 
-impl Transformer for Yomi {
+impl Transformable for Yomi {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Yomi
   }
@@ -61,7 +61,7 @@ impl Transformer for Yomi {
     self.transformer.try_change_transformer(pressing_keys)
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     // ここらへんCompositionの再利用でよさそう
     let new_transformer = self.transformer.push_character(character);
 
@@ -74,15 +74,15 @@ impl Transformer for Yomi {
     }
   }
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     Box::new(Canceled::new(self.config()))
   }
 
-  fn push_enter(&self) -> Box<dyn Transformer> {
+  fn push_enter(&self) -> Box<dyn Transformable> {
     Box::new(Stopped::new(self.config(), self.buffer_content()))
   }
 
-  fn push_space(&self) -> Box<dyn Transformer> {
+  fn push_space(&self) -> Box<dyn Transformable> {
     match self.config().dictionary.transform(&self.buffer_content()) {
       Some(entry) => Box::new(SelectCandidate::new(self.config(), entry)),
       None => Box::new(UnknownWord::new(
@@ -92,16 +92,16 @@ impl Transformer for Yomi {
     }
   }
 
-  fn push_delete(&self) -> Box<dyn Transformer> {
+  fn push_delete(&self) -> Box<dyn Transformable> {
     // TODO: bufferかtransformerから文字を削除
     unimplemented!();
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformer> {
+  fn push_backspace(&self) -> Box<dyn Transformable> {
     self.push_delete()
   }
 
-  fn push_tab(&self) -> Box<dyn Transformer> {
+  fn push_tab(&self) -> Box<dyn Transformable> {
     // TODO: 補完して新しいYomiTransformerを返す
     unimplemented!()
   }
@@ -118,7 +118,7 @@ impl Displayable for Yomi {
 }
 
 impl AsTransformerTrait for Yomi {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

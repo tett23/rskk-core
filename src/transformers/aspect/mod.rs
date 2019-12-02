@@ -6,7 +6,7 @@ mod unknown_word;
 mod yomi;
 
 use super::{
-  AsTransformerTrait, Config, Displayable, Transformer, TransformerState, TransformerTypes,
+  AsTransformerTrait, Config, Displayable, Transformable, TransformerState, TransformerTypes,
   WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -21,12 +21,12 @@ pub use yomi::Yomi;
 
 #[derive(Clone, Debug)]
 pub enum Aspect {
-  Yomi(Box<dyn Transformer>),
+  Yomi(Box<dyn Transformable>),
   // Okuri(Okuri),
-  SelectCandidate(Box<dyn Transformer>),
-  UnknownWord(Box<dyn Transformer>),
-  Canceled(Box<dyn Transformer>),
-  Stopped(Box<dyn Transformer>),
+  SelectCandidate(Box<dyn Transformable>),
+  UnknownWord(Box<dyn Transformable>),
+  Canceled(Box<dyn Transformable>),
+  Stopped(Box<dyn Transformable>),
 }
 
 impl Aspect {
@@ -51,7 +51,7 @@ impl AspectTransformer {
     }
   }
 
-  fn new_from_transformer(&self, aspect: Box<dyn Transformer>) -> Self {
+  fn new_from_transformer(&self, aspect: Box<dyn Transformable>) -> Self {
     let mut ret = self.clone();
     ret.aspect = match aspect.transformer_type() {
       TransformerTypes::Yomi => Aspect::Yomi(aspect),
@@ -81,7 +81,7 @@ impl TransformerState for AspectTransformer {
   }
 }
 
-impl Transformer for AspectTransformer {
+impl Transformable for AspectTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     match &self.aspect {
       Aspect::Yomi(t) => t.transformer_type(),
@@ -102,7 +102,7 @@ impl Transformer for AspectTransformer {
     }
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let new_aspect = match &self.aspect {
       Aspect::Yomi(t) => t.push_character(character),
       Aspect::SelectCandidate(t) => t.push_character(character),
@@ -114,7 +114,7 @@ impl Transformer for AspectTransformer {
     Box::new(self.new_from_transformer(new_aspect))
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformer> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
     let new_aspect = match &self.aspect {
       Aspect::Yomi(t) => t.push_meta_key(key_code),
       Aspect::SelectCandidate(t) => t.push_meta_key(key_code),
@@ -150,7 +150,7 @@ impl Displayable for AspectTransformer {
 }
 
 impl AsTransformerTrait for AspectTransformer {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

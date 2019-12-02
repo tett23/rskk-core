@@ -1,8 +1,8 @@
 use super::keyboards::{KeyEvents, Keyboard};
-use super::transformers::{Config, Transformer, TransformerState, TransformerTypes};
+use super::transformers::{Config, Transformable, TransformerState, TransformerTypes};
 
 pub struct Composition {
-  transformer: Box<dyn Transformer>,
+  transformer: Box<dyn Transformable>,
   keyboard: Box<dyn Keyboard>,
   // TODO: 変更のあった辞書要素を保持できる必要あり？
   // 変更は読みと変換先だけあればいいかな。
@@ -21,7 +21,7 @@ impl Composition {
   }
 
   #[cfg(test)]
-  pub fn new_from_transformer(config: Config, transformer: Box<dyn Transformer>) -> Self {
+  pub fn new_from_transformer(config: Config, transformer: Box<dyn Transformable>) -> Self {
     let keyboard = config.rskk_config().keyboard_type.to_keyboard();
 
     Composition {

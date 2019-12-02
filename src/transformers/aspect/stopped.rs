@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, Config, Displayable, Transformer, TransformerState, TransformerTypes,
+  AsTransformerTrait, Config, Displayable, Transformable, TransformerState, TransformerTypes,
   WithConfig,
 };
 
@@ -37,7 +37,7 @@ impl TransformerState for Stopped {
   }
 }
 
-impl Transformer for Stopped {
+impl Transformable for Stopped {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Stopped
   }
@@ -46,7 +46,7 @@ impl Transformer for Stopped {
     None
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformer> {
+  fn push_character(&self, _: char) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }
@@ -62,7 +62,7 @@ impl Displayable for Stopped {
 }
 
 impl AsTransformerTrait for Stopped {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }

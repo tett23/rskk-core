@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, Canceled, Config, Displayable, Stackable, Stopped, Transformer,
+  AsTransformerTrait, Canceled, Config, Displayable, Stackable, Stopped, Transformable,
   TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -9,7 +9,7 @@ use std::collections::HashSet;
 pub struct ContinuousTransformer {
   config: Config,
   transformer_type: TransformerTypes,
-  stack: Vec<Box<dyn Transformer>>,
+  stack: Vec<Box<dyn Transformable>>,
 }
 
 impl ContinuousTransformer {
@@ -21,11 +21,11 @@ impl ContinuousTransformer {
     }
   }
 
-  fn new_child_transformer(&self) -> Box<dyn Transformer> {
+  fn new_child_transformer(&self) -> Box<dyn Transformable> {
     self.transformer_type.to_transformer(self.config.clone())
   }
 
-  fn new_from_stack(&self, stack: Vec<Box<dyn Transformer>>) -> Self {
+  fn new_from_stack(&self, stack: Vec<Box<dyn Transformable>>) -> Self {
     let mut ret = self.clone();
     ret.stack = stack;
 
@@ -53,7 +53,7 @@ impl TransformerState for ContinuousTransformer {
   }
 }
 
-impl Transformer for ContinuousTransformer {
+impl Transformable for ContinuousTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::ContinuousTransformer
   }
@@ -64,9 +64,9 @@ impl Transformer for ContinuousTransformer {
 
   fn transformer_changed(
     &self,
-    new_transformer: Box<dyn Transformer>,
+    new_transformer: Box<dyn Transformable>,
     key: Option<char>,
-  ) -> Box<dyn Transformer> {
+  ) -> Box<dyn Transformable> {
     let new_transformer = match new_transformer.transformer_type() {
       TransformerTypes::Henkan => match key {
         Some(character) => new_transformer.push_character(character),
@@ -78,7 +78,7 @@ impl Transformer for ContinuousTransformer {
     self.replace_last_element(new_transformer)
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformer> {
+  fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let last_tf = self.stack.last();
     if last_tf.is_none() {
       return Box::new(Stopped::empty(self.config.clone()));
@@ -99,28 +99,28 @@ impl Transformer for ContinuousTransformer {
     }
   }
 
-  fn push_escape(&self) -> Box<dyn Transformer> {
+  fn push_escape(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.push_escape(),
       None => Box::new(Canceled::new(self.config().clone())),
     }
   }
 
-  fn push_enter(&self) -> Box<dyn Transformer> {
+  fn push_enter(&self) -> Box<dyn Transformable> {
     Box::new(Stopped::new(self.config(), self.stopped_buffer_content()))
   }
 
-  fn push_space(&self) -> Box<dyn Transformer> {
+  fn push_space(&self) -> Box<dyn Transformable> {
     unimplemented!()
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformer> {
+  fn push_backspace(&self) -> Box<dyn Transformable> {
     // TODO: stackが空になるまでstack先頭にbackspaceを送り続ける
     // すべて空のときは空のStoppedを返す
     unimplemented!()
   }
 
-  fn push_delete(&self) -> Box<dyn Transformer> {
+  fn push_delete(&self) -> Box<dyn Transformable> {
     self.push_backspace()
   }
 }
@@ -142,13 +142,13 @@ impl Displayable for ContinuousTransformer {
 }
 
 impl AsTransformerTrait for ContinuousTransformer {
-  fn as_trait(&self) -> Box<dyn Transformer> {
+  fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
 }
 
 impl Stackable for ContinuousTransformer {
-  fn push(&self, item: Box<dyn Transformer>) -> Box<dyn Transformer> {
+  fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
     let mut ret = self.new_from_stack(self.stack.clone());
 
     ret.stack.push(item);
@@ -156,7 +156,7 @@ impl Stackable for ContinuousTransformer {
     Box::new(ret)
   }
 
-  fn pop(&self) -> (Box<dyn Transformer>, Option<Box<dyn Transformer>>) {
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
     let mut ret = self.new_from_stack(self.stack.clone());
 
     let item = ret.stack.pop();
@@ -164,7 +164,7 @@ impl Stackable for ContinuousTransformer {
     (Box::new(ret), item)
   }
 
-  fn replace_last_element(&self, item: Box<dyn Transformer>) -> Box<dyn Transformer> {
+  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
     let mut ret = self.clone();
 
     ret.stack.pop();
