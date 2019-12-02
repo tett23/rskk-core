@@ -2,6 +2,7 @@ mod aspect;
 mod direct;
 mod henkan;
 mod hiragana;
+mod stackable;
 mod tables;
 
 use crate::keyboards::{KeyCode, KeyCombinations, KeyEvents, MetaKey};
@@ -18,6 +19,7 @@ pub use aspect::{
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
 pub use hiragana::HiraganaTransformer;
+pub use stackable::Stackable;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum BufferState {

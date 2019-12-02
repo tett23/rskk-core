@@ -1,6 +1,6 @@
 use super::super::{
-  AsTransformerTrait, Canceled, Config, Displayable, Stopped, Transformer, TransformerState,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, Canceled, Config, Displayable, Stackable, Stopped, Transformer,
+  TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -8,34 +8,36 @@ use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct ContinuousTransformer {
   config: Config,
-  buffer: String,
-  transformer: Box<dyn Transformer>,
   transformer_type: TransformerTypes,
+  stack: Vec<Box<dyn Transformer>>,
 }
 
 impl ContinuousTransformer {
   pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
     ContinuousTransformer {
       config: config.clone(),
-      buffer: "".to_string(),
-      transformer: transformer_type.to_transformer(config),
       transformer_type,
+      stack: vec![transformer_type.to_transformer(config)],
     }
   }
 
-  fn new_from_transformer(&self, transformer: Box<dyn Transformer>) -> Self {
+  fn new_child_transformer(&self) -> Box<dyn Transformer> {
+    self.transformer_type.to_transformer(self.config.clone())
+  }
+
+  fn new_from_stack(&self, stack: Vec<Box<dyn Transformer>>) -> Self {
     let mut ret = self.clone();
-    ret.transformer = transformer;
+    ret.stack = stack;
 
     ret
   }
 
-  fn new_from_buffer<S: Into<String>>(&self, buffer: S) -> Self {
-    let mut ret = self.clone();
-    ret.buffer = buffer.into();
-    ret.transformer = self.transformer_type.to_transformer(self.config());
-
-    ret
+  fn stopped_buffer_content(&self) -> String {
+    self
+      .stack
+      .iter()
+      .filter(|tf| tf.is_stopped())
+      .fold("".to_string(), |acc, tf| acc + &tf.buffer_content())
   }
 }
 
@@ -57,7 +59,7 @@ impl Transformer for ContinuousTransformer {
   }
 
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
-    self.transformer.try_change_transformer(pressing_keys)
+    self.stack.last()?.try_change_transformer(pressing_keys)
   }
 
   fn transformer_changed(
@@ -73,89 +75,69 @@ impl Transformer for ContinuousTransformer {
       _ => new_transformer,
     };
 
-    Box::new(self.new_from_transformer(new_transformer))
+    self.replace_last_element(new_transformer)
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformer> {
-    let new_transformer = self.transformer.push_character(character);
+    let last_tf = self.stack.last();
+    if last_tf.is_none() {
+      return Box::new(Stopped::empty(self.config.clone()));
+    }
+    let last_tf = last_tf.unwrap();
 
+    let new_transformer = last_tf.push_character(character);
     match new_transformer.is_stopped() {
       true => {
-        Box::new(self.new_from_buffer(self.buffer.clone() + &new_transformer.buffer_content()))
+        let mut ret = self.clone();
+        ret.stack.pop();
+        ret.stack.push(new_transformer);
+        ret.stack.push(ret.new_child_transformer());
+
+        Box::new(ret)
       }
-      false => Box::new(self.new_from_transformer(new_transformer)),
+      false => self.replace_last_element(new_transformer),
     }
-  }
-
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformer>) -> Box<dyn Transformer> {
-    if new_transformer.is_stopped() {
-      return new_transformer;
-    }
-
-    Box::new(self.new_from_transformer(new_transformer))
   }
 
   fn push_escape(&self) -> Box<dyn Transformer> {
-    Box::new(Canceled::new(self.config()))
+    match self.stack.last() {
+      Some(tf) => tf.push_escape(),
+      None => Box::new(Canceled::new(self.config().clone())),
+    }
   }
 
   fn push_enter(&self) -> Box<dyn Transformer> {
-    Box::new(Stopped::new(self.config(), self.buffer_content()))
+    Box::new(Stopped::new(self.config(), self.stopped_buffer_content()))
   }
 
   fn push_space(&self) -> Box<dyn Transformer> {
-    println!("push_space");
-    self.transformer.push_space()
+    unimplemented!()
   }
 
   fn push_backspace(&self) -> Box<dyn Transformer> {
-    match self.transformer.buffer_content().len() {
-      0 => {
-        let buf = self.buffer.clone();
-        let (buf, _) = buf.split_at(buf.len() - 2);
-
-        Box::new(self.new_from_buffer(buf))
-      }
-      _ => self.transformer.push_backspace(),
-    }
+    // TODO: stackが空になるまでstack先頭にbackspaceを送り続ける
+    // すべて空のときは空のStoppedを返す
+    unimplemented!()
   }
 
   fn push_delete(&self) -> Box<dyn Transformer> {
     self.push_backspace()
   }
-
-  fn push_tab(&self) -> Box<dyn Transformer> {
-    self.transformer.push_tab()
-  }
-
-  fn push_null(&self) -> Box<dyn Transformer> {
-    self.transformer.push_null()
-  }
-
-  fn push_arrow_right(&self) -> Box<dyn Transformer> {
-    unimplemented!()
-  }
-
-  fn push_arrow_down(&self) -> Box<dyn Transformer> {
-    self.transformer.push_arrow_down()
-  }
-
-  fn push_arrow_left(&self) -> Box<dyn Transformer> {
-    unimplemented!()
-  }
-
-  fn push_arrow_up(&self) -> Box<dyn Transformer> {
-    self.transformer.push_arrow_up()
-  }
 }
 
 impl Displayable for ContinuousTransformer {
   fn buffer_content(&self) -> String {
-    self.buffer.clone() + &self.transformer.buffer_content()
+    self
+      .stack
+      .iter()
+      .fold("".to_string(), |acc, tf| acc + &tf.buffer_content())
   }
 
   fn display_string(&self) -> String {
-    self.buffer_content()
+    self
+      .stack
+      .iter()
+      .fold("".to_string(), |acc, tf| acc + &tf.display_string())
   }
 }
 
@@ -165,13 +147,40 @@ impl AsTransformerTrait for ContinuousTransformer {
   }
 }
 
+impl Stackable for ContinuousTransformer {
+  fn push(&self, item: Box<dyn Transformer>) -> Box<dyn Transformer> {
+    let mut ret = self.new_from_stack(self.stack.clone());
+
+    ret.stack.push(item);
+
+    Box::new(ret)
+  }
+
+  fn pop(&self) -> (Box<dyn Transformer>, Option<Box<dyn Transformer>>) {
+    let mut ret = self.new_from_stack(self.stack.clone());
+
+    let item = ret.stack.pop();
+
+    (Box::new(ret), item)
+  }
+
+  fn replace_last_element(&self, item: Box<dyn Transformer>) -> Box<dyn Transformer> {
+    let mut ret = self.clone();
+
+    ret.stack.pop();
+    ret.stack.push(item);
+
+    Box::new(ret)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
   use crate::tests::dummy_conf;
 
   #[test]
-  fn push() {
+  fn push_character() {
     let config = dummy_conf();
     let continuous = ContinuousTransformer::new(config.clone(), TransformerTypes::Hiragana);
 
