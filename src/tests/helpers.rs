@@ -49,20 +49,8 @@ fn head_token(string: &str) -> (Option<Vec<KeyEvents>>, usize) {
     let token = &tail[..end_pos];
     return (parse_token(token), end_pos + 2);
   }
-  if is_normal_token(head) {
-    return (parse_token(&head.to_string()), 1);
-  }
 
-  (None, 1)
-}
-
-fn is_normal_token(character: char) -> bool {
-  match character {
-    'a'..='z' => true,
-    'A'..='Z' => true,
-    '0'..='9' => true,
-    _ => false,
-  }
+  return (parse_token(&head.to_string()), 1);
 }
 
 fn is_meta_start(character: char) -> bool {
@@ -135,5 +123,16 @@ mod tests {
 
     let events = str_to_key_code_vector("[a]");
     assert_eq!(events, vec![KeyDown(key!("a")), KeyUp(key!("a"))]);
+
+    let events = str_to_key_code_vector(" \n");
+    assert_eq!(
+      events,
+      vec![
+        KeyDown(key!(" ")),
+        KeyUp(key!(" ")),
+        KeyDown(key!("\n")),
+        KeyUp(key!("\n"))
+      ]
+    );
   }
 }

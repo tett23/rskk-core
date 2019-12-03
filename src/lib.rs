@@ -99,13 +99,15 @@ macro_rules! key {
             "shift" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Shift),
             "alt" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Alt),
             "super" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Super),
-            "enter" => {
+            "enter" | "\n" => {
                 crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Enter, '\n')
             }
-            "space" => {
+            "space" | " " => {
                 crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Space, ' ')
             }
-            "tab" => crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Tab, '\t'),
+            "tab" | "\t" => {
+                crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Tab, '\t')
+            }
             "escape" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Escape),
             "delete" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Delete),
             "backspace" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Backspace),
@@ -155,11 +157,11 @@ mod lib_tests {
     #[test]
     fn it_works2() {
         let conf = dummy_conf();
-        // conf.dictionary = Dictionary::parse(
+        // conf.dictionary = Rc::new(Dictionary::parse(
         //     "かんじ/漢字/
         //     みち/未知/
         //     ご/語/",
-        // );
+        // ));
 
         let items = vec![
             TestData(tf!(Direct, conf.clone()), "a", "a", Stopped),
@@ -177,18 +179,8 @@ mod lib_tests {
             TestData(tf!(Hiragana, conf.clone()), "K", "▽k", Henkan),
             TestData(tf!(Hiragana, conf.clone()), "Ka", "▽か", Henkan),
             TestData(tf!(Hiragana, conf.clone()), "Kannji", "▽かんじ", Henkan),
-            TestData(
-                tf!(Hiragana, conf.clone()),
-                "Kannji[space]",
-                "▼漢字",
-                Henkan,
-            ),
-            TestData(
-                tf!(Hiragana, conf.clone()),
-                "Kannji[space][enter]",
-                "漢字",
-                Stopped,
-            ),
+            TestData(tf!(Hiragana, conf.clone()), "Kannji ", "▼漢字", Henkan),
+            TestData(tf!(Hiragana, conf.clone()), "Kannji \n", "漢字", Stopped),
             TestData(
                 tf!(ContinuousTransformer, conf.clone(), Hiragana),
                 "hiragana",
@@ -197,7 +189,7 @@ mod lib_tests {
             ),
             TestData(
                 tf!(ContinuousTransformer, conf.clone(), Hiragana),
-                "hiragana[enter]",
+                "hiragana\n",
                 "ひらがな",
                 Stopped,
             ),
@@ -233,7 +225,7 @@ mod lib_tests {
                     conf.clone(),
                     Word::new("みちご", None)
                 ),
-                "Kannji[space]",
+                "Kannji ",
                 "[登録: みちご]▼漢字",
                 UnknownWord,
             ),
@@ -269,16 +261,11 @@ mod lib_tests {
             // ),
             TestData(
                 tf!(Hiragana, conf.clone()),
-                "Michigo[space]",
+                "Michigo ",
                 "[登録: みちご]",
                 Henkan,
             ),
-            TestData(
-                tf!(Hiragana, conf.clone()),
-                "Michigo[space][enter]",
-                "",
-                Stopped,
-            ),
+            TestData(tf!(Hiragana, conf.clone()), "Michigo \n", "", Stopped),
         ];
 
         items.into_iter().for_each(
