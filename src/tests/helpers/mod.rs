@@ -1,10 +1,15 @@
 #![cfg(test)]
 
+#[macro_use]
+pub mod transformer;
+
 use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
 use crate::transformers::Config;
 use crate::{key, Dictionary, RSKKConfig};
 use std::rc::Rc;
 use KeyEvents::*;
+
+pub use transformer::*;
 
 pub fn dummy_conf() -> Config {
   Config::new(

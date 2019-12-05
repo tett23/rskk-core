@@ -124,7 +124,7 @@ macro_rules! key {
 
 #[macro_export]
 macro_rules! tf {
-    ( $t:expr, $conf:expr ) => {
+    ( $conf:expr, $t:expr ) => {
         match $t {
             transformers::TransformerTypes::Direct => {
                 Box::new(transformers::DirectTransformer::new($conf))
@@ -135,176 +135,85 @@ macro_rules! tf {
             _ => unreachable!(),
         }
     };
-    ( ContinuousTransformer, $conf:expr, $v:expr  ) => {
+    ( $conf:expr, ContinuousTransformer, $v:expr  ) => {
         Box::new(transformers::ContinuousTransformer::new($conf, $v))
     };
-    ( UnknownWordTransformer, $conf:expr, $v:expr ) => {
+    ( $conf:expr, UnknownWordTransformer, $v:expr ) => {
         Box::new(transformers::UnknownWord::new($conf, $v))
     };
+}
+
+#[macro_export]
+macro_rules! td {
+    ($conf:expr, $tf:tt; [$input:expr, $out:expr, $out_tf:expr]) => {{
+        crate::tests::TestData::new(tf!($conf, $tf), $input, $out, $out_tf)
+    }};
+    ($conf:expr, $tf:tt, $tf_v1:expr; [$input:expr, $out:expr, $out_tf:expr]) => {{
+        crate::tests::TestData::new(tf!($conf, $tf, $tf_v1), $input, $out, $out_tf)
+    }};
+}
+
+#[macro_export]
+macro_rules! tds {
+    ( $conf:expr, $tf:tt; $( [ $($x:expr),* $(,)? ] ),* $(,)? ) => {{
+        vec![
+            $( td![$conf.clone(), $tf; [ $($x),* ]], )*
+        ]
+    }};
+    ( $conf:expr, $tf:tt, $tf_v1:expr; $( [ $($x:expr),* $(,)? ] ),* $(,)? ) => {{
+        vec![
+            $( td![$conf.clone(), $tf, $tf_v1; [ $($x),* ] ], )*
+        ]
+    }};
 }
 
 #[cfg(test)]
 mod lib_tests {
     use super::*;
-    use crate::tests::{dummy_conf, str_to_key_code_vector};
-    use transformers::Transformable;
+    use crate::tests::{dummy_conf, test_transformer};
     use transformers::Word;
     use TransformerTypes::*;
 
-    #[derive(Debug)]
-    struct TestData<S: Into<String>>(Box<dyn Transformable>, S, S, TransformerTypes);
-
     #[test]
-    fn it_works2() {
+    fn it_works() {
         let conf = dummy_conf();
-        // conf.dictionary = Rc::new(Dictionary::parse(
-        //     "かんじ/漢字/
-        //     みち/未知/
-        //     ご/語/",
-        // ));
 
-        let items = vec![
-            TestData(tf!(Direct, conf.clone()), "a", "a", Stopped),
-            TestData(tf!(Direct, conf.clone()), "A", "A", Stopped),
-            TestData(tf!(Hiragana, conf.clone()), "a", "あ", Stopped),
-            TestData(tf!(Hiragana, conf.clone()), "ka", "か", Stopped),
-            TestData(tf!(Hiragana, conf.clone()), "ts", "ts", Hiragana),
-            TestData(tf!(Hiragana, conf.clone()), "tsu", "つ", Stopped),
-            TestData(
-                tf!(Direct, conf.clone()),
-                "[down:ctrl]j[up:ctrl]a",
-                "あ",
-                Stopped,
-            ),
-            TestData(tf!(Hiragana, conf.clone()), "K", "▽k", Henkan),
-            TestData(tf!(Hiragana, conf.clone()), "Ka", "▽か", Henkan),
-            TestData(tf!(Hiragana, conf.clone()), "Kannji", "▽かんじ", Henkan),
-            TestData(tf!(Hiragana, conf.clone()), "Kannji ", "▼漢字", Henkan),
-            TestData(tf!(Hiragana, conf.clone()), "Kannji \n", "漢字", Stopped),
-            TestData(
-                tf!(ContinuousTransformer, conf.clone(), Hiragana),
-                "hiragana",
-                "ひらがな",
-                ContinuousTransformer,
-            ),
-            TestData(
-                tf!(ContinuousTransformer, conf.clone(), Hiragana),
-                "hiragana\n",
-                "ひらがな",
-                Stopped,
-            ),
-            TestData(
-                tf!(ContinuousTransformer, conf.clone(), Hiragana),
-                "hiragana[escape]",
-                "",
-                Canceled,
-            ),
-            TestData(
-                tf!(
-                    UnknownWordTransformer,
-                    conf.clone(),
-                    Word::new("みちご", None)
-                ),
-                "hiragana",
-                "[登録: みちご]ひらがな",
-                UnknownWord,
-            ),
-            TestData(
-                tf!(
-                    UnknownWordTransformer,
-                    conf.clone(),
-                    Word::new("みちご", None)
-                ),
-                "Kannji",
-                "[登録: みちご]▽かんじ",
-                UnknownWord,
-            ),
-            TestData(
-                tf!(
-                    UnknownWordTransformer,
-                    conf.clone(),
-                    Word::new("みちご", None)
-                ),
-                "Kannji ",
-                "[登録: みちご]▼漢字",
-                UnknownWord,
-            ),
-            // TestData(
-            //     tf!(
-            //         UnknownWordTransformer,
-            //         conf.clone(),
-            //         Word::new("みちご", None)
-            //     ),
-            //     "Kannji[space][enter]",
-            //     "[登録: みちご]漢字",
-            //     Stopped,
-            // ),
-            // TestData(
-            //     tf!(
-            //         UnknownWordTransformer,
-            //         conf.clone(),
-            //         Word::new("みちご", None)
-            //     ),
-            //     "Michigo[space]Michi[space]",
-            //     "[登録: みちご]▼未知",
-            //     Stopped,
-            // ),
-            // TestData(
-            //     tf!(
-            //         UnknownWordTransformer,
-            //         conf.clone(),
-            //         Word::new("みちご", None)
-            //     ),
-            //     "Michi[down:space][down:enter]Go[down:space][down:enter]",
-            //     "未知語",
-            //     Stopped,
-            // ),
-            TestData(
-                tf!(Hiragana, conf.clone()),
-                "Michigo ",
-                "[登録: みちご]",
-                Henkan,
-            ),
-            TestData(tf!(Hiragana, conf.clone()), "Michigo \n", "", Stopped),
+        let items = tds![conf, Direct;
+            ["a", "a", Stopped],
+            ["A", "A", Stopped],
+            ["[down:ctrl]j[up:ctrl]a", "あ", Stopped]
         ];
+        test_transformer(items);
 
-        items.into_iter().for_each(
-            |TestData(start_transformer, input, output, out_transformer)| {
-                let mut composition =
-                    Composition::new_from_transformer(conf.clone(), start_transformer);
-                composition.push_key_events(&str_to_key_code_vector(input));
-                assert_eq!(
-                    (out_transformer, output.into()),
-                    (composition.transformer_type(), composition.display_string()),
-                    "{}",
-                    input
-                );
-            },
-        );
+        let items = tds![conf, Hiragana;
+            ["a", "あ", Stopped],
+            ["ka", "か", Stopped],
+            ["ts", "ts", Hiragana],
+            ["tsu", "つ", Stopped],
+            ["K", "▽k", Henkan],
+            ["Ka", "▽か", Henkan],
+            ["Kannji", "▽かんじ", Henkan],
+            ["Kannji ", "▼漢字", Henkan],
+            ["Kannji \n", "漢字", Stopped],
+            ["Michigo ", "[登録: みちご]", Henkan],
+            ["Michigo \n", "", Stopped]
+        ];
+        test_transformer(items);
+
+        let items = tds![conf, ContinuousTransformer, Hiragana;
+            ["hiragana", "ひらがな", ContinuousTransformer],
+            ["hiragana\n", "ひらがな", Stopped],
+            ["hiragana[escape]", "", Canceled]
+        ];
+        test_transformer(items);
+
+        let items = tds![conf, UnknownWordTransformer, Word::new("みちご", None);
+            ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
+            ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
+            ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
+            // ["Kannji \n","[登録: みちご]漢字", UnknownWord],
+            // ["Michi \nGo \n\n","未知語",Stopped]
+        ];
+        test_transformer(items);
     }
-
-    // #[test]
-    // fn it_works() {
-    //     let mut skk = RSKK::new(TransformerTypes::Direct);
-    //     skk.parse_dictionary(
-    //         "かんじ/漢字/
-    //     みち/未知/
-    //     ご/語/",
-    //     );
-
-    //     let items = vec![TestData(tf!(Direct, conf), "a", "a", Stopped)];
-
-    //     items.into_iter().for_each(
-    //         |TestData(start_transformer, input, output, out_transformer)| {
-    //             let composition = skk.start_composition_as(start_transformer);
-    //             composition.push_key_events(&str_to_key_code_vector(input));
-    //             assert_eq!(
-    //                 (out_transformer, output.into()),
-    //                 (composition.transformer_type(), composition.display_string()),
-    //                 "{:?}",
-    //                 TestData(start_transformer, input, output, out_transformer)
-    //             );
-    //         },
-    //     );
-    // }
 }
