@@ -1,9 +1,15 @@
-mod aspect;
+mod canceled;
+mod continuous;
 mod direct;
 mod henkan;
 mod hiragana;
+mod okuri_completed;
+mod select_candidate;
 mod stackable;
+mod stopped;
 mod tables;
+mod unknown_word;
+mod yomi;
 
 use crate::keyboards::{KeyCode, KeyCombinations, KeyEvents, MetaKey};
 use crate::{set, Dictionary, KeyConfig, RSKKConfig};
@@ -12,14 +18,17 @@ use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
-pub use aspect::{
-  Aspect, AspectTransformer, Canceled, ContinuousTransformer, OkuriCompleted, SelectCandidate,
-  Stopped, UnknownWord, Word, YomiTransformer,
-};
+pub use canceled::Canceled;
+pub use continuous::ContinuousTransformer;
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
 pub use hiragana::HiraganaTransformer;
+pub use okuri_completed::OkuriCompleted;
+pub use select_candidate::SelectCandidate;
 pub use stackable::Stackable;
+pub use stopped::Stopped;
+pub use unknown_word::{UnknownWord, Word};
+pub use yomi::YomiTransformer;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum BufferState {

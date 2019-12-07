@@ -1,5 +1,5 @@
-use super::super::tables::hiragana_convert;
-use super::super::{
+use super::tables::hiragana_convert;
+use super::{
   AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerState,
   TransformerTypes, WithConfig,
 };

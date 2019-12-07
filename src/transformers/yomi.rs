@@ -1,4 +1,4 @@
-use super::super::{
+use super::{
   AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, OkuriCompleted,
   Stackable, Stopped, Transformable, TransformerState, TransformerTypes, WithConfig,
 };

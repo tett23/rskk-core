@@ -1,44 +1,36 @@
-use super::super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerState,
-  TransformerTypes, WithConfig,
+use super::{
+  AsTransformerTrait, Config, Displayable, Transformable, TransformerState, TransformerTypes,
+  WithConfig,
 };
-
+use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Stopped {
+pub struct Canceled {
   config: Config,
-  buffer: String,
 }
 
-impl Stopped {
-  pub fn new(config: Config, buffer: String) -> Self {
-    Stopped { config, buffer }
-  }
-
-  pub fn empty(config: Config) -> Self {
-    Stopped {
-      config,
-      buffer: "".to_string(),
-    }
+impl Canceled {
+  pub fn new(config: Config) -> Self {
+    Canceled { config }
   }
 }
 
-impl WithConfig for Stopped {
+impl WithConfig for Canceled {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for Stopped {
+impl TransformerState for Canceled {
   fn is_stopped(&self) -> bool {
     true
   }
 }
 
-impl Transformable for Stopped {
+impl Transformable for Canceled {
   fn transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::Stopped
+    TransformerTypes::Canceled
   }
 
   fn try_change_transformer(
@@ -54,17 +46,17 @@ impl Transformable for Stopped {
   }
 }
 
-impl Displayable for Stopped {
+impl Displayable for Canceled {
   fn buffer_content(&self) -> String {
-    self.buffer.clone()
+    "".to_string()
   }
 
   fn display_string(&self) -> String {
-    self.buffer.clone()
+    "".to_string()
   }
 }
 
-impl AsTransformerTrait for Stopped {
+impl AsTransformerTrait for Canceled {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }

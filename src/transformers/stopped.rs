@@ -1,4 +1,4 @@
-use super::super::{
+use super::{
   AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerState,
   TransformerTypes, WithConfig,
 };
@@ -6,37 +6,39 @@ use super::super::{
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct OkuriCompleted {
+pub struct Stopped {
   config: Config,
-  yomi: String,
-  okuri: String,
+  buffer: String,
 }
 
-impl OkuriCompleted {
-  pub fn new<S: Into<String>>(config: Config, yomi: S, okuri: S) -> Self {
-    OkuriCompleted {
+impl Stopped {
+  pub fn new(config: Config, buffer: String) -> Self {
+    Stopped { config, buffer }
+  }
+
+  pub fn empty(config: Config) -> Self {
+    Stopped {
       config,
-      yomi: yomi.into(),
-      okuri: okuri.into(),
+      buffer: "".to_string(),
     }
   }
 }
 
-impl WithConfig for OkuriCompleted {
+impl WithConfig for Stopped {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for OkuriCompleted {
+impl TransformerState for Stopped {
   fn is_stopped(&self) -> bool {
-    false
+    true
   }
 }
 
-impl Transformable for OkuriCompleted {
+impl Transformable for Stopped {
   fn transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::OkuriCompleted
+    TransformerTypes::Stopped
   }
 
   fn try_change_transformer(
@@ -52,17 +54,17 @@ impl Transformable for OkuriCompleted {
   }
 }
 
-impl Displayable for OkuriCompleted {
+impl Displayable for Stopped {
   fn buffer_content(&self) -> String {
-    self.yomi.clone() + &self.okuri
+    self.buffer.clone()
   }
 
   fn display_string(&self) -> String {
-    self.buffer_content()
+    self.buffer.clone()
   }
 }
 
-impl AsTransformerTrait for OkuriCompleted {
+impl AsTransformerTrait for Stopped {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
