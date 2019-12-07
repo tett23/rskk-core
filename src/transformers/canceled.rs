@@ -6,29 +6,29 @@ use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Canceled {
+pub struct CanceledTransformer {
   config: Config,
 }
 
-impl Canceled {
+impl CanceledTransformer {
   pub fn new(config: Config) -> Self {
-    Canceled { config }
+    CanceledTransformer { config }
   }
 }
 
-impl WithConfig for Canceled {
+impl WithConfig for CanceledTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for Canceled {
+impl TransformerState for CanceledTransformer {
   fn is_stopped(&self) -> bool {
     true
   }
 }
 
-impl Transformable for Canceled {
+impl Transformable for CanceledTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Canceled
   }
@@ -46,7 +46,7 @@ impl Transformable for Canceled {
   }
 }
 
-impl Displayable for Canceled {
+impl Displayable for CanceledTransformer {
   fn buffer_content(&self) -> String {
     "".to_string()
   }
@@ -56,7 +56,7 @@ impl Displayable for Canceled {
   }
 }
 
-impl AsTransformerTrait for Canceled {
+impl AsTransformerTrait for CanceledTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }

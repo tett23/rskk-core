@@ -1,6 +1,6 @@
 use super::{
-  AsTransformerTrait, Canceled, Config, Displayable, MetaKey, Stackable, Stopped, Transformable,
-  TransformerState, TransformerTypes, WithConfig,
+  AsTransformerTrait, CanceledTransformer, Config, Displayable, MetaKey, Stackable,
+  StoppedTransformer, Transformable, TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -105,12 +105,15 @@ impl Transformable for ContinuousTransformer {
   fn push_escape(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.push_escape(),
-      None => Box::new(Canceled::new(self.config().clone())),
+      None => Box::new(CanceledTransformer::new(self.config().clone())),
     }
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(Stopped::new(self.config(), self.stopped_buffer_content()))
+    Box::new(StoppedTransformer::new(
+      self.config(),
+      self.stopped_buffer_content(),
+    ))
   }
 
   fn push_backspace(&self) -> Box<dyn Transformable> {
@@ -126,9 +129,9 @@ impl Transformable for ContinuousTransformer {
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     match new_transformer.is_stopped() {
       true if new_transformer.transformer_type() == TransformerTypes::Canceled => {
-        Box::new(Canceled::new(self.config()))
+        Box::new(CanceledTransformer::new(self.config()))
       }
-      true => Box::new(Stopped::new(
+      true => Box::new(StoppedTransformer::new(
         self.config(),
         self.replace_last_element(new_transformer).buffer_content(),
       )),
@@ -158,7 +161,7 @@ impl AsTransformerTrait for ContinuousTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => Box::new(Stopped::empty(self.config())),
+      None => Box::new(StoppedTransformer::empty(self.config())),
     }
   }
 }

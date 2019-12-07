@@ -3,13 +3,13 @@ use super::{
   AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerState,
   TransformerTypes, WithConfig,
 };
-use super::{Canceled, Stopped};
+use super::{CanceledTransformer, StoppedTransformer};
 use crate::dictionary::{Candidate, DictionaryEntry};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct SelectCandidate {
+pub struct SelectCandidateTransformer {
   config: Config,
   buffer: String,
   buffer_state: BufferState,
@@ -18,9 +18,9 @@ pub struct SelectCandidate {
   okuri: Option<char>,
 }
 
-impl SelectCandidate {
+impl SelectCandidateTransformer {
   pub fn new(config: Config, dictionary_entry: &DictionaryEntry, okuri: Option<char>) -> Self {
-    SelectCandidate {
+    SelectCandidateTransformer {
       config,
       buffer: "".to_string(),
       buffer_state: BufferState::Continue,
@@ -31,19 +31,19 @@ impl SelectCandidate {
   }
 }
 
-impl WithConfig for SelectCandidate {
+impl WithConfig for SelectCandidateTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for SelectCandidate {
+impl TransformerState for SelectCandidateTransformer {
   fn is_stopped(&self) -> bool {
     false
   }
 }
 
-impl Transformable for SelectCandidate {
+impl Transformable for SelectCandidateTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::SelectCandidate
   }
@@ -61,11 +61,14 @@ impl Transformable for SelectCandidate {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(Canceled::new(self.config()))
+    Box::new(CanceledTransformer::new(self.config()))
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(Stopped::new(self.config(), self.buffer_content()))
+    Box::new(StoppedTransformer::new(
+      self.config(),
+      self.buffer_content(),
+    ))
   }
 
   fn push_space(&self) -> Box<dyn Transformable> {
@@ -83,7 +86,7 @@ impl Transformable for SelectCandidate {
     let mut new_state = self.clone();
     match new_state.candidates.prev() {
       Some(_) => Box::new(new_state),
-      None => Box::new(Canceled::new(self.config())),
+      None => Box::new(CanceledTransformer::new(self.config())),
     }
   }
 
@@ -98,15 +101,18 @@ impl Transformable for SelectCandidate {
   ) -> Box<dyn Transformable> {
     match key_code.is_printable() {
       true => match self.candidates.current() {
-        Some(candidate) => Box::new(Stopped::new(self.config(), candidate.entry.clone())),
-        None => Box::new(Canceled::new(self.config())),
+        Some(candidate) => Box::new(StoppedTransformer::new(
+          self.config(),
+          candidate.entry.clone(),
+        )),
+        None => Box::new(CanceledTransformer::new(self.config())),
       },
       false => self.as_trait(),
     }
   }
 }
 
-impl Displayable for SelectCandidate {
+impl Displayable for SelectCandidateTransformer {
   fn buffer_content(&self) -> String {
     match (self.candidates.current(), &self.okuri) {
       (Some(candidate), Some(okuri)) => {
@@ -134,7 +140,7 @@ impl Displayable for SelectCandidate {
   }
 }
 
-impl AsTransformerTrait for SelectCandidate {
+impl AsTransformerTrait for SelectCandidateTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
@@ -198,7 +204,7 @@ mod tests {
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry, None);
+    let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
 
     assert_eq!(select_candidate.buffer_content(), "a");
     assert_eq!(
@@ -219,7 +225,7 @@ mod tests {
     let candidate1 = Candidate::new("a", None);
     let vec = vec![candidate1.clone()];
     let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry, None);
+    let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
 
     let stopped = select_candidate.push_meta_key(&key!("enter"));
     assert_eq!(stopped.transformer_type(), TransformerTypes::Stopped);
@@ -236,7 +242,7 @@ mod tests {
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate = SelectCandidate::new(config.clone(), &dictionary_entry, None);
+    let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
 
     let select_candidate = select_candidate.push_meta_key(&key!("space"));
     let select_candidate = select_candidate.push_meta_key(&key!("delete"));

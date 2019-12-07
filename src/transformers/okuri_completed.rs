@@ -6,15 +6,15 @@ use super::{
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct OkuriCompleted {
+pub struct OkuriCompletedTransformer {
   config: Config,
   yomi: String,
   okuri: String,
 }
 
-impl OkuriCompleted {
+impl OkuriCompletedTransformer {
   pub fn new<S: Into<String>>(config: Config, yomi: S, okuri: S) -> Self {
-    OkuriCompleted {
+    OkuriCompletedTransformer {
       config,
       yomi: yomi.into(),
       okuri: okuri.into(),
@@ -22,19 +22,19 @@ impl OkuriCompleted {
   }
 }
 
-impl WithConfig for OkuriCompleted {
+impl WithConfig for OkuriCompletedTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for OkuriCompleted {
+impl TransformerState for OkuriCompletedTransformer {
   fn is_stopped(&self) -> bool {
     false
   }
 }
 
-impl Transformable for OkuriCompleted {
+impl Transformable for OkuriCompletedTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::OkuriCompleted
   }
@@ -52,7 +52,7 @@ impl Transformable for OkuriCompleted {
   }
 }
 
-impl Displayable for OkuriCompleted {
+impl Displayable for OkuriCompletedTransformer {
   fn buffer_content(&self) -> String {
     self.yomi.clone() + &self.okuri
   }
@@ -62,7 +62,7 @@ impl Displayable for OkuriCompleted {
   }
 }
 
-impl AsTransformerTrait for OkuriCompleted {
+impl AsTransformerTrait for OkuriCompletedTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }

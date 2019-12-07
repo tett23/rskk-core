@@ -6,37 +6,37 @@ use super::{
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Stopped {
+pub struct StoppedTransformer {
   config: Config,
   buffer: String,
 }
 
-impl Stopped {
+impl StoppedTransformer {
   pub fn new(config: Config, buffer: String) -> Self {
-    Stopped { config, buffer }
+    StoppedTransformer { config, buffer }
   }
 
   pub fn empty(config: Config) -> Self {
-    Stopped {
+    StoppedTransformer {
       config,
       buffer: "".to_string(),
     }
   }
 }
 
-impl WithConfig for Stopped {
+impl WithConfig for StoppedTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for Stopped {
+impl TransformerState for StoppedTransformer {
   fn is_stopped(&self) -> bool {
     true
   }
 }
 
-impl Transformable for Stopped {
+impl Transformable for StoppedTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Stopped
   }
@@ -54,7 +54,7 @@ impl Transformable for Stopped {
   }
 }
 
-impl Displayable for Stopped {
+impl Displayable for StoppedTransformer {
   fn buffer_content(&self) -> String {
     self.buffer.clone()
   }
@@ -64,7 +64,7 @@ impl Displayable for Stopped {
   }
 }
 
-impl AsTransformerTrait for Stopped {
+impl AsTransformerTrait for StoppedTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }

@@ -1,6 +1,6 @@
 use super::{
-  AsTransformerTrait, Canceled, Config, Displayable, Stopped, Transformable, TransformerState,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, CanceledTransformer, Config, Displayable, StoppedTransformer, Transformable,
+  TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::set;
@@ -58,11 +58,14 @@ impl Transformable for DirectTransformer {
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    return Box::new(Stopped::new(self.config(), character.to_string()));
+    return Box::new(StoppedTransformer::new(
+      self.config(),
+      character.to_string(),
+    ));
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(Canceled::new(self.config()))
+    Box::new(CanceledTransformer::new(self.config()))
   }
 }
 

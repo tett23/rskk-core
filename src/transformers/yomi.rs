@@ -1,6 +1,7 @@
 use super::{
-  AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, OkuriCompleted,
-  Stackable, Stopped, Transformable, TransformerState, TransformerTypes, WithConfig,
+  AsTransformerTrait, CanceledTransformer, Config, ContinuousTransformer, Displayable,
+  OkuriCompletedTransformer, Stackable, StoppedTransformer, Transformable, TransformerState,
+  TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::set;
@@ -78,14 +79,14 @@ impl Transformable for YomiTransformer {
 
     match (new_transformer.is_stopped(), &self.pair) {
       (false, _) => self.replace_last_element(new_transformer),
-      (true, (_, None)) => Box::new(Stopped::new(
+      (true, (_, None)) => Box::new(StoppedTransformer::new(
         self.config(),
         self.replace_last_element(new_transformer).buffer_content(),
       )),
       (true, (_, Some(_))) if new_transformer.transformer_type() == TransformerTypes::Canceled => {
         self.pop().0
       }
-      (true, (_, Some(_))) => Box::new(OkuriCompleted::new(
+      (true, (_, Some(_))) => Box::new(OkuriCompletedTransformer::new(
         self.config(),
         self.pair.0.buffer_content(),
         new_transformer.buffer_content(),
@@ -100,7 +101,10 @@ impl Transformable for YomiTransformer {
         self.pop().0
       }
       (true, (_, Some(_))) if new_transformer.transformer_type() == TransformerTypes::Stopped => {
-        Box::new(Stopped::new(self.config(), self.buffer_content()))
+        Box::new(StoppedTransformer::new(
+          self.config(),
+          self.buffer_content(),
+        ))
       }
       (true, (_, Some(_))) => unreachable!(),
       (false, _) => self.replace_last_element(new_transformer),
@@ -150,7 +154,10 @@ impl Stackable for YomiTransformer {
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
     match &self.pair {
-      (yomi, None) => (Box::new(Canceled::new(self.config())), Some(yomi.clone())),
+      (yomi, None) => (
+        Box::new(CanceledTransformer::new(self.config())),
+        Some(yomi.clone()),
+      ),
       (_, Some(okuri)) => {
         let mut ret = self.clone();
         ret.pair.1 = None;

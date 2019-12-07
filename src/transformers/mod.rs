@@ -18,16 +18,16 @@ use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
-pub use canceled::Canceled;
+pub use canceled::CanceledTransformer;
 pub use continuous::ContinuousTransformer;
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
 pub use hiragana::HiraganaTransformer;
-pub use okuri_completed::OkuriCompleted;
-pub use select_candidate::SelectCandidate;
+pub use okuri_completed::OkuriCompletedTransformer;
+pub use select_candidate::SelectCandidateTransformer;
 pub use stackable::Stackable;
-pub use stopped::Stopped;
-pub use unknown_word::{UnknownWord, Word};
+pub use stopped::StoppedTransformer;
+pub use unknown_word::{UnknownWordTransformer, Word};
 pub use yomi::YomiTransformer;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]

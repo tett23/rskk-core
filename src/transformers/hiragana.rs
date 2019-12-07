@@ -1,7 +1,7 @@
 use super::tables::hiragana_convert;
 use super::{
-  AsTransformerTrait, BufferState, Canceled, Config, Displayable, Stopped, Transformable,
-  TransformerState, TransformerTypes, WithConfig,
+  AsTransformerTrait, BufferState, CanceledTransformer, Config, Displayable, StoppedTransformer,
+  Transformable, TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::set;
@@ -83,13 +83,13 @@ impl Transformable for HiraganaTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     match hiragana_convert(&self.buffer, character) {
       Some((new_buffer, Continue)) => Box::new(self.new_from(new_buffer)),
-      Some((new_buffer, Stop)) => Box::new(Stopped::new(self.config(), new_buffer)),
-      None => Box::new(Canceled::new(self.config())),
+      Some((new_buffer, Stop)) => Box::new(StoppedTransformer::new(self.config(), new_buffer)),
+      None => Box::new(CanceledTransformer::new(self.config())),
     }
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(Canceled::new(self.config()))
+    Box::new(CanceledTransformer::new(self.config()))
   }
 }
 

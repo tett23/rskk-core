@@ -1,7 +1,7 @@
 use super::{
-  AsTransformerTrait, Canceled, Config, Displayable, MetaKey, SelectCandidate, Stackable, Stopped,
-  Transformable, TransformerState, TransformerTypes, UnknownWord, WithConfig, Word,
-  YomiTransformer,
+  AsTransformerTrait, CanceledTransformer, Config, Displayable, MetaKey,
+  SelectCandidateTransformer, Stackable, StoppedTransformer, Transformable, TransformerState,
+  TransformerTypes, UnknownWordTransformer, WithConfig, Word, YomiTransformer,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -60,12 +60,15 @@ impl Transformable for HenkanTransformer {
     if new_transformer.transformer_type() == TransformerTypes::OkuriCompleted {
       let buf = self.buffer_content();
       let tf: Box<dyn Transformable> = match self.config.dictionary.transform(&buf) {
-        Some(dic_entry) => Box::new(SelectCandidate::new(
+        Some(dic_entry) => Box::new(SelectCandidateTransformer::new(
           self.config(),
           dic_entry,
           Some(character),
         )),
-        None => Box::new(UnknownWord::new(self.config(), Word::new(&buf, None))),
+        None => Box::new(UnknownWordTransformer::new(
+          self.config(),
+          Word::new(&buf, None),
+        )),
       };
 
       return self.push(tf);
@@ -90,8 +93,15 @@ impl Transformable for HenkanTransformer {
   fn push_space(&self) -> Box<dyn Transformable> {
     let buf = self.buffer_content();
     match self.config.dictionary.transform(&buf) {
-      Some(dic_entry) => Box::new(SelectCandidate::new(self.config(), dic_entry, None)),
-      None => Box::new(UnknownWord::new(self.config(), Word::new(&buf, None))),
+      Some(dic_entry) => Box::new(SelectCandidateTransformer::new(
+        self.config(),
+        dic_entry,
+        None,
+      )),
+      None => Box::new(UnknownWordTransformer::new(
+        self.config(),
+        Word::new(&buf, None),
+      )),
     }
   }
 
@@ -125,7 +135,7 @@ impl AsTransformerTrait for HenkanTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => Box::new(Stopped::empty(self.config())),
+      None => Box::new(StoppedTransformer::empty(self.config())),
     }
   }
 }
@@ -144,7 +154,7 @@ impl Stackable for HenkanTransformer {
 
     let item = ret.stack.pop();
     if ret.stack.len() == 0 {
-      return (Box::new(Canceled::new(self.config())), None);
+      return (Box::new(CanceledTransformer::new(self.config())), None);
     }
 
     (Box::new(ret), item)

@@ -1,6 +1,6 @@
 use super::{
-  AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, MetaKey, Stackable,
-  Stopped, Transformable, TransformerState, TransformerTypes, WithConfig,
+  AsTransformerTrait, CanceledTransformer, Config, ContinuousTransformer, Displayable, MetaKey,
+  Stackable, StoppedTransformer, Transformable, TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -28,15 +28,15 @@ impl Word {
 }
 
 #[derive(Clone, Debug)]
-pub struct UnknownWord {
+pub struct UnknownWordTransformer {
   config: Config,
   word: Word,
   stack: Vec<Box<dyn Transformable>>,
 }
 
-impl UnknownWord {
+impl UnknownWordTransformer {
   pub fn new(config: Config, word: Word) -> Self {
-    UnknownWord {
+    UnknownWordTransformer {
       config: config.clone(),
       word,
       stack: vec![Box::new(ContinuousTransformer::new(
@@ -62,7 +62,7 @@ impl UnknownWord {
   }
 }
 
-impl Stackable for UnknownWord {
+impl Stackable for UnknownWordTransformer {
   fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
     let mut ret = self.new_from_stack(self.stack.clone());
 
@@ -89,19 +89,19 @@ impl Stackable for UnknownWord {
   }
 }
 
-impl WithConfig for UnknownWord {
+impl WithConfig for UnknownWordTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for UnknownWord {
+impl TransformerState for UnknownWordTransformer {
   fn is_stopped(&self) -> bool {
     false
   }
 }
 
-impl Transformable for UnknownWord {
+impl Transformable for UnknownWordTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::UnknownWord
   }
@@ -125,7 +125,7 @@ impl Transformable for UnknownWord {
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let last_tf = self.stack.last();
     if last_tf.is_none() {
-      return Box::new(Stopped::empty(self.config.clone()));
+      return Box::new(StoppedTransformer::empty(self.config.clone()));
     }
     let last_tf = last_tf.unwrap();
 
@@ -171,7 +171,10 @@ impl Transformable for UnknownWord {
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter)
         if target.is_empty() =>
       {
-        return Box::new(Stopped::new(self.config(), self.stopped_buffer_content()))
+        return Box::new(StoppedTransformer::new(
+          self.config(),
+          self.stopped_buffer_content(),
+        ))
       }
       _ => target.push_meta_key(key_code),
     };
@@ -180,11 +183,11 @@ impl Transformable for UnknownWord {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    return Box::new(Canceled::new(self.config()));
+    return Box::new(CanceledTransformer::new(self.config()));
   }
 }
 
-impl Displayable for UnknownWord {
+impl Displayable for UnknownWordTransformer {
   fn buffer_content(&self) -> String {
     self
       .stack
@@ -202,7 +205,7 @@ impl Displayable for UnknownWord {
   }
 }
 
-impl AsTransformerTrait for UnknownWord {
+impl AsTransformerTrait for UnknownWordTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
@@ -210,7 +213,7 @@ impl AsTransformerTrait for UnknownWord {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => Box::new(Stopped::empty(self.config())),
+      None => Box::new(StoppedTransformer::empty(self.config())),
     }
   }
 }

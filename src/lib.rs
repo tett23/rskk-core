@@ -139,7 +139,7 @@ macro_rules! tf {
         Box::new(crate::transformers::ContinuousTransformer::new($conf, $v))
     };
     ( $conf:expr, UnknownWordTransformer, $v:expr ) => {
-        Box::new(crate::transformers::UnknownWord::new($conf, $v))
+        Box::new(crate::transformers::UnknownWordTransformer::new($conf, $v))
     };
     ( $conf:expr, HenkanTransformer, $v:expr ) => {
         Box::new(crate::transformers::HenkanTransformer::new($conf, $v))
