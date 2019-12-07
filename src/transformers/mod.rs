@@ -34,6 +34,9 @@ pub trait TransformerState {
 pub trait Displayable {
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
+  fn is_empty(&self) -> bool {
+    self.buffer_content().len() == 0
+  }
 }
 
 #[derive(Clone, Debug)]

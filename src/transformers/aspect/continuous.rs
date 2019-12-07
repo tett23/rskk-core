@@ -1,5 +1,5 @@
 use super::super::{
-  AsTransformerTrait, Canceled, Config, Displayable, Stackable, Stopped, Transformable,
+  AsTransformerTrait, Canceled, Config, Displayable, MetaKey, Stackable, Stopped, Transformable,
   TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
@@ -8,7 +8,7 @@ use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct ContinuousTransformer {
   config: Config,
-  transformer_type: TransformerTypes,
+  current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
 }
 
@@ -16,20 +16,9 @@ impl ContinuousTransformer {
   pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
     ContinuousTransformer {
       config: config.clone(),
-      transformer_type,
+      current_transformer_type: transformer_type,
       stack: vec![transformer_type.to_transformer(config)],
     }
-  }
-
-  fn new_child_transformer(&self) -> Box<dyn Transformable> {
-    self.transformer_type.to_transformer(self.config.clone())
-  }
-
-  fn new_from_stack(&self, stack: Vec<Box<dyn Transformable>>) -> Self {
-    let mut ret = self.clone();
-    ret.stack = stack;
-
-    ret
   }
 
   fn stopped_buffer_content(&self) -> String {
@@ -68,32 +57,49 @@ impl Transformable for ContinuousTransformer {
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     match self.is_empty() {
-      true => self
-        .send_target()
-        .try_change_transformer(pressing_keys, last_key_code),
+      true => {
+        let new_transformer = self
+          .send_target()
+          .try_change_transformer(pressing_keys, last_key_code);
+
+        match new_transformer {
+          Some(tf) if tf.transformer_type() == TransformerTypes::Henkan => Some(tf),
+          Some(tf) => Some(self.replace_last_element(tf)),
+          None => None,
+        }
+      }
       false => None,
     }
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    let last_tf = self.stack.last();
-    if last_tf.is_none() {
-      return Box::new(Stopped::empty(self.config.clone()));
-    }
-    let last_tf = last_tf.unwrap();
-
-    let new_transformer = last_tf.push_character(character);
+    let new_transformer = self.send_target().push_character(character);
     match new_transformer.is_stopped() {
       true => {
         let mut ret = self.clone();
         ret.stack.pop();
         ret.stack.push(new_transformer);
-        ret.stack.push(ret.new_child_transformer());
+        ret
+          .stack
+          .push(self.current_transformer_type.to_transformer(self.config()));
 
         Box::new(ret)
       }
       false => self.replace_last_element(new_transformer),
     }
+  }
+
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
+    let target = self.send_target();
+
+    let new_transformer = match key_code {
+      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
+        return self.push_enter()
+      }
+      _ => target.push_meta_key(key_code),
+    };
+
+    self.transformer_updated(new_transformer)
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
@@ -116,6 +122,19 @@ impl Transformable for ContinuousTransformer {
   fn push_delete(&self) -> Box<dyn Transformable> {
     self.push_backspace()
   }
+
+  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    match new_transformer.is_stopped() {
+      true if new_transformer.transformer_type() == TransformerTypes::Canceled => {
+        Box::new(Canceled::new(self.config()))
+      }
+      true => Box::new(Stopped::new(
+        self.config(),
+        self.replace_last_element(new_transformer).buffer_content(),
+      )),
+      false => self.replace_last_element(new_transformer),
+    }
+  }
 }
 
 impl Displayable for ContinuousTransformer {
@@ -127,10 +146,7 @@ impl Displayable for ContinuousTransformer {
   }
 
   fn display_string(&self) -> String {
-    self
-      .stack
-      .iter()
-      .fold("".to_string(), |acc, tf| acc + &tf.display_string())
+    self.buffer_content()
   }
 }
 
@@ -138,11 +154,18 @@ impl AsTransformerTrait for ContinuousTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
+
+  fn send_target(&self) -> Box<dyn Transformable> {
+    match self.stack.last() {
+      Some(tf) => tf.clone(),
+      None => Box::new(Stopped::empty(self.config())),
+    }
+  }
 }
 
 impl Stackable for ContinuousTransformer {
   fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    let mut ret = self.new_from_stack(self.stack.clone());
+    let mut ret = self.clone();
 
     ret.stack.push(item);
 
@@ -150,7 +173,7 @@ impl Stackable for ContinuousTransformer {
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    let mut ret = self.new_from_stack(self.stack.clone());
+    let mut ret = self.clone();
 
     let item = ret.stack.pop();
 
@@ -170,31 +193,20 @@ impl Stackable for ContinuousTransformer {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::tests::dummy_conf;
+  use crate::tds;
+  use crate::tests::{dummy_conf, test_transformer};
+  use TransformerTypes::*;
 
   #[test]
-  fn push_character() {
-    let config = dummy_conf();
-    let continuous = ContinuousTransformer::new(config.clone(), TransformerTypes::Hiragana);
+  fn it_works() {
+    let conf = dummy_conf();
 
-    let continuous = continuous.push_character('h');
-    let continuous = continuous.push_character('i');
-    let continuous = continuous.push_character('r');
-    let continuous = continuous.push_character('a');
-    let continuous = continuous.push_character('g');
-    let continuous = continuous.push_character('a');
-    let continuous = continuous.push_character('n');
-    let continuous = continuous.push_character('a');
-
-    assert_eq!(continuous.display_string(), "ひらがな");
-    assert_eq!(
-      continuous.transformer_type(),
-      TransformerTypes::ContinuousTransformer
-    );
-
-    let continuous = continuous.push_enter();
-
-    assert_eq!(continuous.display_string(), "ひらがな");
-    assert_eq!(continuous.transformer_type(), TransformerTypes::Stopped);
+    let items = tds![conf, ContinuousTransformer, Hiragana;
+        ["hiragana", "ひらがな", ContinuousTransformer],
+        ["hiragana\n", "ひらがな", Stopped],
+        ["Kannji", "▽かんじ", Henkan],
+        ["Kannji \n", "漢字", Stopped],
+    ];
+    test_transformer(items);
   }
 }

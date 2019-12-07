@@ -182,6 +182,7 @@ mod tests {
       ["okuRi", "▼送り", Henkan],
       ["okuRi[escape]", "▽おく*r", Henkan],
       ["okuRi\n", "送り", Stopped],
+      ["michigo ", "[登録: みちご]", Henkan],
     ];
     test_transformer(items);
 
