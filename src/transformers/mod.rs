@@ -14,7 +14,7 @@ use std::rc::Rc;
 
 pub use aspect::{
   Aspect, AspectTransformer, Canceled, ContinuousTransformer, SelectCandidate, Stopped,
-  UnknownWord, Word, Yomi,
+  UnknownWord, Word, YomiTransformer,
 };
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;

@@ -17,7 +17,7 @@ pub use continuous::ContinuousTransformer;
 pub use select_candidate::SelectCandidate;
 pub use stopped::Stopped;
 pub use unknown_word::{UnknownWord, Word};
-pub use yomi::Yomi;
+pub use yomi::YomiTransformer;
 
 #[derive(Clone, Debug)]
 pub enum Aspect {
@@ -31,7 +31,7 @@ pub enum Aspect {
 
 impl Aspect {
   pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
-    Aspect::Yomi(Box::new(Yomi::new(config, transformer_type)))
+    Aspect::Yomi(Box::new(YomiTransformer::new(config, transformer_type)))
   }
 }
 

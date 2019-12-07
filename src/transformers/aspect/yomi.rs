@@ -7,16 +7,16 @@ use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Yomi {
+pub struct YomiTransformer {
   config: Config,
   buffer: String,
   transformer_type: TransformerTypes,
   transformer: Box<dyn Transformable>,
 }
 
-impl Yomi {
+impl YomiTransformer {
   pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
-    Yomi {
+    YomiTransformer {
       config: config.clone(),
       buffer: "".to_string(),
       transformer_type,
@@ -40,19 +40,19 @@ impl Yomi {
   }
 }
 
-impl WithConfig for Yomi {
+impl WithConfig for YomiTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl TransformerState for Yomi {
+impl TransformerState for YomiTransformer {
   fn is_stopped(&self) -> bool {
     false
   }
 }
 
-impl Transformable for Yomi {
+impl Transformable for YomiTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Yomi
   }
@@ -107,7 +107,7 @@ impl Transformable for Yomi {
   }
 }
 
-impl Displayable for Yomi {
+impl Displayable for YomiTransformer {
   fn buffer_content(&self) -> String {
     self.buffer.clone() + &self.transformer.buffer_content()
   }
@@ -117,7 +117,7 @@ impl Displayable for Yomi {
   }
 }
 
-impl AsTransformerTrait for Yomi {
+impl AsTransformerTrait for YomiTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
