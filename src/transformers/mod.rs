@@ -130,29 +130,31 @@ pub trait Transformable:
   }
   fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes>;
   fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
+    let target = self.send_target();
+
     let new_transformer = match key_code {
-      KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
+      KeyCode::Meta(MetaKey::Escape) => target.push_escape(),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        self.push_enter()
+        target.push_enter()
       }
       KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
-        self.push_space()
+        target.push_space()
       }
       KeyCode::PrintableMeta(MetaKey::Backspace, _) | KeyCode::Meta(MetaKey::Backspace) => {
-        self.push_backspace()
+        target.push_backspace()
       }
       KeyCode::PrintableMeta(MetaKey::Delete, _) | KeyCode::Meta(MetaKey::Delete) => {
-        self.push_delete()
+        target.push_delete()
       }
-      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => self.push_tab(),
-      KeyCode::Meta(MetaKey::ArrowRight) => self.push_arrow_right(),
-      KeyCode::Meta(MetaKey::ArrowDown) => self.push_arrow_down(),
-      KeyCode::Meta(MetaKey::ArrowLeft) => self.push_arrow_left(),
-      KeyCode::Meta(MetaKey::ArrowUp) => self.push_arrow_up(),
-      _ => return self.as_trait(),
+      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => target.push_tab(),
+      KeyCode::Meta(MetaKey::ArrowRight) => target.push_arrow_right(),
+      KeyCode::Meta(MetaKey::ArrowDown) => target.push_arrow_down(),
+      KeyCode::Meta(MetaKey::ArrowLeft) => target.push_arrow_left(),
+      KeyCode::Meta(MetaKey::ArrowUp) => target.push_arrow_up(),
+      _ => return target.as_trait(),
     };
 
-    self.transformer_updated(new_transformer)
+    target.transformer_updated(new_transformer)
   }
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     new_transformer
@@ -196,6 +198,10 @@ pub trait Transformable:
 
 pub trait AsTransformerTrait {
   fn as_trait(&self) -> Box<dyn Transformable>;
+
+  fn send_target(&self) -> Box<dyn Transformable> {
+    self.as_trait()
+  }
 }
 
 objekt::clone_trait_object!(Transformable);
