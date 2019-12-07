@@ -48,7 +48,7 @@ impl TransformerState for ContinuousTransformer {
 
 impl Transformable for ContinuousTransformer {
   fn transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::ContinuousTransformer
+    TransformerTypes::Continuous
   }
 
   fn try_change_transformer(
@@ -202,7 +202,7 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, ContinuousTransformer, Hiragana;
-        ["hiragana", "ひらがな", ContinuousTransformer],
+        ["hiragana", "ひらがな", Continuous],
         ["hiragana\n", "ひらがな", Stopped],
         ["Kannji", "▽かんじ", Henkan],
         ["Kannji \n", "漢字", Stopped],

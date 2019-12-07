@@ -230,7 +230,7 @@ pub enum TransformerTypes {
   Stopped,
   SelectCandidate,
   UnknownWord,
-  ContinuousTransformer,
+  Continuous,
   OkuriCompleted,
 }
 
@@ -247,7 +247,7 @@ impl TransformerTypes {
       TransformerTypes::Abbr => Box::new(DirectTransformer::new(config)),
       TransformerTypes::EmEisu => Box::new(DirectTransformer::new(config)),
       TransformerTypes::EnKatakana => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::ContinuousTransformer => Box::new(ContinuousTransformer::new(
+      TransformerTypes::Continuous => Box::new(ContinuousTransformer::new(
         config,
         TransformerTypes::Hiragana,
       )),
