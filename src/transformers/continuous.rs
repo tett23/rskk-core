@@ -3,6 +3,7 @@ use super::{
   StoppedTransformer, Transformable, TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
+use crate::tf;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -17,7 +18,7 @@ impl ContinuousTransformer {
     ContinuousTransformer {
       config: config.clone(),
       current_transformer_type: transformer_type,
-      stack: vec![transformer_type.to_transformer(config)],
+      stack: vec![tf!(config, transformer_type)],
     }
   }
 
@@ -81,7 +82,7 @@ impl Transformable for ContinuousTransformer {
         ret.stack.push(new_transformer);
         ret
           .stack
-          .push(self.current_transformer_type.to_transformer(self.config()));
+          .push(tf!(self.config(), self.current_transformer_type));
 
         Box::new(ret)
       }

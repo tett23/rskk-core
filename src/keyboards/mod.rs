@@ -1,8 +1,6 @@
 pub mod keycodes;
 pub mod us;
 
-use crate::KeyConfig;
-use crate::TransformerTypes;
 use std::collections::HashSet;
 
 pub use keycodes::{KeyCode, KeyCombination, KeyCombinations, MetaKey};
@@ -55,58 +53,5 @@ pub trait Keyboard {
 
   fn is_pressing(&self, key: &KeyCode) -> bool {
     self.pressing_keys().contains(key)
-  }
-
-  fn try_change_transformer(
-    &self,
-    key_config: &KeyConfig,
-    current_transformer: &TransformerTypes,
-  ) -> Option<TransformerTypes> {
-    if let Some(ret) = current_transformer
-      .allow_change_transformer_to()
-      .iter()
-      .find(|&&transformer| {
-        transformer
-          .get_key_combination(key_config)
-          .fulfilled(&self.pressing_keys())
-      })
-    {
-      Some(ret.clone())
-    } else {
-      None
-    }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::tests::str_to_key_code_vector;
-  use crate::KeyConfig;
-
-  #[test]
-  fn change_transformer() {
-    let key_config = KeyConfig::default_config();
-
-    let mut keyboard = us::US::new();
-    keyboard.push_events(&str_to_key_code_vector("a"));
-    assert_eq!(
-      None,
-      keyboard.try_change_transformer(&key_config, &TransformerTypes::Direct)
-    );
-
-    let mut keyboard = us::US::new();
-    keyboard.push_events(&str_to_key_code_vector("[down:ctrl][down:j]"));
-    assert_eq!(
-      Some(TransformerTypes::Hiragana),
-      keyboard.try_change_transformer(&key_config, &TransformerTypes::Direct)
-    );
-
-    let mut keyboard = us::US::new();
-    keyboard.push_events(&str_to_key_code_vector("[down:l]"));
-    assert_eq!(
-      Some(TransformerTypes::Direct),
-      keyboard.try_change_transformer(&key_config, &TransformerTypes::Hiragana)
-    );
   }
 }

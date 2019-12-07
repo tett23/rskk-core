@@ -3,7 +3,7 @@ use super::{
   TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
-use crate::set;
+use crate::{set, tf};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -52,7 +52,7 @@ impl Transformable for DirectTransformer {
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), pressing_keys);
     match transformer_type {
-      Some(tft) => Some(tft.to_transformer(self.config())),
+      Some(tft) => Some(tf!(self.config(), tft)),
       None => None,
     }
   }

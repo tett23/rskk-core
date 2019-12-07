@@ -1,5 +1,6 @@
 use super::keyboards::{KeyEvents, Keyboard};
 use super::transformers::{Config, Transformable, TransformerState, TransformerTypes};
+use crate::tf;
 
 pub struct Composition {
   transformer: Box<dyn Transformable>,
@@ -15,7 +16,7 @@ impl Composition {
     let keyboard = config.rskk_config().keyboard_type.to_keyboard();
 
     Composition {
-      transformer: transformer_types.to_transformer(config.clone()),
+      transformer: tf!(config, transformer_types),
       keyboard: keyboard,
     }
   }

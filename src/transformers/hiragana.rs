@@ -4,7 +4,7 @@ use super::{
   Transformable, TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
-use crate::set;
+use crate::{set, tf};
 use std::collections::HashSet;
 use BufferState::*;
 
@@ -69,13 +69,13 @@ impl Transformable for HiraganaTransformer {
       .try_change_transformer(&Self::allow_transformers(), pressing_keys);
     match transformer_type {
       Some(tft) if tft == TransformerTypes::Henkan => {
-        let tf = tft.to_transformer(self.config());
+        let tf = tf!(self.config(), tft);
         match last_key_code.printable_key() {
           Some(c) => Some(tf.push_character(c)),
           None => Some(tf),
         }
       }
-      Some(tft) => Some(tft.to_transformer(self.config())),
+      Some(tft) => Some(tf!(self.config(), tft)),
       None => None,
     }
   }

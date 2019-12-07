@@ -11,8 +11,8 @@ mod tables;
 mod unknown_word;
 mod yomi;
 
-use crate::keyboards::{KeyCode, KeyCombinations, KeyEvents, MetaKey};
-use crate::{set, Dictionary, KeyConfig, RSKKConfig};
+use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
+use crate::{Dictionary, KeyConfig, RSKKConfig};
 use objekt;
 use std::collections::HashSet;
 use std::fmt;
@@ -241,75 +241,4 @@ pub enum TransformerTypes {
   UnknownWord,
   Continuous,
   OkuriCompleted,
-}
-
-impl TransformerTypes {
-  pub fn to_transformer(&self, config: Config) -> Box<dyn Transformable> {
-    match self {
-      TransformerTypes::Direct => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::Henkan => {
-        Box::new(HenkanTransformer::new(config, TransformerTypes::Hiragana))
-      }
-      TransformerTypes::Okuri => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::Hiragana => Box::new(HiraganaTransformer::new(config)),
-      TransformerTypes::Katakana => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::Abbr => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::EmEisu => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::EnKatakana => Box::new(DirectTransformer::new(config)),
-      TransformerTypes::Continuous => Box::new(ContinuousTransformer::new(
-        config,
-        TransformerTypes::Hiragana,
-      )),
-      _ => unreachable!(),
-    }
-  }
-
-  pub fn allow_change_transformer_to(&self) -> HashSet<TransformerTypes> {
-    match self {
-      TransformerTypes::Direct => set![TransformerTypes::Hiragana],
-      TransformerTypes::Hiragana => set![
-        TransformerTypes::Direct,
-        TransformerTypes::Henkan,
-        TransformerTypes::Abbr,
-        TransformerTypes::Katakana,
-        TransformerTypes::EnKatakana,
-        TransformerTypes::EmEisu
-      ],
-      TransformerTypes::Henkan => set![TransformerTypes::Okuri],
-      TransformerTypes::Okuri => set![],
-      TransformerTypes::Katakana => set![
-        TransformerTypes::Direct,
-        TransformerTypes::Hiragana,
-        TransformerTypes::Henkan,
-        TransformerTypes::Abbr,
-        TransformerTypes::EnKatakana,
-        TransformerTypes::EmEisu
-      ],
-      TransformerTypes::EnKatakana => set![
-        TransformerTypes::Direct,
-        TransformerTypes::Hiragana,
-        TransformerTypes::Henkan,
-        TransformerTypes::Abbr,
-        TransformerTypes::Katakana,
-        TransformerTypes::EmEisu
-      ],
-      TransformerTypes::EmEisu => set![TransformerTypes::Hiragana],
-      TransformerTypes::Abbr => set![],
-      _ => unreachable!(),
-    }
-  }
-
-  pub fn get_key_combination<'a>(&self, key_config: &'a KeyConfig) -> &'a KeyCombinations {
-    match self {
-      TransformerTypes::Direct => &key_config.enter_direct_transformer,
-      TransformerTypes::Henkan => &key_config.enter_henkan_transformer,
-      TransformerTypes::Okuri => &key_config.enter_okuri_transformer,
-      TransformerTypes::Hiragana => &key_config.enter_hiragana_transformer,
-      TransformerTypes::Katakana => &key_config.enter_katakana_transformer,
-      TransformerTypes::EnKatakana => &key_config.enter_en_katakana_transformer,
-      TransformerTypes::EmEisu => &key_config.enter_em_eisu_transformer,
-      TransformerTypes::Abbr => &key_config.enter_abbr_transformer,
-      _ => unreachable!(),
-    }
-  }
 }

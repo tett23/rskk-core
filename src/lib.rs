@@ -124,18 +124,27 @@ macro_rules! key {
 
 #[macro_export]
 macro_rules! tf {
-    ( $conf:expr, $t:expr ) => {
-        match $t {
+    ( $conf:expr, $t:expr ) => {{
+        dbg!($t);
+        let ret: Box<dyn crate::transformers::Transformable> = match $t {
             crate::transformers::TransformerTypes::Direct => {
                 Box::new(crate::transformers::DirectTransformer::new($conf))
             }
             crate::transformers::TransformerTypes::Hiragana => {
                 Box::new(crate::transformers::HiraganaTransformer::new($conf))
             }
+            crate::transformers::TransformerTypes::Henkan => {
+                Box::new(crate::transformers::HenkanTransformer::new(
+                    $conf,
+                    crate::transformers::TransformerTypes::Hiragana,
+                ))
+            }
             _ => unreachable!(),
-        }
-    };
-    ( $conf:expr, ContinuousTransformer, $v:expr  ) => {
+        };
+
+        ret
+    }};
+    ( $conf:expr, ContinuousTransformer, $v:expr ) => {
         Box::new(crate::transformers::ContinuousTransformer::new($conf, $v))
     };
     ( $conf:expr, UnknownWordTransformer, $v:expr ) => {

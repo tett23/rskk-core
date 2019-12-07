@@ -4,13 +4,13 @@ use super::{
   TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
-use crate::set;
+use crate::{set, tf};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct YomiTransformer {
   config: Config,
-  transformer_type: TransformerTypes,
+  current_transformer_type: TransformerTypes,
   pair: (Box<dyn Transformable>, Option<Box<dyn Transformable>>),
 }
 
@@ -18,7 +18,7 @@ impl YomiTransformer {
   pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
     YomiTransformer {
       config: config.clone(),
-      transformer_type,
+      current_transformer_type: transformer_type,
       pair: (
         Box::new(ContinuousTransformer::new(config, transformer_type)),
         None,
@@ -58,7 +58,7 @@ impl Transformable for YomiTransformer {
         match transformer_type {
           Some(TransformerTypes::Henkan) => {
             let ret = self.clone();
-            let okuri = self.transformer_type.to_transformer(self.config());
+            let okuri = tf!(self.config(), self.current_transformer_type);
             let okuri = if let Some(character) = last_key_code.printable_key() {
               okuri.push_character(character)
             } else {
