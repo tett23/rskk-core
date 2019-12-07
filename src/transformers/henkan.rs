@@ -1,5 +1,5 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, MetaKey, SelectCandidate, Stackable, Stopped,
+  AsTransformerTrait, Canceled, Config, Displayable, MetaKey, SelectCandidate, Stackable, Stopped,
   Transformable, TransformerState, TransformerTypes, UnknownWord, WithConfig, Word,
   YomiTransformer,
 };
@@ -45,13 +45,31 @@ impl Transformable for HenkanTransformer {
     pressing_keys: &HashSet<KeyCode>,
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
-    self
+    let new_transformer = self
       .send_target()
-      .try_change_transformer(pressing_keys, last_key_code)
+      .try_change_transformer(pressing_keys, last_key_code);
+
+    match new_transformer {
+      Some(tf) => Some(self.replace_last_element(tf)),
+      None => None,
+    }
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let new_transformer = self.send_target().push_character(character);
+    if new_transformer.transformer_type() == TransformerTypes::OkuriCompleted {
+      let buf = self.buffer_content();
+      let tf: Box<dyn Transformable> = match self.config.dictionary.transform(&buf) {
+        Some(dic_entry) => Box::new(SelectCandidate::new(
+          self.config(),
+          dic_entry,
+          Some(character),
+        )),
+        None => Box::new(UnknownWord::new(self.config(), Word::new(&buf, None))),
+      };
+
+      return self.push(tf);
+    }
 
     self.replace_last_element(new_transformer)
   }
@@ -60,25 +78,10 @@ impl Transformable for HenkanTransformer {
     let target = self.send_target();
 
     let new_transformer = match key_code {
-      KeyCode::Meta(MetaKey::Escape) => target.push_escape(),
-      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        target.push_enter()
-      }
       KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
         self.push_space()
       }
-      KeyCode::PrintableMeta(MetaKey::Backspace, _) | KeyCode::Meta(MetaKey::Backspace) => {
-        target.push_backspace()
-      }
-      KeyCode::PrintableMeta(MetaKey::Delete, _) | KeyCode::Meta(MetaKey::Delete) => {
-        target.push_delete()
-      }
-      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => target.push_tab(),
-      KeyCode::Meta(MetaKey::ArrowRight) => target.push_arrow_right(),
-      KeyCode::Meta(MetaKey::ArrowDown) => target.push_arrow_down(),
-      KeyCode::Meta(MetaKey::ArrowLeft) => target.push_arrow_left(),
-      KeyCode::Meta(MetaKey::ArrowUp) => target.push_arrow_up(),
-      _ => return self.as_trait(),
+      _ => target.push_meta_key(key_code),
     };
 
     self.transformer_updated(new_transformer)
@@ -87,17 +90,20 @@ impl Transformable for HenkanTransformer {
   fn push_space(&self) -> Box<dyn Transformable> {
     let buf = self.buffer_content();
     match self.config.dictionary.transform(&buf) {
-      Some(dic_entry) => Box::new(SelectCandidate::new(self.config(), dic_entry)),
+      Some(dic_entry) => Box::new(SelectCandidate::new(self.config(), dic_entry, None)),
       None => Box::new(UnknownWord::new(self.config(), Word::new(&buf, None))),
     }
   }
 
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    if new_transformer.is_stopped() {
-      return new_transformer;
+    match (
+      new_transformer.is_stopped(),
+      new_transformer.transformer_type(),
+    ) {
+      (true, TransformerTypes::Stopped) => new_transformer,
+      (true, TransformerTypes::Canceled) => self.pop().0,
+      _ => self.replace_last_element(new_transformer),
     }
-
-    self.replace_last_element(new_transformer)
   }
 }
 
@@ -137,6 +143,9 @@ impl Stackable for HenkanTransformer {
     let mut ret = self.clone();
 
     let item = ret.stack.pop();
+    if ret.stack.len() == 0 {
+      return (Box::new(Canceled::new(self.config())), None);
+    }
 
     (Box::new(ret), item)
   }
@@ -163,12 +172,16 @@ mod tests {
 
     let items = tds![conf, HenkanTransformer, Hiragana;
       ["hiragana", "▽ひらがな", Henkan],
+      ["hiragana\n", "ひらがな", Stopped],
+      ["hiragana[escape]", "", Canceled],
       ["kannji ", "▼漢字", Henkan],
-      // ["kannji\n", "▼漢字", Henkan],
-      // ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
-      // ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
-      // ["Kannji \n","[登録: みちご]漢字", UnknownWord],
-      // ["Michi \nGo \n\n","未知語",Stopped]
+      ["kannji \n", "漢字", Stopped],
+      ["okuR", "▽おく*r", Henkan],
+      ["okuR\n", "▽おく", Henkan],
+      ["okuR[escape]", "▽おく", Henkan],
+      ["okuRi", "▼送り", Henkan],
+      ["okuRi[escape]", "▽おく*r", Henkan],
+      ["okuRi\n", "送り", Stopped],
     ];
     test_transformer(items);
 

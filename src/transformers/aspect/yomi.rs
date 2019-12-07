@@ -1,6 +1,6 @@
 use super::super::{
-  AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, Stackable, Stopped,
-  Transformable, TransformerState, TransformerTypes, WithConfig,
+  AsTransformerTrait, Canceled, Config, ContinuousTransformer, Displayable, OkuriCompleted,
+  Stackable, Stopped, Transformable, TransformerState, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::set;
@@ -57,10 +57,7 @@ impl Transformable for YomiTransformer {
         match transformer_type {
           Some(TransformerTypes::Henkan) => {
             let ret = self.clone();
-            let okuri = Box::new(ContinuousTransformer::new(
-              self.config.clone(),
-              self.transformer_type,
-            ));
+            let okuri = self.transformer_type.to_transformer(self.config());
             let okuri = if let Some(character) = last_key_code.printable_key() {
               okuri.push_character(character)
             } else {
@@ -79,23 +76,34 @@ impl Transformable for YomiTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let new_transformer = self.send_target().push_character(character);
 
-    self.replace_last_element(new_transformer)
+    match (new_transformer.is_stopped(), &self.pair) {
+      (false, _) => self.replace_last_element(new_transformer),
+      (true, (_, None)) => Box::new(Stopped::new(
+        self.config(),
+        self.replace_last_element(new_transformer).buffer_content(),
+      )),
+      (true, (_, Some(_))) if new_transformer.transformer_type() == TransformerTypes::Canceled => {
+        self.pop().0
+      }
+      (true, (_, Some(_))) => Box::new(OkuriCompleted::new(
+        self.config(),
+        self.pair.0.buffer_content(),
+        new_transformer.buffer_content(),
+      )),
+    }
   }
 
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    match &self.pair {
-      (_, None) => match new_transformer.is_stopped() {
-        true => new_transformer,
-        false => self.replace_last_element(new_transformer),
-      },
-      (_, Some(_)) => match new_transformer.is_stopped() {
-        true => match new_transformer.transformer_type() {
-          TransformerTypes::Canceled => self.pop().0,
-          TransformerTypes::Stopped => Box::new(Stopped::new(self.config(), self.buffer_content())),
-          _ => unreachable!(),
-        },
-        false => self.replace_last_element(new_transformer),
-      },
+    match (new_transformer.is_stopped(), &self.pair) {
+      (true, (_, None)) => new_transformer,
+      (true, (_, Some(_))) if new_transformer.transformer_type() == TransformerTypes::Canceled => {
+        self.pop().0
+      }
+      (true, (_, Some(_))) if new_transformer.transformer_type() == TransformerTypes::Stopped => {
+        Box::new(Stopped::new(self.config(), self.buffer_content()))
+      }
+      (true, (_, Some(_))) => unreachable!(),
+      (false, _) => self.replace_last_element(new_transformer),
     }
   }
 }
@@ -183,8 +191,11 @@ mod tests {
     let items = tds![conf, YomiTransformer, Hiragana;
       ["hiragana", "▽ひらがな", Yomi],
       ["hiragana\n", "ひらがな", Stopped],
-      ["okuriKana", "▽おくり*かな", Yomi],
-      ["okuriKana\n", "おくりかな", Stopped],
+      ["oku[escape]", "", Canceled],
+      ["okuR", "▽おく*r", Yomi],
+      ["okuR[escape]", "▽おく", Yomi],
+      ["okuR\n", "▽おく", Yomi],
+      ["okuRi", "おくり", OkuriCompleted],
     ];
     test_transformer(items);
 

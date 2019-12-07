@@ -84,7 +84,7 @@ impl Transformable for HiraganaTransformer {
     match hiragana_convert(&self.buffer, character) {
       Some((new_buffer, Continue)) => Box::new(self.new_from(new_buffer)),
       Some((new_buffer, Stop)) => Box::new(Stopped::new(self.config(), new_buffer)),
-      _ => Box::new(Stopped::empty(self.config())),
+      None => Box::new(Canceled::new(self.config())),
     }
   }
 

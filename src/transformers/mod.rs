@@ -13,8 +13,8 @@ use std::fmt;
 use std::rc::Rc;
 
 pub use aspect::{
-  Aspect, AspectTransformer, Canceled, ContinuousTransformer, SelectCandidate, Stopped,
-  UnknownWord, Word, YomiTransformer,
+  Aspect, AspectTransformer, Canceled, ContinuousTransformer, OkuriCompleted, SelectCandidate,
+  Stopped, UnknownWord, Word, YomiTransformer,
 };
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
@@ -228,6 +228,7 @@ pub enum TransformerTypes {
   SelectCandidate,
   UnknownWord,
   ContinuousTransformer,
+  OkuriCompleted,
 }
 
 impl TransformerTypes {

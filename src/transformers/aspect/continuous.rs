@@ -107,10 +107,6 @@ impl Transformable for ContinuousTransformer {
     Box::new(Stopped::new(self.config(), self.stopped_buffer_content()))
   }
 
-  fn push_space(&self) -> Box<dyn Transformable> {
-    unimplemented!()
-  }
-
   fn push_backspace(&self) -> Box<dyn Transformable> {
     // TODO: stackが空になるまでstack先頭にbackspaceを送り続ける
     // すべて空のときは空のStoppedを返す

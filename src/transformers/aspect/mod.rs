@@ -1,5 +1,6 @@
 mod canceled;
 mod continuous;
+mod okuri_completed;
 mod select_candidate;
 mod stopped;
 mod unknown_word;
@@ -14,6 +15,7 @@ use std::collections::HashSet;
 
 pub use canceled::Canceled;
 pub use continuous::ContinuousTransformer;
+pub use okuri_completed::OkuriCompleted;
 pub use select_candidate::SelectCandidate;
 pub use stopped::Stopped;
 pub use unknown_word::{UnknownWord, Word};
