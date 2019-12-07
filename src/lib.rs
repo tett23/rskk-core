@@ -127,29 +127,29 @@ macro_rules! tf {
     ( $conf:expr, $t:expr ) => {
         match $t {
             transformers::TransformerTypes::Direct => {
-                Box::new(transformers::DirectTransformer::new($conf))
+                Box::new(crate::transformers::DirectTransformer::new($conf))
             }
             transformers::TransformerTypes::Hiragana => {
-                Box::new(transformers::HiraganaTransformer::new($conf))
+                Box::new(crate::transformers::HiraganaTransformer::new($conf))
             }
             _ => unreachable!(),
         }
     };
     ( $conf:expr, ContinuousTransformer, $v:expr  ) => {
-        Box::new(transformers::ContinuousTransformer::new($conf, $v))
+        Box::new(crate::transformers::ContinuousTransformer::new($conf, $v))
     };
     ( $conf:expr, UnknownWordTransformer, $v:expr ) => {
-        Box::new(transformers::UnknownWord::new($conf, $v))
+        Box::new(crate::transformers::UnknownWord::new($conf, $v))
     };
 }
 
 #[macro_export]
 macro_rules! td {
     ($conf:expr, $tf:tt; [$input:expr, $out:expr, $out_tf:expr]) => {{
-        crate::tests::TestData::new(tf!($conf, $tf), $input, $out, $out_tf)
+        crate::tests::TestData::new(crate::tf!($conf, $tf), $input, $out, $out_tf)
     }};
     ($conf:expr, $tf:tt, $tf_v1:expr; [$input:expr, $out:expr, $out_tf:expr]) => {{
-        crate::tests::TestData::new(tf!($conf, $tf, $tf_v1), $input, $out, $out_tf)
+        crate::tests::TestData::new(crate::tf!($conf, $tf, $tf_v1), $input, $out, $out_tf)
     }};
 }
 
@@ -157,12 +157,12 @@ macro_rules! td {
 macro_rules! tds {
     ( $conf:expr, $tf:tt; $( [ $($x:expr),* $(,)? ] ),* $(,)? ) => {{
         vec![
-            $( td![$conf.clone(), $tf; [ $($x),* ]], )*
+            $( crate::td![$conf.clone(), $tf; [ $($x),* ]], )*
         ]
     }};
     ( $conf:expr, $tf:tt, $tf_v1:expr; $( [ $($x:expr),* $(,)? ] ),* $(,)? ) => {{
         vec![
-            $( td![$conf.clone(), $tf, $tf_v1; [ $($x),* ] ], )*
+            $( crate::td![$conf.clone(), $tf, $tf_v1; [ $($x),* ] ], )*
         ]
     }};
 }
