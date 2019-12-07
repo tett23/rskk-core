@@ -93,16 +93,23 @@ pub trait Transformable:
     key: &KeyCode,
     last_character: Option<char>,
   ) -> Box<dyn Transformable> {
-    println!("change transformer {:?} {:?}", key, self.transformer_type());
+    println!(
+      "change transformer start {:?} {:?}",
+      key,
+      self.transformer_type()
+    );
     if let Some(new_transformer_type) = self.try_change_transformer(pressing_keys) {
       let new_transformer = new_transformer_type.to_transformer(self.config());
       return self.transformer_changed(new_transformer, key.printable_key());
     };
 
-    println!("change transformer {:?}", self.transformer_type());
+    println!(
+      "change transformer try_change_transformer {:?}",
+      self.transformer_type()
+    );
     let new_transformer = self.push_meta_key(key);
     println!(
-      "change transformer {:?}",
+      "change transformer push_meta key {:?}",
       new_transformer.transformer_type()
     );
     let new_transformer = match last_character {
@@ -110,7 +117,7 @@ pub trait Transformable:
       None => new_transformer,
     };
     println!(
-      "change transformer {:?}",
+      "change transformer push_character {:?}",
       new_transformer.transformer_type()
     );
     println!();
@@ -151,10 +158,10 @@ pub trait Transformable:
       KeyCode::Meta(MetaKey::ArrowDown) => target.push_arrow_down(),
       KeyCode::Meta(MetaKey::ArrowLeft) => target.push_arrow_left(),
       KeyCode::Meta(MetaKey::ArrowUp) => target.push_arrow_up(),
-      _ => return target.as_trait(),
+      _ => return self.as_trait(),
     };
 
-    target.transformer_updated(new_transformer)
+    self.transformer_updated(new_transformer)
   }
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     new_transformer

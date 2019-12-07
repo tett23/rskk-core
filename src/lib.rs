@@ -171,7 +171,6 @@ macro_rules! tds {
 mod lib_tests {
     use super::*;
     use crate::tests::{dummy_conf, test_transformer};
-    use transformers::Word;
     use TransformerTypes::*;
 
     #[test]
@@ -185,35 +184,26 @@ mod lib_tests {
         ];
         test_transformer(items);
 
-        let items = tds![conf, Hiragana;
-            ["a", "あ", Stopped],
-            ["ka", "か", Stopped],
-            ["ts", "ts", Hiragana],
-            ["tsu", "つ", Stopped],
-            ["K", "▽k", Henkan],
-            ["Ka", "▽か", Henkan],
-            ["Kannji", "▽かんじ", Henkan],
-            ["Kannji ", "▼漢字", Henkan],
-            ["Kannji \n", "漢字", Stopped],
-            ["Michigo ", "[登録: みちご]", Henkan],
-            ["Michigo \n", "", Stopped]
-        ];
-        test_transformer(items);
+        // let items = tds![conf, Hiragana;
+        //     ["a", "あ", Stopped],
+        //     ["ka", "か", Stopped],
+        //     ["ts", "ts", Hiragana],
+        //     ["tsu", "つ", Stopped],
+        //     ["K", "▽k", Henkan],
+        //     ["Ka", "▽か", Henkan],
+        //     ["Kannji", "▽かんじ", Henkan],
+        //     ["Kannji ", "▼漢字", Henkan],
+        //     ["Kannji \n", "漢字", Stopped],
+        //     ["Michigo ", "[登録: みちご]", Henkan],
+        //     ["Michigo \n", "", Stopped]
+        // ];
+        // test_transformer(items);
 
-        let items = tds![conf, ContinuousTransformer, Hiragana;
-            ["hiragana", "ひらがな", ContinuousTransformer],
-            ["hiragana\n", "ひらがな", Stopped],
-            ["hiragana[escape]", "", Canceled]
-        ];
-        test_transformer(items);
-
-        let items = tds![conf, UnknownWordTransformer, Word::new("みちご", None);
-            ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
-            ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
-            ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
-            // ["Kannji \n","[登録: みちご]漢字", UnknownWord],
-            // ["Michi \nGo \n\n","未知語",Stopped]
-        ];
-        test_transformer(items);
+        // let items = tds![conf, ContinuousTransformer, Hiragana;
+        //     ["hiragana", "ひらがな", ContinuousTransformer],
+        //     ["hiragana\n", "ひらがな", Stopped],
+        //     ["hiragana[escape]", "", Canceled]
+        // ];
+        // test_transformer(items);
     }
 }
