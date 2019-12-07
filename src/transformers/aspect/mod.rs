@@ -92,13 +92,17 @@ impl Transformable for AspectTransformer {
     }
   }
 
-  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+  fn try_change_transformer(
+    &self,
+    pressing_keys: &HashSet<KeyCode>,
+    last_key_code: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
     match &self.aspect {
-      Aspect::Yomi(t) => t.try_change_transformer(pressing_keys),
-      Aspect::SelectCandidate(t) => t.try_change_transformer(pressing_keys),
-      Aspect::UnknownWord(t) => t.try_change_transformer(pressing_keys),
-      Aspect::Stopped(t) => t.try_change_transformer(pressing_keys),
-      Aspect::Canceled(t) => t.try_change_transformer(pressing_keys),
+      Aspect::Yomi(t) => t.try_change_transformer(pressing_keys, last_key_code),
+      Aspect::SelectCandidate(t) => t.try_change_transformer(pressing_keys, last_key_code),
+      Aspect::UnknownWord(t) => t.try_change_transformer(pressing_keys, last_key_code),
+      Aspect::Stopped(t) => t.try_change_transformer(pressing_keys, last_key_code),
+      Aspect::Canceled(t) => t.try_change_transformer(pressing_keys, last_key_code),
     }
   }
 

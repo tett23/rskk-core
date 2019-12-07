@@ -1,9 +1,8 @@
 use super::super::{
-  AsTransformerTrait, Config, Displayable, Transformable, TransformerState, TransformerTypes,
-  WithConfig,
+  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerState,
+  TransformerTypes, WithConfig,
 };
 
-use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -42,7 +41,11 @@ impl Transformable for Stopped {
     TransformerTypes::Stopped
   }
 
-  fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+  fn try_change_transformer(
+    &self,
+    _: &HashSet<KeyCode>,
+    _: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
     None
   }
 

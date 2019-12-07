@@ -42,11 +42,19 @@ impl Transformable for DirectTransformer {
     TransformerTypes::Direct
   }
 
-  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
-    self
+  fn try_change_transformer(
+    &self,
+    pressing_keys: &HashSet<KeyCode>,
+    _: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
+    let transformer_type = self
       .config
       .key_config()
-      .try_change_transformer(&Self::allow_transformers(), pressing_keys)
+      .try_change_transformer(&Self::allow_transformers(), pressing_keys);
+    match transformer_type {
+      Some(tft) => Some(tft.to_transformer(self.config())),
+      None => None,
+    }
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {

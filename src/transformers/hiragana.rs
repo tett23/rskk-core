@@ -58,11 +58,26 @@ impl Transformable for HiraganaTransformer {
     TransformerTypes::Hiragana
   }
 
-  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
-    self
+  fn try_change_transformer(
+    &self,
+    pressing_keys: &HashSet<KeyCode>,
+    last_key_code: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
+    let transformer_type = self
       .config
       .key_config()
-      .try_change_transformer(&Self::allow_transformers(), pressing_keys)
+      .try_change_transformer(&Self::allow_transformers(), pressing_keys);
+    match transformer_type {
+      Some(tft) if tft == TransformerTypes::Henkan => {
+        let tf = tft.to_transformer(self.config());
+        match last_key_code.printable_key() {
+          Some(c) => Some(tf.push_character(c)),
+          None => Some(tf),
+        }
+      }
+      Some(tft) => Some(tft.to_transformer(self.config())),
+      None => None,
+    }
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
@@ -75,26 +90,6 @@ impl Transformable for HiraganaTransformer {
 
   fn push_escape(&self) -> Box<dyn Transformable> {
     Box::new(Canceled::new(self.config()))
-  }
-
-  fn transformer_changed(
-    &self,
-    new_transformer: Box<dyn Transformable>,
-    key: Option<char>,
-  ) -> Box<dyn Transformable> {
-    match new_transformer.transformer_type() {
-      TransformerTypes::Henkan => {
-        match key {
-          Some(character) => {
-            return new_transformer.push_character(character);
-          }
-          None => {}
-        };
-      }
-      _ => {}
-    };
-
-    new_transformer
   }
 }
 

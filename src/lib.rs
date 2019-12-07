@@ -126,10 +126,10 @@ macro_rules! key {
 macro_rules! tf {
     ( $conf:expr, $t:expr ) => {
         match $t {
-            transformers::TransformerTypes::Direct => {
+            crate::transformers::TransformerTypes::Direct => {
                 Box::new(crate::transformers::DirectTransformer::new($conf))
             }
-            transformers::TransformerTypes::Hiragana => {
+            crate::transformers::TransformerTypes::Hiragana => {
                 Box::new(crate::transformers::HiraganaTransformer::new($conf))
             }
             _ => unreachable!(),
@@ -140,6 +140,12 @@ macro_rules! tf {
     };
     ( $conf:expr, UnknownWordTransformer, $v:expr ) => {
         Box::new(crate::transformers::UnknownWord::new($conf, $v))
+    };
+    ( $conf:expr, HenkanTransformer, $v:expr ) => {
+        Box::new(crate::transformers::HenkanTransformer::new($conf, $v))
+    };
+    ( $conf:expr, YomiTransformer, $v:expr ) => {
+        Box::new(crate::transformers::YomiTransformer::new($conf, $v))
     };
 }
 

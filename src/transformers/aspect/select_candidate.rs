@@ -45,7 +45,11 @@ impl Transformable for SelectCandidate {
     TransformerTypes::SelectCandidate
   }
 
-  fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+  fn try_change_transformer(
+    &self,
+    _: &HashSet<KeyCode>,
+    _: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
     None
   }
 

@@ -39,6 +39,10 @@ impl ContinuousTransformer {
       .filter(|tf| tf.is_stopped())
       .fold("".to_string(), |acc, tf| acc + &tf.buffer_content())
   }
+
+  fn is_empty(&self) -> bool {
+    self.buffer_content() == ""
+  }
 }
 
 impl WithConfig for ContinuousTransformer {
@@ -58,24 +62,17 @@ impl Transformable for ContinuousTransformer {
     TransformerTypes::ContinuousTransformer
   }
 
-  fn try_change_transformer(&self, pressing_keys: &HashSet<KeyCode>) -> Option<TransformerTypes> {
-    self.stack.last()?.try_change_transformer(pressing_keys)
-  }
-
-  fn transformer_changed(
+  fn try_change_transformer(
     &self,
-    new_transformer: Box<dyn Transformable>,
-    key: Option<char>,
-  ) -> Box<dyn Transformable> {
-    let new_transformer = match new_transformer.transformer_type() {
-      TransformerTypes::Henkan => match key {
-        Some(character) => new_transformer.push_character(character),
-        None => new_transformer,
-      },
-      _ => new_transformer,
-    };
-
-    self.replace_last_element(new_transformer)
+    pressing_keys: &HashSet<KeyCode>,
+    last_key_code: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
+    match self.is_empty() {
+      true => self
+        .send_target()
+        .try_change_transformer(pressing_keys, last_key_code),
+      false => None,
+    }
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {

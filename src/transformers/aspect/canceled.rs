@@ -33,7 +33,11 @@ impl Transformable for Canceled {
     TransformerTypes::Canceled
   }
 
-  fn try_change_transformer(&self, _: &HashSet<KeyCode>) -> Option<TransformerTypes> {
+  fn try_change_transformer(
+    &self,
+    _: &HashSet<KeyCode>,
+    _: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
     None
   }
 
