@@ -1,7 +1,6 @@
 use super::tables::hiragana_convert;
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerState,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerTypes, WithConfig,
 };
 use super::{CanceledTransformer, StoppedTransformer};
 use crate::dictionary::{Candidate, DictionaryEntry};
@@ -34,12 +33,6 @@ impl SelectCandidateTransformer {
 impl WithConfig for SelectCandidateTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for SelectCandidateTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

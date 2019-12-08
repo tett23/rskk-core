@@ -1,6 +1,5 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerState,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerTypes, WithConfig,
 };
 
 use std::collections::HashSet;
@@ -27,12 +26,6 @@ impl StoppedTransformer {
 impl WithConfig for StoppedTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for StoppedTransformer {
-  fn is_stopped(&self) -> bool {
-    true
   }
 }
 

@@ -1,7 +1,7 @@
 use super::{
   AsTransformerTrait, CanceledTransformer, Config, Displayable, MetaKey,
-  SelectCandidateTransformer, Stackable, StoppedTransformer, Transformable, TransformerState,
-  TransformerTypes, UnknownWordTransformer, WithConfig, Word, YomiTransformer,
+  SelectCandidateTransformer, Stackable, StoppedTransformer, Transformable, TransformerTypes,
+  UnknownWordTransformer, WithConfig, Word, YomiTransformer,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -26,12 +26,6 @@ impl HenkanTransformer {
 impl WithConfig for HenkanTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for HenkanTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

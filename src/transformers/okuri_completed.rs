@@ -1,6 +1,5 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerState,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerTypes, WithConfig,
 };
 
 use std::collections::HashSet;
@@ -25,12 +24,6 @@ impl OkuriCompletedTransformer {
 impl WithConfig for OkuriCompletedTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for OkuriCompletedTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

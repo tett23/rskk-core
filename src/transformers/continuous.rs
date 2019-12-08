@@ -1,6 +1,6 @@
 use super::{
   AsTransformerTrait, CanceledTransformer, Config, Displayable, MetaKey, Stackable,
-  StoppedTransformer, Transformable, TransformerState, TransformerTypes, WithConfig,
+  StoppedTransformer, Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::tf;
@@ -38,12 +38,6 @@ impl ContinuousTransformer {
 impl WithConfig for ContinuousTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for ContinuousTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

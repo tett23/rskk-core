@@ -1,7 +1,7 @@
 use super::tables::hiragana_convert;
 use super::{
   AsTransformerTrait, BufferState, CanceledTransformer, Config, Displayable, StoppedTransformer,
-  Transformable, TransformerState, TransformerTypes, WithConfig,
+  Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::{set, tf};
@@ -44,12 +44,6 @@ impl HiraganaTransformer {
 impl WithConfig for HiraganaTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for HiraganaTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

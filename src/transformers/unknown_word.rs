@@ -1,6 +1,6 @@
 use super::{
   AsTransformerTrait, CanceledTransformer, Config, ContinuousTransformer, Displayable, MetaKey,
-  Stackable, StoppedTransformer, Transformable, TransformerState, TransformerTypes, WithConfig,
+  Stackable, StoppedTransformer, Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -92,12 +92,6 @@ impl Stackable for UnknownWordTransformer {
 impl WithConfig for UnknownWordTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for UnknownWordTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

@@ -1,5 +1,5 @@
 use super::keyboards::{KeyEvents, Keyboard};
-use super::transformers::{Config, Transformable, TransformerState, TransformerTypes};
+use super::transformers::{Config, Transformable, TransformerTypes};
 use crate::tf;
 
 pub struct Composition {
@@ -54,11 +54,5 @@ impl Composition {
 
   pub fn display_string(&self) -> String {
     self.transformer.display_string()
-  }
-}
-
-impl TransformerState for Composition {
-  fn is_stopped(&self) -> bool {
-    self.transformer.is_stopped()
   }
 }

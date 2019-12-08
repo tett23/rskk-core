@@ -1,7 +1,7 @@
 use super::{
   AsTransformerTrait, CanceledTransformer, Config, ContinuousTransformer, Displayable,
-  OkuriCompletedTransformer, Stackable, StoppedTransformer, Transformable, TransformerState,
-  TransformerTypes, WithConfig,
+  OkuriCompletedTransformer, Stackable, StoppedTransformer, Transformable, TransformerTypes,
+  WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::{set, tf};
@@ -30,12 +30,6 @@ impl YomiTransformer {
 impl WithConfig for YomiTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for YomiTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 

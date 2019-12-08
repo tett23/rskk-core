@@ -36,10 +36,6 @@ pub enum BufferState {
   Stop,
 }
 
-pub trait TransformerState {
-  fn is_stopped(&self) -> bool;
-}
-
 pub trait Displayable {
   fn buffer_content(&self) -> String;
   fn display_string(&self) -> String;
@@ -80,10 +76,11 @@ pub trait WithConfig {
 }
 
 pub trait Transformable:
-  AsTransformerTrait + WithConfig + TransformerState + Displayable + fmt::Debug + objekt::Clone
+  AsTransformerTrait + WithConfig + Displayable + fmt::Debug + objekt::Clone
 {
-  fn transformer_type(&self) -> TransformerTypes {
-    unimplemented!()
+  fn transformer_type(&self) -> TransformerTypes;
+  fn is_stopped(&self) -> bool {
+    self.transformer_type() == TransformerTypes::Stopped
   }
 
   fn push_key_event(

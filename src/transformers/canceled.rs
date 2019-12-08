@@ -1,7 +1,4 @@
-use super::{
-  AsTransformerTrait, Config, Displayable, Transformable, TransformerState, TransformerTypes,
-  WithConfig,
-};
+use super::{AsTransformerTrait, Config, Displayable, Transformable, TransformerTypes, WithConfig};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
 
@@ -22,15 +19,13 @@ impl WithConfig for CanceledTransformer {
   }
 }
 
-impl TransformerState for CanceledTransformer {
-  fn is_stopped(&self) -> bool {
-    true
-  }
-}
-
 impl Transformable for CanceledTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::Canceled
+  }
+
+  fn is_stopped(&self) -> bool {
+    true
   }
 
   fn try_change_transformer(

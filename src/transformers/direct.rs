@@ -1,6 +1,6 @@
 use super::{
   AsTransformerTrait, CanceledTransformer, Config, Displayable, StoppedTransformer, Transformable,
-  TransformerState, TransformerTypes, WithConfig,
+  TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::{set, tf};
@@ -28,12 +28,6 @@ impl DirectTransformer {
 impl WithConfig for DirectTransformer {
   fn config(&self) -> Config {
     self.config.clone()
-  }
-}
-
-impl TransformerState for DirectTransformer {
-  fn is_stopped(&self) -> bool {
-    false
   }
 }
 
