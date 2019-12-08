@@ -91,6 +91,22 @@ impl Transformable for HiraganaTransformer {
   fn push_escape(&self) -> Box<dyn Transformable> {
     Box::new(CanceledTransformer::new(self.config()))
   }
+
+  fn push_backspace(&self) -> Box<dyn Transformable> {
+    match self.is_empty() {
+      true => Box::new(CanceledTransformer::new(self.config())),
+      false => {
+        let mut buf = self.buffer.clone();
+        buf.pop();
+
+        Box::new(self.new_from(buf))
+      }
+    }
+  }
+
+  fn push_delete(&self) -> Box<dyn Transformable> {
+    self.push_backspace()
+  }
 }
 
 impl Displayable for HiraganaTransformer {
@@ -106,5 +122,29 @@ impl Displayable for HiraganaTransformer {
 impl AsTransformerTrait for HiraganaTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::tds;
+  use crate::tests::{dummy_conf, test_transformer};
+  use crate::transformers::TransformerTypes::*;
+
+  #[test]
+  fn it_works() {
+    let conf = dummy_conf();
+
+    let items = tds![conf, Hiragana;
+      ["a", "あ", Stopped],
+      ["k", "k", Hiragana],
+      ["k[escape]", "", Canceled],
+      ["k[backspace]", "", Hiragana],
+      ["ka", "か", Stopped],
+      ["[backspace]", "", Canceled],
+      ["k[escape]", "", Canceled],
+      ["[escape]", "", Canceled],
+    ];
+    test_transformer(items);
   }
 }
