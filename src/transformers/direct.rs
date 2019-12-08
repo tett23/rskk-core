@@ -52,7 +52,7 @@ impl Transformable for DirectTransformer {
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    return Box::new(StoppedTransformer::from_buffer(
+    return Box::new(StoppedTransformer::completed(
       self.config(),
       character.to_string(),
     ));

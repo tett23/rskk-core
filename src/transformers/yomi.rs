@@ -72,7 +72,7 @@ impl Transformable for YomiTransformer {
     let new_transformer = self.send_target().push_character(character);
 
     match (new_transformer.transformer_type(), &self.pair) {
-      (TransformerTypes::Stopped(_), (_, None)) => Box::new(StoppedTransformer::from_buffer(
+      (TransformerTypes::Stopped(_), (_, None)) => Box::new(StoppedTransformer::completed(
         self.config(),
         self.replace_last_element(new_transformer).buffer_content(),
       )),
@@ -91,7 +91,7 @@ impl Transformable for YomiTransformer {
       (TransformerTypes::Stopped(_), (_, None)) => new_transformer,
       (TransformerTypes::Stopped(Canceled), (_, Some(_))) => self.pop().0,
       (TransformerTypes::Stopped(Compleated), (_, Some(_))) => Box::new(
-        StoppedTransformer::from_buffer(self.config(), self.buffer_content()),
+        StoppedTransformer::completed(self.config(), self.buffer_content()),
       ),
       (_, _) => self.replace_last_element(new_transformer),
     }

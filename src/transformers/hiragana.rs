@@ -78,7 +78,7 @@ impl Transformable for HiraganaTransformer {
     match hiragana_convert(&self.buffer, character) {
       Some((new_buffer, Continue)) => Box::new(self.new_from(new_buffer)),
       Some((new_buffer, Stop)) => {
-        Box::new(StoppedTransformer::from_buffer(self.config(), new_buffer))
+        Box::new(StoppedTransformer::completed(self.config(), new_buffer))
       }
       None => Box::new(StoppedTransformer::canceled(self.config())),
     }
@@ -89,14 +89,12 @@ impl Transformable for HiraganaTransformer {
   }
 
   fn push_backspace(&self) -> Box<dyn Transformable> {
-    match self.is_empty() {
-      true => Box::new(StoppedTransformer::canceled(self.config())),
-      false => {
-        let mut buf = self.buffer.clone();
-        buf.pop();
+    let mut buf = self.buffer_content();
+    buf.pop();
 
-        Box::new(self.new_from(buf))
-      }
+    match buf.len() == 0 {
+      true => Box::new(StoppedTransformer::canceled(self.config())),
+      false => Box::new(self.new_from(buf)),
     }
   }
 
@@ -136,7 +134,8 @@ mod tests {
       ["a", "あ", Stopped(Compleated)],
       ["k", "k", Hiragana],
       ["k[escape]", "", Stopped(Canceled)],
-      ["k[backspace]", "", Hiragana],
+      ["k[backspace]", "", Stopped(Canceled)],
+      ["ts[backspace]", "t", Hiragana],
       ["ka", "か", Stopped(Compleated)],
       ["[backspace]", "", Stopped(Canceled)],
       ["k[escape]", "", Stopped(Canceled)],

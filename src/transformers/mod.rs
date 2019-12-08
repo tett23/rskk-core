@@ -132,7 +132,8 @@ pub trait Transformable:
     );
     let new_transformer = self.push_meta_key(key);
     println!(
-      "change transformer push_meta key {:?}",
+      "change transformer push_meta key {:?}, {:?}",
+      key,
       new_transformer.transformer_type()
     );
     let new_transformer = match last_character {
@@ -140,7 +141,8 @@ pub trait Transformable:
       None => new_transformer,
     };
     println!(
-      "change transformer push_character {:?}",
+      "change transformer push_character {:?}, {:?}",
+      last_character,
       new_transformer.transformer_type()
     );
     println!();
@@ -178,7 +180,7 @@ pub trait Transformable:
       KeyCode::Meta(MetaKey::ArrowDown) => target.push_arrow_down(),
       KeyCode::Meta(MetaKey::ArrowLeft) => target.push_arrow_left(),
       KeyCode::Meta(MetaKey::ArrowUp) => target.push_arrow_up(),
-      _ => return self.push_any_character(&target, key_code),
+      _ => target.push_any_character(&target, key_code),
     };
 
     self.transformer_updated(new_transformer)

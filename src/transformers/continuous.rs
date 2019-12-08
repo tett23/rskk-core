@@ -69,19 +69,16 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    let new_transformer = self.send_target().push_character(character);
-    match new_transformer.is_stopped() {
-      true => {
-        let mut ret = self.clone();
-        ret.stack.pop();
-        ret.stack.push(new_transformer);
-        ret
-          .stack
-          .push(tf!(self.config(), self.current_transformer_type));
+    let target = self.send_target();
+    if target.is_stopped() {
+      let r = self.push(tf!(self.config(), self.current_transformer_type));
+      return r.push_character(character);
+    }
 
-        Box::new(ret)
-      }
-      false => self.replace_last_element(new_transformer),
+    let new_transformer = self.send_target().push_character(character);
+    match new_transformer.transformer_type() {
+      TransformerTypes::Stopped(Canceled) => self.pop().0,
+      _ => self.replace_last_element(new_transformer),
     }
   }
 
@@ -92,6 +89,12 @@ impl Transformable for ContinuousTransformer {
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
         return self.push_enter()
       }
+      KeyCode::PrintableMeta(MetaKey::Backspace, _) | KeyCode::Meta(MetaKey::Backspace) => {
+        self.push_backspace()
+      }
+      KeyCode::PrintableMeta(MetaKey::Delete, _) | KeyCode::Meta(MetaKey::Delete) => {
+        self.push_delete()
+      }
       _ => target.push_meta_key(key_code),
     };
 
@@ -99,23 +102,21 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    match self.stack.last() {
-      Some(tf) => tf.push_escape(),
-      None => Box::new(StoppedTransformer::canceled(self.config().clone())),
-    }
+    Box::new(StoppedTransformer::canceled(self.config().clone()))
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::from_buffer(
+    Box::new(StoppedTransformer::completed(
       self.config(),
       self.stopped_buffer_content(),
     ))
   }
 
   fn push_backspace(&self) -> Box<dyn Transformable> {
-    // TODO: stackが空になるまでstack先頭にbackspaceを送り続ける
-    // すべて空のときは空のStoppedを返す
-    unimplemented!()
+    match self.send_target().is_stopped() {
+      true => Box::new(StoppedTransformer::canceled(self.config().clone())),
+      false => self.send_target().push_backspace(),
+    }
   }
 
   fn push_delete(&self) -> Box<dyn Transformable> {
@@ -124,11 +125,7 @@ impl Transformable for ContinuousTransformer {
 
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
     match new_transformer.transformer_type() {
-      TransformerTypes::Stopped(Canceled) => Box::new(StoppedTransformer::canceled(self.config())),
-      TransformerTypes::Stopped(_) => Box::new(StoppedTransformer::from_buffer(
-        self.config(),
-        self.replace_last_element(new_transformer).buffer_content(),
-      )),
+      TransformerTypes::Stopped(Canceled) => self.pop().0,
       _ => self.replace_last_element(new_transformer),
     }
   }
@@ -155,7 +152,7 @@ impl AsTransformerTrait for ContinuousTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => Box::new(StoppedTransformer::empty(self.config())),
+      None => Box::new(StoppedTransformer::canceled(self.config())),
     }
   }
 }
@@ -173,6 +170,9 @@ impl Stackable for ContinuousTransformer {
     let mut ret = self.clone();
 
     let item = ret.stack.pop();
+    if ret.stack.len() == 0 {
+      return (Box::new(StoppedTransformer::canceled(self.config())), item);
+    }
 
     (Box::new(ret), item)
   }
@@ -199,6 +199,10 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, ContinuousTransformer, Hiragana;
+        ["[escape]", "", Stopped(Canceled)],
+        ["[backspace]", "", Stopped(Canceled)],
+        ["aa[backspace]", "あ", Continuous],
+        ["ak[backspace]", "あ", Continuous],
         ["hiragana", "ひらがな", Continuous],
         ["hiragana\n", "ひらがな", Stopped(Compleated)],
         ["Kannji", "▽かんじ", Henkan],

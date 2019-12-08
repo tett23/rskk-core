@@ -58,7 +58,7 @@ impl Transformable for SelectCandidateTransformer {
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::from_buffer(
+    Box::new(StoppedTransformer::completed(
       self.config(),
       self.buffer_content(),
     ))
@@ -94,7 +94,7 @@ impl Transformable for SelectCandidateTransformer {
   ) -> Box<dyn Transformable> {
     match key_code.is_printable() {
       true => match self.candidates.current() {
-        Some(candidate) => Box::new(StoppedTransformer::from_buffer(
+        Some(candidate) => Box::new(StoppedTransformer::completed(
           self.config(),
           candidate.entry.clone(),
         )),

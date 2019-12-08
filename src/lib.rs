@@ -125,7 +125,6 @@ macro_rules! key {
 #[macro_export]
 macro_rules! tf {
     ( $conf:expr, $t:expr ) => {{
-        dbg!($t);
         let ret: Box<dyn crate::transformers::Transformable> = match $t {
             crate::transformers::TransformerTypes::Direct => {
                 Box::new(crate::transformers::DirectTransformer::new($conf))

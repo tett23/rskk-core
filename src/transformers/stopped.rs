@@ -26,7 +26,7 @@ impl StoppedTransformer {
     }
   }
 
-  pub fn from_buffer<S: Into<String>>(config: Config, buffer: S) -> Self {
+  pub fn completed<S: Into<String>>(config: Config, buffer: S) -> Self {
     Self::new(config, StoppedReason::Compleated, buffer)
   }
 

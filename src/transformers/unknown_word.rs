@@ -166,7 +166,7 @@ impl Transformable for UnknownWordTransformer {
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter)
         if target.is_empty() =>
       {
-        return Box::new(StoppedTransformer::from_buffer(
+        return Box::new(StoppedTransformer::completed(
           self.config(),
           self.stopped_buffer_content(),
         ))
