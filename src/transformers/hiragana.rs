@@ -1,7 +1,7 @@
 use super::tables::hiragana_convert;
 use super::{
-  AsTransformerTrait, BufferState, CanceledTransformer, Config, Displayable, StoppedTransformer,
-  Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, StoppedTransformer, Transformable,
+  TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::{set, tf};
@@ -77,18 +77,20 @@ impl Transformable for HiraganaTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     match hiragana_convert(&self.buffer, character) {
       Some((new_buffer, Continue)) => Box::new(self.new_from(new_buffer)),
-      Some((new_buffer, Stop)) => Box::new(StoppedTransformer::new(self.config(), new_buffer)),
-      None => Box::new(CanceledTransformer::new(self.config())),
+      Some((new_buffer, Stop)) => {
+        Box::new(StoppedTransformer::from_buffer(self.config(), new_buffer))
+      }
+      None => Box::new(StoppedTransformer::canceled(self.config())),
     }
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(CanceledTransformer::new(self.config()))
+    Box::new(StoppedTransformer::canceled(self.config()))
   }
 
   fn push_backspace(&self) -> Box<dyn Transformable> {
     match self.is_empty() {
-      true => Box::new(CanceledTransformer::new(self.config())),
+      true => Box::new(StoppedTransformer::canceled(self.config())),
       false => {
         let mut buf = self.buffer.clone();
         buf.pop();
@@ -123,6 +125,7 @@ impl AsTransformerTrait for HiraganaTransformer {
 mod tests {
   use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
+  use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
@@ -130,14 +133,14 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, Hiragana;
-      ["a", "あ", Stopped],
+      ["a", "あ", Stopped(Compleated)],
       ["k", "k", Hiragana],
-      ["k[escape]", "", Canceled],
+      ["k[escape]", "", Stopped(Canceled)],
       ["k[backspace]", "", Hiragana],
-      ["ka", "か", Stopped],
-      ["[backspace]", "", Canceled],
-      ["k[escape]", "", Canceled],
-      ["[escape]", "", Canceled],
+      ["ka", "か", Stopped(Compleated)],
+      ["[backspace]", "", Stopped(Canceled)],
+      ["k[escape]", "", Stopped(Canceled)],
+      ["[escape]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
   }

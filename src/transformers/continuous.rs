@@ -1,10 +1,11 @@
 use super::{
-  AsTransformerTrait, CanceledTransformer, Config, Displayable, MetaKey, Stackable,
-  StoppedTransformer, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, MetaKey, Stackable, StoppedReason, StoppedTransformer,
+  Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use crate::tf;
 use std::collections::HashSet;
+use StoppedReason::*;
 
 #[derive(Clone, Debug)]
 pub struct ContinuousTransformer {
@@ -100,12 +101,12 @@ impl Transformable for ContinuousTransformer {
   fn push_escape(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.push_escape(),
-      None => Box::new(CanceledTransformer::new(self.config().clone())),
+      None => Box::new(StoppedTransformer::canceled(self.config().clone())),
     }
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::new(
+    Box::new(StoppedTransformer::from_buffer(
       self.config(),
       self.stopped_buffer_content(),
     ))
@@ -122,15 +123,13 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    match new_transformer.is_stopped() {
-      true if new_transformer.transformer_type() == TransformerTypes::Canceled => {
-        Box::new(CanceledTransformer::new(self.config()))
-      }
-      true => Box::new(StoppedTransformer::new(
+    match new_transformer.transformer_type() {
+      TransformerTypes::Stopped(Canceled) => Box::new(StoppedTransformer::canceled(self.config())),
+      TransformerTypes::Stopped(_) => Box::new(StoppedTransformer::from_buffer(
         self.config(),
         self.replace_last_element(new_transformer).buffer_content(),
       )),
-      false => self.replace_last_element(new_transformer),
+      _ => self.replace_last_element(new_transformer),
     }
   }
 }
@@ -201,9 +200,9 @@ mod tests {
 
     let items = tds![conf, ContinuousTransformer, Hiragana;
         ["hiragana", "ひらがな", Continuous],
-        ["hiragana\n", "ひらがな", Stopped],
+        ["hiragana\n", "ひらがな", Stopped(Compleated)],
         ["Kannji", "▽かんじ", Henkan],
-        ["Kannji \n", "漢字", Stopped],
+        ["Kannji \n", "漢字", Stopped(Compleated)],
     ];
     test_transformer(items);
   }

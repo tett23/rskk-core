@@ -1,8 +1,8 @@
 use super::tables::hiragana_convert;
+use super::StoppedTransformer;
 use super::{
   AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerTypes, WithConfig,
 };
-use super::{CanceledTransformer, StoppedTransformer};
 use crate::dictionary::{Candidate, DictionaryEntry};
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
@@ -54,11 +54,11 @@ impl Transformable for SelectCandidateTransformer {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(CanceledTransformer::new(self.config()))
+    Box::new(StoppedTransformer::canceled(self.config()))
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::new(
+    Box::new(StoppedTransformer::from_buffer(
       self.config(),
       self.buffer_content(),
     ))
@@ -79,7 +79,7 @@ impl Transformable for SelectCandidateTransformer {
     let mut new_state = self.clone();
     match new_state.candidates.prev() {
       Some(_) => Box::new(new_state),
-      None => Box::new(CanceledTransformer::new(self.config())),
+      None => Box::new(StoppedTransformer::canceled(self.config())),
     }
   }
 
@@ -94,11 +94,11 @@ impl Transformable for SelectCandidateTransformer {
   ) -> Box<dyn Transformable> {
     match key_code.is_printable() {
       true => match self.candidates.current() {
-        Some(candidate) => Box::new(StoppedTransformer::new(
+        Some(candidate) => Box::new(StoppedTransformer::from_buffer(
           self.config(),
           candidate.entry.clone(),
         )),
-        None => Box::new(CanceledTransformer::new(self.config())),
+        None => Box::new(StoppedTransformer::canceled(self.config())),
       },
       false => self.as_trait(),
     }
@@ -184,8 +184,10 @@ impl Candidates {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::transformers::StoppedReason::*;
   use crate::{key, set, Dictionary, RSKKConfig};
   use std::rc::Rc;
+  use TransformerTypes::*;
 
   #[test]
   fn space() {
@@ -221,7 +223,7 @@ mod tests {
     let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
 
     let stopped = select_candidate.push_meta_key(&key!("enter"));
-    assert_eq!(stopped.transformer_type(), TransformerTypes::Stopped);
+    assert_eq!(stopped.transformer_type(), Stopped(Compleated));
     assert_eq!(stopped.buffer_content(), "a");
   }
 
@@ -242,7 +244,7 @@ mod tests {
     assert_eq!(select_candidate.buffer_content(), "a");
 
     let canceled = select_candidate.push_meta_key(&key!("delete"));
-    assert_eq!(canceled.transformer_type(), TransformerTypes::Canceled);
+    assert_eq!(canceled.transformer_type(), Stopped(Canceled));
   }
 
   mod candidates {

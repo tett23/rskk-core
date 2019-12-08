@@ -1,4 +1,3 @@
-mod canceled;
 mod continuous;
 mod direct;
 mod henkan;
@@ -18,7 +17,6 @@ use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
-pub use canceled::CanceledTransformer;
 pub use continuous::ContinuousTransformer;
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;
@@ -26,7 +24,7 @@ pub use hiragana::HiraganaTransformer;
 pub use okuri_completed::OkuriCompletedTransformer;
 pub use select_candidate::SelectCandidateTransformer;
 pub use stackable::Stackable;
-pub use stopped::StoppedTransformer;
+pub use stopped::{StoppedReason, StoppedTransformer};
 pub use unknown_word::{UnknownWordTransformer, Word};
 pub use yomi::YomiTransformer;
 
@@ -80,7 +78,24 @@ pub trait Transformable:
 {
   fn transformer_type(&self) -> TransformerTypes;
   fn is_stopped(&self) -> bool {
-    self.transformer_type() == TransformerTypes::Stopped
+    match self.transformer_type() {
+      TransformerTypes::Stopped(_) => true,
+      _ => false,
+    }
+  }
+
+  fn is_compleated(&self) -> bool {
+    match self.transformer_type() {
+      TransformerTypes::Stopped(StoppedReason::Compleated) => true,
+      _ => false,
+    }
+  }
+
+  fn is_canceled(&self) -> bool {
+    match self.transformer_type() {
+      TransformerTypes::Stopped(StoppedReason::Canceled) => true,
+      _ => false,
+    }
   }
 
   fn push_key_event(
@@ -232,8 +247,7 @@ pub enum TransformerTypes {
   EmEisu,
   EnKatakana,
   Yomi,
-  Canceled,
-  Stopped,
+  Stopped(StoppedReason),
   SelectCandidate,
   UnknownWord,
   Continuous,

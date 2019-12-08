@@ -1,9 +1,10 @@
 use super::{
-  AsTransformerTrait, CanceledTransformer, Config, ContinuousTransformer, Displayable, MetaKey,
-  Stackable, StoppedTransformer, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, ContinuousTransformer, Displayable, MetaKey, Stackable,
+  StoppedReason, StoppedTransformer, Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
+use StoppedReason::*;
 
 #[derive(Clone, Debug)]
 pub struct Word(String, Option<String>);
@@ -141,9 +142,9 @@ impl Transformable for UnknownWordTransformer {
   }
 
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    match new_transformer.is_stopped() {
-      true if new_transformer.transformer_type() == TransformerTypes::Canceled => new_transformer,
-      true => {
+    match new_transformer.transformer_type() {
+      TransformerTypes::Stopped(Canceled) => new_transformer,
+      TransformerTypes::Stopped(_) => {
         let mut ret = self.clone();
         ret.stack.pop();
         ret.stack.push(new_transformer);
@@ -154,7 +155,7 @@ impl Transformable for UnknownWordTransformer {
 
         Box::new(ret)
       }
-      false => self.replace_last_element(new_transformer),
+      _ => self.replace_last_element(new_transformer),
     }
   }
 
@@ -165,7 +166,7 @@ impl Transformable for UnknownWordTransformer {
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter)
         if target.is_empty() =>
       {
-        return Box::new(StoppedTransformer::new(
+        return Box::new(StoppedTransformer::from_buffer(
           self.config(),
           self.stopped_buffer_content(),
         ))
@@ -177,7 +178,7 @@ impl Transformable for UnknownWordTransformer {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    return Box::new(CanceledTransformer::new(self.config()));
+    return Box::new(StoppedTransformer::canceled(self.config()));
   }
 }
 
@@ -224,16 +225,16 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, UnknownWordTransformer, Word::new("みちご", None);
-        ["[escape]", "", Canceled],
+        ["[escape]", "", Stopped(Canceled)],
         ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
         ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
         ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
         ["Kannji \n","[登録: みちご]漢字", UnknownWord],
-        ["Kannji \n\n","漢字", Stopped],
+        ["Kannji \n\n","漢字", Stopped(Compleated)],
         ["Michi \nGo","[登録: みちご]未知▽ご", UnknownWord],
         ["Michi \nGo ","[登録: みちご]未知▼語", UnknownWord],
         ["Michi \nGo \n","[登録: みちご]未知語", UnknownWord],
-        ["Michi \nGo \n\n","未知語",Stopped]
+        ["Michi \nGo \n\n","未知語", Stopped(Compleated)]
     ];
     test_transformer(items);
   }

@@ -1,10 +1,11 @@
 use super::{
-  AsTransformerTrait, CanceledTransformer, Config, Displayable, MetaKey,
-  SelectCandidateTransformer, Stackable, StoppedTransformer, Transformable, TransformerTypes,
-  UnknownWordTransformer, WithConfig, Word, YomiTransformer,
+  AsTransformerTrait, Config, Displayable, MetaKey, SelectCandidateTransformer, Stackable,
+  StoppedReason, StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer,
+  WithConfig, Word, YomiTransformer,
 };
 use crate::keyboards::KeyCode;
 use std::collections::HashSet;
+use StoppedReason::*;
 
 #[derive(Clone, Debug)]
 pub struct HenkanTransformer {
@@ -100,12 +101,9 @@ impl Transformable for HenkanTransformer {
   }
 
   fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    match (
-      new_transformer.is_stopped(),
-      new_transformer.transformer_type(),
-    ) {
-      (true, TransformerTypes::Stopped) => new_transformer,
-      (true, TransformerTypes::Canceled) => self.pop().0,
+    match new_transformer.transformer_type() {
+      TransformerTypes::Stopped(Compleated) => new_transformer,
+      TransformerTypes::Stopped(Canceled) => self.pop().0,
       _ => self.replace_last_element(new_transformer),
     }
   }
@@ -148,7 +146,7 @@ impl Stackable for HenkanTransformer {
 
     let item = ret.stack.pop();
     if ret.stack.len() == 0 {
-      return (Box::new(CanceledTransformer::new(self.config())), None);
+      return (Box::new(StoppedTransformer::canceled(self.config())), None);
     }
 
     (Box::new(ret), item)
@@ -168,6 +166,7 @@ impl Stackable for HenkanTransformer {
 mod tests {
   use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
+  use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
@@ -176,16 +175,16 @@ mod tests {
 
     let items = tds![conf, HenkanTransformer, Hiragana;
       ["hiragana", "▽ひらがな", Henkan],
-      ["hiragana\n", "ひらがな", Stopped],
-      ["hiragana[escape]", "", Canceled],
+      ["hiragana\n", "ひらがな", Stopped(Compleated)],
+      ["hiragana[escape]", "", Stopped(Canceled)],
       ["kannji ", "▼漢字", Henkan],
-      ["kannji \n", "漢字", Stopped],
+      ["kannji \n", "漢字", Stopped(Compleated)],
       ["okuR", "▽おく*r", Henkan],
       ["okuR\n", "▽おく", Henkan],
       ["okuR[escape]", "▽おく", Henkan],
       ["okuRi", "▼送り", Henkan],
       ["okuRi[escape]", "▽おく*r", Henkan],
-      ["okuRi\n", "送り", Stopped],
+      ["okuRi\n", "送り", Stopped(Compleated)],
       ["michigo ", "[登録: みちご]", Henkan],
     ];
     test_transformer(items);

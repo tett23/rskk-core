@@ -4,22 +4,38 @@ use super::{
 
 use std::collections::HashSet;
 
+#[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
+pub enum StoppedReason {
+  Compleated,
+  Canceled,
+}
+
 #[derive(Clone, Debug)]
 pub struct StoppedTransformer {
   config: Config,
+  reason: StoppedReason,
   buffer: String,
 }
 
 impl StoppedTransformer {
-  pub fn new(config: Config, buffer: String) -> Self {
-    StoppedTransformer { config, buffer }
+  pub fn new<S: Into<String>>(config: Config, reason: StoppedReason, buffer: S) -> Self {
+    StoppedTransformer {
+      config,
+      reason,
+      buffer: buffer.into(),
+    }
+  }
+
+  pub fn from_buffer<S: Into<String>>(config: Config, buffer: S) -> Self {
+    Self::new(config, StoppedReason::Compleated, buffer)
   }
 
   pub fn empty(config: Config) -> Self {
-    StoppedTransformer {
-      config,
-      buffer: "".to_string(),
-    }
+    Self::new(config, StoppedReason::Compleated, "")
+  }
+
+  pub fn canceled(config: Config) -> Self {
+    Self::new(config, StoppedReason::Canceled, "")
   }
 }
 
@@ -31,7 +47,7 @@ impl WithConfig for StoppedTransformer {
 
 impl Transformable for StoppedTransformer {
   fn transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::Stopped
+    TransformerTypes::Stopped(self.reason)
   }
 
   fn try_change_transformer(

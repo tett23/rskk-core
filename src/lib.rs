@@ -186,6 +186,7 @@ macro_rules! tds {
 mod lib_tests {
     use super::*;
     use crate::tests::{dummy_conf, test_transformer};
+    use crate::transformers::StoppedReason::*;
     use TransformerTypes::*;
 
     #[test]
@@ -193,9 +194,9 @@ mod lib_tests {
         let conf = dummy_conf();
 
         let items = tds![conf, Direct;
-            ["a", "a", Stopped],
-            ["A", "A", Stopped],
-            ["[down:ctrl]j[up:ctrl]a", "あ", Stopped]
+            ["a", "a", Stopped(Compleated)],
+            ["A", "A", Stopped(Compleated)],
+            ["[down:ctrl]j[up:ctrl]a", "あ", Stopped(Compleated)]
         ];
         test_transformer(items);
 
