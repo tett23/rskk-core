@@ -22,11 +22,11 @@ impl HiraganaTransformer {
     }
   }
 
-  pub fn new_from(&self, buffer: String) -> Self {
-    let mut new_state = self.clone();
-    new_state.buffer = buffer;
+  pub fn from_buffer<S: Into<String>>(config: Config, buffer: S) -> Self {
+    let mut ret = Self::new(config);
+    ret.buffer = buffer.into();
 
-    new_state
+    ret
   }
 
   fn allow_transformers() -> HashSet<TransformerTypes> {
@@ -73,7 +73,7 @@ impl Transformable for HiraganaTransformer {
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     match hiragana_convert(&self.buffer, character) {
-      Some((new_buffer, Continue)) => Box::new(self.new_from(new_buffer)),
+      Some((new_buffer, Continue)) => Box::new(Self::from_buffer(self.config(), new_buffer)),
       Some((new_buffer, Stop)) => {
         Box::new(StoppedTransformer::completed(self.config(), new_buffer))
       }
@@ -91,7 +91,7 @@ impl Transformable for HiraganaTransformer {
 
     match buf.len() == 0 {
       true => Box::new(StoppedTransformer::canceled(self.config())),
-      false => Box::new(self.new_from(buf)),
+      false => Box::new(Self::from_buffer(self.config(), buf)),
     }
   }
 

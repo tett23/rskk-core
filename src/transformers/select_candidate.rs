@@ -46,7 +46,7 @@ impl Transformable for SelectCandidateTransformer {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::canceled(self.config()))
+    self.to_canceled()
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {

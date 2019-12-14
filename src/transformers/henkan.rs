@@ -9,7 +9,7 @@ use StoppedReason::*;
 #[derive(Clone)]
 pub struct HenkanTransformer {
   config: Config,
-  transformer_type: TransformerTypes,
+  current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
 }
 
@@ -17,7 +17,7 @@ impl HenkanTransformer {
   pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
     HenkanTransformer {
       config: config.clone(),
-      transformer_type: transformer_type.clone(),
+      current_transformer_type: transformer_type,
       stack: vec![Box::new(YomiTransformer::new(config, transformer_type))],
     }
   }
@@ -49,20 +49,23 @@ impl Transformable for HenkanTransformer {
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let new_transformer = self.send_target().push_character(character);
     if new_transformer.transformer_type() == TransformerTypes::OkuriCompleted {
+      let yomi = YomiTransformer::from_pair(
+        self.config(),
+        self.current_transformer_type,
+        new_transformer.pair(),
+      )
+      .pop()
+      .0;
+      let ret = self.replace_last_element(yomi);
       let buf = self.buffer_content();
       let tf: Box<dyn Transformable> = match self.config.dictionary.transform(&buf) {
-        Some(dic_entry) => Box::new(SelectCandidateTransformer::new(
-          self.config(),
-          dic_entry,
-          Some(character),
-        )),
-        None => Box::new(UnknownWordTransformer::new(
-          self.config(),
-          Word::new(&buf, None),
-        )),
+        Some(dic_entry) => {
+          box SelectCandidateTransformer::new(self.config(), dic_entry, Some(character))
+        }
+        None => box UnknownWordTransformer::new(self.config(), Word::new(&buf, None)),
       };
 
-      return self.push(tf);
+      return ret.push(tf);
     }
 
     self.replace_last_element(new_transformer)
@@ -168,7 +171,7 @@ mod tests {
       ["okuR\n", "▽おく", Henkan],
       ["okuR[escape]", "▽おく", Henkan],
       ["okuRi", "▼送り", Henkan],
-      ["okuRi[escape]", "▽おく*r", Henkan],
+      ["okuRi[escape]", "▽おく", Henkan],
       ["okuRi\n", "送り", Stopped(Compleated)],
       ["michigo ", "[登録: みちご]", Henkan],
     ];

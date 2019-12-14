@@ -1,6 +1,6 @@
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, Transformable,
-  TransformerTypes, WithConfig, YomiTransformer,
+  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
+  YomiTransformer,
 };
 
 #[derive(Clone, Debug)]
@@ -51,6 +51,10 @@ impl Displayable for OkuriCompletedTransformer {
   fn display_string(&self) -> String {
     self.buffer_content()
   }
+
+  fn pair(&self) -> (String, Option<String>) {
+    (self.yomi.clone(), Some(self.okuri.clone()))
+  }
 }
 
 impl AsTransformerTrait for OkuriCompletedTransformer {
@@ -68,14 +72,7 @@ impl Stackable for OkuriCompletedTransformer {
     let ret = YomiTransformer::from_pair(
       self.config(),
       self.transformer_type,
-      (
-        box ContinuousTransformer::from_buffer(
-          self.config(),
-          self.transformer_type(),
-          self.yomi.clone(),
-        ),
-        None,
-      ),
+      (self.yomi.clone(), None),
     );
 
     (box ret, Some(box self.clone()))

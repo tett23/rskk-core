@@ -1,7 +1,7 @@
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, OkuriCompletedTransformer,
-  SelectCandidateTransformer, Stackable, StoppedReason, StoppedTransformer, Transformable,
-  TransformerTypes, UnknownWordTransformer, WithConfig, Word,
+  AsTransformerTrait, Config, ContinuousTransformer, Displayable, HiraganaTransformer,
+  OkuriCompletedTransformer, SelectCandidateTransformer, Stackable, StoppedReason,
+  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
 };
 use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
@@ -20,21 +20,27 @@ impl YomiTransformer {
       config: config.clone(),
       current_transformer_type: transformer_type,
       pair: (
-        Box::new(ContinuousTransformer::new(config, transformer_type)),
+        box ContinuousTransformer::new(config, transformer_type),
         None,
       ),
     }
   }
 
-  pub fn from_pair(
+  pub fn from_pair<S: Into<String>>(
     config: Config,
     transformer_type: TransformerTypes,
-    pair: (Box<dyn Transformable>, Option<Box<dyn Transformable>>),
+    pair: (S, Option<S>),
   ) -> Self {
     YomiTransformer {
       config: config.clone(),
       current_transformer_type: transformer_type,
-      pair,
+      pair: (
+        box ContinuousTransformer::from_buffer(config.clone(), transformer_type, pair.0),
+        match pair.1 {
+          Some(s) => Some(box HiraganaTransformer::from_buffer(config.clone(), s)),
+          None => None,
+        },
+      ),
     }
   }
 }
@@ -147,6 +153,13 @@ impl Displayable for YomiTransformer {
       }
     }
   }
+
+  fn pair(&self) -> (String, Option<String>) {
+    match &self.pair {
+      (yomi, Some(okuri)) => (yomi.buffer_content(), Some(okuri.buffer_content())),
+      (yomi, None) => (yomi.buffer_content(), None),
+    }
+  }
 }
 
 impl AsTransformerTrait for YomiTransformer {
@@ -233,6 +246,7 @@ mod tests {
       ["okuR\n", "▽おく", Yomi],
       ["okuRi", "おくり", OkuriCompleted],
       ["kannji ", "▼漢字", SelectCandidate],
+      ["kannji [escape]", "", Stopped(Canceled)],
       ["michigo ", "[登録: みちご]", UnknownWord],
     ];
     test_transformer(items);

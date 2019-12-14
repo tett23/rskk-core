@@ -38,10 +38,10 @@ impl UnknownWordTransformer {
     UnknownWordTransformer {
       config: config.clone(),
       word,
-      stack: vec![box ContinuousTransformer::new(
-        config,
-        TransformerTypes::Hiragana,
-      )],
+      stack: vec![
+        box StoppedTransformer::empty(config.clone()),
+        box ContinuousTransformer::new(config, TransformerTypes::Hiragana),
+      ],
     }
   }
 
@@ -159,7 +159,9 @@ impl Stackable for UnknownWordTransformer {
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
     let mut ret = self.clone();
-    if ret.send_target().is_empty() {
+    if ret.send_target().transformer_type() == TransformerTypes::Continuous
+      && ret.send_target().is_empty()
+    {
       ret.stack.pop();
     }
 
@@ -178,16 +180,14 @@ impl Stackable for UnknownWordTransformer {
     match item.is_canceled() {
       true => {
         ret.stack.pop();
+        dbg!(ret.as_trait());
 
-        match ret.is_empty() {
-          true => ret.to_canceled(),
-          false => match ret.is_all_stopped() {
-            true => ret.push(box ContinuousTransformer::new(
-              ret.config(),
-              TransformerTypes::Hiragana,
-            )),
-            false => box ret,
-          },
+        match ret.is_all_stopped() {
+          true => ret.push(box ContinuousTransformer::new(
+            ret.config(),
+            TransformerTypes::Hiragana,
+          )),
+          false => box ret,
         }
       }
       false => {
@@ -228,14 +228,22 @@ mod tests {
       ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
       ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
       ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
-      ["Kannji \n","[登録: みちご]漢字", UnknownWord],
-      ["Kannji \n\n","漢字", Stopped(Compleated)],
-      ["Michi \nGo","[登録: みちご]未知▽ご", UnknownWord],
-      ["Michi \nGo ","[登録: みちご]未知▼語", UnknownWord],
-      ["Michi \nGo \n","[登録: みちご]未知語", UnknownWord],
-      ["Michi \nGo \n[backspace]","[登録: みちご]未知", UnknownWord],
-      ["Michi \nGo \n[backspace][backspace]","[登録: みちご]未", UnknownWord],
-      ["Michi \nGo \n\n","未知語", Stopped(Compleated)]
+      ["Kannji \n", "[登録: みちご]漢字", UnknownWord],
+      ["Kannji \n\n", "漢字", Stopped(Compleated)],
+      ["Michi \nGo", "[登録: みちご]未知▽ご", UnknownWord],
+      ["Michi \nGo ", "[登録: みちご]未知▼語", UnknownWord],
+      ["Michi \nGo \n", "[登録: みちご]未知語", UnknownWord],
+      ["Michi \nGo \n[backspace]", "[登録: みちご]未知", UnknownWord],
+      ["Michi \nGo \n[backspace][backspace]", "[登録: みちご]未", UnknownWord],
+      ["Michi \nGo \n\n","未知語", Stopped(Compleated)],
+      ["AA", "[登録: みちご]▽あ*あ", UnknownWord],
+      ["AAA", "[登録: みちご][登録: ああ]", UnknownWord],
+      ["AAAOkuRi", "[登録: みちご][登録: ああ]▼送り", UnknownWord],
+      ["AAAOkuRi[escape]", "[登録: みちご][登録: ああ]▽おく", UnknownWord],
+      ["AAAOkuRi[escape][escape]", "[登録: みちご][登録: ああ]", UnknownWord],
+      ["AAAOkuRi[escape][escape][escape]", "[登録: みちご]▽あ", UnknownWord],
+      ["AAAOkuRi[escape][escape][escape][escape]", "[登録: みちご]", UnknownWord],
+      ["AAAOkuRi[escape][escape][escape][escape][escape]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
   }

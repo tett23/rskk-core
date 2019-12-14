@@ -39,6 +39,9 @@ pub trait Displayable {
   fn is_empty(&self) -> bool {
     self.buffer_content().len() == 0
   }
+  fn pair(&self) -> (String, Option<String>) {
+    (self.buffer_content(), None)
+  }
 }
 
 #[derive(Clone, Debug)]
