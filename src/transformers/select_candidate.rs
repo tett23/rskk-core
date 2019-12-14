@@ -107,7 +107,10 @@ impl Displayable for SelectCandidateTransformer {
         if okuri.is_none() {
           return candidate.entry.clone();
         }
-        let (okuri, _) = okuri.unwrap();
+        let okuri = okuri
+          .unwrap()
+          .iter()
+          .fold("".to_string(), |acc, (s, _)| acc + &s);
 
         candidate.entry.clone() + &okuri
       }

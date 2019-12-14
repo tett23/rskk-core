@@ -49,7 +49,15 @@ impl Transformable for StoppedTransformer {
   }
 
   fn push_character(&self, _: char) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
+  }
+
+  fn push_backspace(&self) -> Box<dyn Transformable> {
+    self.pop().0
+  }
+
+  fn push_delete(&self) -> Box<dyn Transformable> {
+    self.push_backspace()
   }
 }
 
@@ -65,7 +73,7 @@ impl Displayable for StoppedTransformer {
 
 impl AsTransformerTrait for StoppedTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
   }
 }
 

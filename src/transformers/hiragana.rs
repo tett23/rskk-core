@@ -11,6 +11,7 @@ use BufferState::*;
 #[derive(Clone)]
 pub struct HiraganaTransformer {
   config: Config,
+  stopped: String,
   buffer: String,
 }
 
@@ -18,12 +19,21 @@ impl HiraganaTransformer {
   pub fn new(config: Config) -> Self {
     HiraganaTransformer {
       config,
+      stopped: "".to_string(),
       buffer: "".to_string(),
     }
   }
 
   pub fn from_buffer<S: Into<String>>(config: Config, buffer: S) -> Self {
     let mut ret = Self::new(config);
+    ret.buffer = buffer.into();
+
+    ret
+  }
+
+  pub fn from_stopped_and_buffer<S: Into<String>>(config: Config, stopped: S, buffer: S) -> Self {
+    let mut ret = Self::new(config);
+    ret.stopped = stopped.into();
     ret.buffer = buffer.into();
 
     ret
@@ -73,26 +83,34 @@ impl Transformable for HiraganaTransformer {
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     match hiragana_convert(&self.buffer, character) {
-      Some((new_buffer, Continue)) => Box::new(Self::from_buffer(self.config(), new_buffer)),
-      Some((new_buffer, Stop)) => {
-        Box::new(StoppedTransformer::completed(self.config(), new_buffer))
-      }
-      None => Box::new(StoppedTransformer::canceled(self.config())),
+      Some(vec) => match &*vec {
+        [] => self.to_canceled(),
+        [(new_buffer, Continue)] => {
+          box Self::from_stopped_and_buffer(self.config(), &self.stopped, &new_buffer)
+        }
+        [(new_buffer, Stop)] => {
+          box StoppedTransformer::completed(self.config(), self.stopped.clone() + &new_buffer)
+        }
+        vec => {
+          let (last, elems) = vec.split_last().unwrap();
+          let stopped = elems.iter().fold("".to_string(), |acc, (s, _)| acc + &s);
+
+          match last {
+            (s, Continue) => box Self::from_stopped_and_buffer(self.config(), stopped, s.clone()),
+            (s, Stop) => box StoppedTransformer::completed(self.config(), stopped + s),
+          }
+        }
+      },
+      None => box StoppedTransformer::canceled(self.config()),
     }
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::canceled(self.config()))
+    self.to_canceled()
   }
 
   fn push_backspace(&self) -> Box<dyn Transformable> {
-    let mut buf = self.buffer_content();
-    buf.pop();
-
-    match buf.len() == 0 {
-      true => Box::new(StoppedTransformer::canceled(self.config())),
-      false => Box::new(Self::from_buffer(self.config(), buf)),
-    }
+    self.pop().0
   }
 
   fn push_delete(&self) -> Box<dyn Transformable> {
@@ -102,11 +120,11 @@ impl Transformable for HiraganaTransformer {
 
 impl Displayable for HiraganaTransformer {
   fn buffer_content(&self) -> String {
-    self.buffer.clone()
+    self.stopped.clone() + &self.buffer
   }
 
   fn display_string(&self) -> String {
-    self.buffer.clone()
+    self.buffer_content()
   }
 }
 
@@ -122,20 +140,17 @@ impl Stackable for HiraganaTransformer {
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    if self.buffer.len() <= 1 {
-      return (
-        box StoppedTransformer::canceled(self.config()),
-        Some(box StoppedTransformer::canceled(self.config())),
-      );
-    }
-
     let mut ret = self.clone();
     ret.buffer.pop();
 
-    (
-      Box::new(ret),
-      Some(box StoppedTransformer::canceled(self.config())),
-    )
+    let ret = match (ret.buffer.len() == 0, &self.stopped.clone() as &str) {
+      (true, "") => ret.to_canceled(),
+      (false, "") => box Self::from_buffer(self.config(), &ret.buffer),
+      (true, _) => ret.to_completed(),
+      (false, s) => box Self::from_stopped_and_buffer(self.config(), s, &ret.buffer),
+    };
+
+    (ret, Some(self.to_canceled()))
   }
 
   fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
@@ -165,10 +180,15 @@ mod tests {
       ["k[backspace]", "", Stopped(Canceled)],
       ["ts[backspace]", "t", Hiragana],
       ["ka", "か", Stopped(Compleated)],
+      ["tt", "っt", Hiragana],
+      ["tt[backspace]", "っ", Stopped(Compleated)],
+      ["tte", "って", Stopped(Compleated)],
+      ["tte[backspace]", "っ", Stopped(Compleated)],
       ["[backspace]", "", Stopped(Canceled)],
       ["k[escape]", "", Stopped(Canceled)],
       ["[escape]", "", Stopped(Canceled)],
       ["Kannji", "▽かんじ", Henkan],
+      ["Kanji", "▽かんじ", Henkan],
     ];
     test_transformer(items);
   }
