@@ -1,14 +1,14 @@
 use super::tables::hiragana_convert;
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, StoppedTransformer, Transformable,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, Stackable, StoppedTransformer,
+  Transformable, TransformerTypes, WithConfig,
 };
-use crate::keyboards::KeyCode;
+use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
 use std::collections::HashSet;
 use BufferState::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct HiraganaTransformer {
   config: Config,
   buffer: String,
@@ -54,23 +54,20 @@ impl Transformable for HiraganaTransformer {
 
   fn try_change_transformer(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
-    last_key_code: &KeyCode,
+    keyboard: &Box<dyn Keyboard>,
+    _: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .config
       .key_config()
-      .try_change_transformer(&Self::allow_transformers(), pressing_keys);
-    match transformer_type {
-      Some(tft) if tft == TransformerTypes::Henkan => {
-        let tf = tf!(self.config(), tft);
-        match last_key_code.printable_key() {
-          Some(c) => Some(tf.push_character(c)),
-          None => Some(tf),
-        }
+      .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
+    match transformer_type? {
+      TransformerTypes::Henkan => {
+        let tf = tf!(self.config(), transformer_type?);
+
+        Some(tf.push_character(keyboard.last_character()?))
       }
-      Some(tft) => Some(tf!(self.config(), tft)),
-      None => None,
+      _ => Some(tf!(self.config(), transformer_type?)),
     }
   }
 
@@ -119,12 +116,43 @@ impl AsTransformerTrait for HiraganaTransformer {
   }
 }
 
+impl Stackable for HiraganaTransformer {
+  fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    unreachable!()
+  }
+
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
+    if self.buffer.len() <= 1 {
+      return (
+        box StoppedTransformer::canceled(self.config()),
+        Some(box StoppedTransformer::canceled(self.config())),
+      );
+    }
+
+    let mut ret = self.clone();
+    ret.buffer.pop();
+
+    (
+      Box::new(ret),
+      Some(box StoppedTransformer::canceled(self.config())),
+    )
+  }
+
+  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    box self.clone()
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    vec![]
+  }
+}
+
 #[cfg(test)]
 mod tests {
-  use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
+  use crate::{tds, tfe};
 
   #[test]
   fn it_works() {
@@ -140,7 +168,21 @@ mod tests {
       ["[backspace]", "", Stopped(Canceled)],
       ["k[escape]", "", Stopped(Canceled)],
       ["[escape]", "", Stopped(Canceled)],
+      ["Kannji", "▽かんじ", Henkan],
     ];
     test_transformer(items);
+  }
+
+  #[test]
+  fn stack() {
+    let conf = dummy_conf();
+
+    let tf = tfe!(conf, Hiragana; "").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
+
+    let tf = tfe!(conf, Hiragana; "ts").pop().0;
+    assert_eq!(tf.transformer_type(), Hiragana);
+    assert_eq!(tf.buffer_content(), "t");
   }
 }

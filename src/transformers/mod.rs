@@ -10,10 +10,9 @@ mod tables;
 mod unknown_word;
 mod yomi;
 
-use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
+use crate::keyboards::{KeyCode, KeyEvents, Keyboard, MetaKey};
 use crate::{Dictionary, KeyConfig, RSKKConfig};
 use objekt;
-use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
@@ -74,7 +73,7 @@ pub trait WithConfig {
 }
 
 pub trait Transformable:
-  AsTransformerTrait + WithConfig + Displayable + fmt::Debug + objekt::Clone
+  AsTransformerTrait + WithConfig + Displayable + Stackable + objekt::Clone
 {
   fn transformer_type(&self) -> TransformerTypes;
   fn is_stopped(&self) -> bool {
@@ -98,31 +97,29 @@ pub trait Transformable:
     }
   }
 
+  fn to_completed(&self) -> Box<dyn Transformable> {
+    box StoppedTransformer::completed(self.config(), self.buffer_content())
+  }
+
+  fn to_canceled(&self) -> Box<dyn Transformable> {
+    box StoppedTransformer::canceled(self.config())
+  }
+
   fn push_key_event(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
+    keyboard: &Box<dyn Keyboard>,
     event: &KeyEvents,
-    last_character: Option<char>,
   ) -> Box<dyn Transformable> {
     match event {
-      KeyEvents::KeyDown(key) => self.key_down(pressing_keys, key, last_character),
+      KeyEvents::KeyDown(key) => self.key_down(keyboard, key),
       KeyEvents::KeyUp(_) => self.key_up(),
       KeyEvents::KeyRepeat(_) => unimplemented!(),
     }
   }
 
-  fn key_down(
-    &self,
-    pressing_keys: &HashSet<KeyCode>,
-    key: &KeyCode,
-    last_character: Option<char>,
-  ) -> Box<dyn Transformable> {
-    println!(
-      "change transformer start {:?} {:?}",
-      key,
-      self.transformer_type()
-    );
-    if let Some(new_transformer) = self.try_change_transformer(pressing_keys, key) {
+  fn key_down(&self, keyboard: &Box<dyn Keyboard>, key: &KeyCode) -> Box<dyn Transformable> {
+    println!("change transformer start {:?} {:?}", key, self.as_trait());
+    if let Some(new_transformer) = self.try_change_transformer(keyboard, key) {
       return new_transformer;
     };
 
@@ -136,15 +133,16 @@ pub trait Transformable:
       key,
       new_transformer.transformer_type()
     );
-    let new_transformer = match last_character {
+    let new_transformer = match keyboard.last_character() {
       Some(character) => new_transformer.push_character(character),
       None => new_transformer,
     };
     println!(
       "change transformer push_character {:?}, {:?}",
-      last_character,
+      keyboard.last_character(),
       new_transformer.transformer_type()
     );
+    println!("{:?}", new_transformer);
     println!();
 
     new_transformer
@@ -155,38 +153,34 @@ pub trait Transformable:
   }
   fn try_change_transformer(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
-    last_key_code: &KeyCode,
-  ) -> Option<Box<dyn Transformable>>;
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
-    let target = self.send_target();
+    _: &Box<dyn Keyboard>,
+    _: &KeyCode,
+  ) -> Option<Box<dyn Transformable>> {
+    None
+  }
 
-    let new_transformer = match key_code {
-      KeyCode::Meta(MetaKey::Escape) => target.push_escape(),
+  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
+    match key_code {
+      KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
-        target.push_enter()
+        self.push_enter()
       }
       KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
-        target.push_space()
+        self.push_space()
       }
       KeyCode::PrintableMeta(MetaKey::Backspace, _) | KeyCode::Meta(MetaKey::Backspace) => {
-        target.push_backspace()
+        self.push_backspace()
       }
       KeyCode::PrintableMeta(MetaKey::Delete, _) | KeyCode::Meta(MetaKey::Delete) => {
-        target.push_delete()
+        self.push_delete()
       }
-      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => target.push_tab(),
-      KeyCode::Meta(MetaKey::ArrowRight) => target.push_arrow_right(),
-      KeyCode::Meta(MetaKey::ArrowDown) => target.push_arrow_down(),
-      KeyCode::Meta(MetaKey::ArrowLeft) => target.push_arrow_left(),
-      KeyCode::Meta(MetaKey::ArrowUp) => target.push_arrow_up(),
-      _ => target.push_any_character(&target, key_code),
-    };
-
-    self.transformer_updated(new_transformer)
-  }
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    new_transformer
+      KeyCode::PrintableMeta(MetaKey::Tab, _) | KeyCode::Meta(MetaKey::Tab) => self.push_tab(),
+      KeyCode::Meta(MetaKey::ArrowRight) => self.push_arrow_right(),
+      KeyCode::Meta(MetaKey::ArrowDown) => self.push_arrow_down(),
+      KeyCode::Meta(MetaKey::ArrowLeft) => self.push_arrow_left(),
+      KeyCode::Meta(MetaKey::ArrowUp) => self.push_arrow_up(),
+      _ => self.push_any_character(key_code),
+    }
   }
   fn push_character(&self, character: char) -> Box<dyn Transformable>;
 
@@ -223,8 +217,50 @@ pub trait Transformable:
   fn push_arrow_up(&self) -> Box<dyn Transformable> {
     self.as_trait()
   }
-  fn push_any_character(&self, _: &Box<dyn Transformable>, _: &KeyCode) -> Box<dyn Transformable> {
+  fn push_any_character(&self, _: &KeyCode) -> Box<dyn Transformable> {
     self.as_trait()
+  }
+}
+
+impl dyn Transformable {
+  #[allow(unused_must_use)]
+  fn print_stack(&self, f: &mut fmt::Formatter<'_>, depth: usize) {
+    let indent = "\t".repeat(depth);
+    let stack = self.stack();
+    if stack.len() == 0 {
+      write!(
+        f,
+        "{}[{:?}: {}]",
+        indent,
+        self.transformer_type(),
+        match &self.buffer_content() as &str {
+          "" => "(empty)",
+          some => some,
+        }
+      );
+      return;
+    }
+
+    write!(
+      f,
+      "{}[{:?}: {}\n",
+      indent,
+      self.transformer_type(),
+      self.buffer_content()
+    );
+    self.stack().iter().for_each(|s| {
+      s.print_stack(f, depth + 1);
+      write!(f, "\n");
+    });
+    write!(f, "{}]", indent);
+  }
+}
+
+impl fmt::Debug for dyn Transformable {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    self.print_stack(f, 0);
+
+    fmt::Result::Ok(())
   }
 }
 

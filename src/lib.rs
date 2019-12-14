@@ -1,3 +1,5 @@
+#![feature(box_syntax)]
+
 mod composition;
 mod dictionary;
 mod keyboards;
@@ -126,8 +128,17 @@ macro_rules! key {
 macro_rules! tf {
     ( $conf:expr, $t:expr ) => {{
         let ret: Box<dyn crate::transformers::Transformable> = match $t {
+            crate::transformers::TransformerTypes::Stopped(reason) => Box::new(
+                crate::transformers::StoppedTransformer::new($conf, reason, ""),
+            ),
             crate::transformers::TransformerTypes::Direct => {
                 Box::new(crate::transformers::DirectTransformer::new($conf))
+            }
+            crate::transformers::TransformerTypes::Continuous => {
+                Box::new(crate::transformers::ContinuousTransformer::new(
+                    $conf,
+                    crate::transformers::TransformerTypes::Hiragana,
+                ))
             }
             crate::transformers::TransformerTypes::Hiragana => {
                 Box::new(crate::transformers::HiraganaTransformer::new($conf))
@@ -155,6 +166,18 @@ macro_rules! tf {
     ( $conf:expr, YomiTransformer, $v:expr ) => {
         Box::new(crate::transformers::YomiTransformer::new($conf, $v))
     };
+}
+
+#[macro_export]
+macro_rules! tfe {
+    ( $conf:expr, $t:tt; $input:expr ) => {{
+        let tf = crate::tf!($conf.clone(), $t);
+        let mut composition = crate::Composition::new_from_transformer(tf.config(), tf);
+        let vec = crate::tests::str_to_key_code_vector($input);
+        composition.push_key_events(&vec);
+
+        composition.transformer()
+    }};
 }
 
 #[macro_export]
@@ -198,27 +221,5 @@ mod lib_tests {
             ["[down:ctrl]j[up:ctrl]a", "あ", Stopped(Compleated)]
         ];
         test_transformer(items);
-
-        // let items = tds![conf, Hiragana;
-        //     ["a", "あ", Stopped],
-        //     ["ka", "か", Stopped],
-        //     ["ts", "ts", Hiragana],
-        //     ["tsu", "つ", Stopped],
-        //     ["K", "▽k", Henkan],
-        //     ["Ka", "▽か", Henkan],
-        //     ["Kannji", "▽かんじ", Henkan],
-        //     ["Kannji ", "▼漢字", Henkan],
-        //     ["Kannji \n", "漢字", Stopped],
-        //     ["Michigo ", "[登録: みちご]", Henkan],
-        //     ["Michigo \n", "", Stopped]
-        // ];
-        // test_transformer(items);
-
-        // let items = tds![conf, ContinuousTransformer, Hiragana;
-        //     ["hiragana", "ひらがな", ContinuousTransformer],
-        //     ["hiragana\n", "ひらがな", Stopped],
-        //     ["hiragana[escape]", "", Canceled]
-        // ];
-        // test_transformer(items);
     }
 }

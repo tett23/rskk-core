@@ -1,10 +1,10 @@
 use super::{
   AsTransformerTrait, Config, ContinuousTransformer, Displayable, OkuriCompletedTransformer,
-  Stackable, StoppedReason, StoppedTransformer, Transformable, TransformerTypes, WithConfig,
+  SelectCandidateTransformer, Stackable, StoppedReason, StoppedTransformer, Transformable,
+  TransformerTypes, UnknownWordTransformer, WithConfig, Word,
 };
-use crate::keyboards::KeyCode;
+use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
-use std::collections::HashSet;
 use StoppedReason::*;
 
 #[derive(Clone, Debug)]
@@ -25,6 +25,18 @@ impl YomiTransformer {
       ),
     }
   }
+
+  pub fn from_pair(
+    config: Config,
+    transformer_type: TransformerTypes,
+    pair: (Box<dyn Transformable>, Option<Box<dyn Transformable>>),
+  ) -> Self {
+    YomiTransformer {
+      config: config.clone(),
+      current_transformer_type: transformer_type,
+      pair,
+    }
+  }
 }
 
 impl WithConfig for YomiTransformer {
@@ -40,7 +52,7 @@ impl Transformable for YomiTransformer {
 
   fn try_change_transformer(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
+    keyboard: &Box<dyn Keyboard>,
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     match &self.pair {
@@ -48,16 +60,12 @@ impl Transformable for YomiTransformer {
         let transformer_type = self
           .config
           .key_config()
-          .try_change_transformer(&set![TransformerTypes::Henkan], pressing_keys);
-        match transformer_type {
-          Some(TransformerTypes::Henkan) => {
+          .try_change_transformer(&set![TransformerTypes::Henkan], keyboard.pressing_keys());
+        match transformer_type? {
+          TransformerTypes::Henkan => {
             let ret = self.clone();
             let okuri = tf!(self.config(), self.current_transformer_type);
-            let okuri = if let Some(character) = last_key_code.printable_key() {
-              okuri.push_character(character)
-            } else {
-              okuri
-            };
+            let okuri = okuri.push_character(last_key_code.printable_key()?);
 
             Some(ret.push(okuri))
           }
@@ -79,6 +87,7 @@ impl Transformable for YomiTransformer {
       (TransformerTypes::Stopped(Canceled), (_, Some(_))) => self.pop().0,
       (TransformerTypes::Stopped(_), (_, Some(_))) => Box::new(OkuriCompletedTransformer::new(
         self.config(),
+        self.current_transformer_type,
         self.pair.0.buffer_content(),
         new_transformer.buffer_content(),
       )),
@@ -86,14 +95,38 @@ impl Transformable for YomiTransformer {
     }
   }
 
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    match (new_transformer.transformer_type(), &self.pair) {
-      (TransformerTypes::Stopped(_), (_, None)) => new_transformer,
-      (TransformerTypes::Stopped(Canceled), (_, Some(_))) => self.pop().0,
-      (TransformerTypes::Stopped(Compleated), (_, Some(_))) => Box::new(
-        StoppedTransformer::completed(self.config(), self.buffer_content()),
-      ),
-      (_, _) => self.replace_last_element(new_transformer),
+  fn push_escape(&self) -> Box<dyn Transformable> {
+    match &self.pair {
+      (_, None) => Box::new(StoppedTransformer::canceled(self.config())),
+      (_, Some(_)) => self.pop().0,
+    }
+  }
+
+  fn push_space(&self) -> Box<dyn Transformable> {
+    let buf = self.buffer_content();
+    match self.config.dictionary.transform(&buf) {
+      Some(dic_entry) => Box::new(SelectCandidateTransformer::new(
+        self.config(),
+        dic_entry,
+        None,
+      )),
+      None => Box::new(UnknownWordTransformer::new(
+        self.config(),
+        Word::new(&buf, None),
+      )),
+    }
+  }
+
+  fn push_enter(&self) -> Box<dyn Transformable> {
+    match &self.pair {
+      (yomi, None) => Box::new(StoppedTransformer::completed(
+        self.config(),
+        yomi.buffer_content(),
+      )),
+      (_, Some(okuri)) => match okuri.push_enter().is_canceled() {
+        true => self.pop().0,
+        false => self.as_trait(),
+      },
     }
   }
 }
@@ -169,6 +202,15 @@ impl Stackable for YomiTransformer {
       }
     }
   }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    let mut ret = vec![self.pair.0.clone()];
+    if let Some(yomi) = &self.pair.1 {
+      ret.push(yomi.clone());
+    };
+
+    ret
+  }
 }
 
 #[cfg(test)]
@@ -190,6 +232,8 @@ mod tests {
       ["okuR[escape]", "▽おく", Yomi],
       ["okuR\n", "▽おく", Yomi],
       ["okuRi", "おくり", OkuriCompleted],
+      ["kannji ", "▼漢字", SelectCandidate],
+      ["michigo ", "[登録: みちご]", UnknownWord],
     ];
     test_transformer(items);
 

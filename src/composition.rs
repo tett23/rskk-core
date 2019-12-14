@@ -41,11 +41,7 @@ impl Composition {
 
   pub fn push_key_event(&mut self, event: &KeyEvents) {
     self.keyboard.push_event(event);
-    self.transformer = self.transformer.push_key_event(
-      self.keyboard.pressing_keys(),
-      event,
-      self.keyboard.last_character(),
-    );
+    self.transformer = self.transformer.push_key_event(&self.keyboard, event);
   }
 
   pub fn buffer_content(&self) -> String {
@@ -54,5 +50,10 @@ impl Composition {
 
   pub fn display_string(&self) -> String {
     self.transformer.display_string()
+  }
+
+  #[cfg(test)]
+  pub fn transformer(&self) -> Box<dyn Transformable> {
+    self.transformer.clone()
   }
 }

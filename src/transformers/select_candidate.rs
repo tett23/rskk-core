@@ -1,11 +1,11 @@
 use super::tables::hiragana_convert;
 use super::StoppedTransformer;
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, Stackable, Transformable, TransformerTypes,
+  WithConfig,
 };
 use crate::dictionary::{Candidate, DictionaryEntry};
 use crate::keyboards::KeyCode;
-use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidateTransformer {
@@ -39,14 +39,6 @@ impl WithConfig for SelectCandidateTransformer {
 impl Transformable for SelectCandidateTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::SelectCandidate
-  }
-
-  fn try_change_transformer(
-    &self,
-    _: &HashSet<KeyCode>,
-    _: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    None
   }
 
   fn push_character(&self, _: char) -> Box<dyn Transformable> {
@@ -87,11 +79,7 @@ impl Transformable for SelectCandidateTransformer {
     self.push_delete()
   }
 
-  fn push_any_character(
-    &self,
-    _: &Box<dyn Transformable>,
-    key_code: &KeyCode,
-  ) -> Box<dyn Transformable> {
+  fn push_any_character(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
     match key_code.is_printable() {
       true => match self.candidates.current() {
         Some(candidate) => Box::new(StoppedTransformer::completed(
@@ -136,6 +124,24 @@ impl Displayable for SelectCandidateTransformer {
 impl AsTransformerTrait for SelectCandidateTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
+  }
+}
+
+impl Stackable for SelectCandidateTransformer {
+  fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    unreachable!()
+  }
+
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
+    (self.push_delete(), Some(box self.clone()))
+  }
+
+  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    box self.clone()
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    vec![]
   }
 }
 

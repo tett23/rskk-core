@@ -1,13 +1,12 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, MetaKey, SelectCandidateTransformer, Stackable,
-  StoppedReason, StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer,
-  WithConfig, Word, YomiTransformer,
+  AsTransformerTrait, Config, Displayable, SelectCandidateTransformer, Stackable, StoppedReason,
+  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
+  YomiTransformer,
 };
-use crate::keyboards::KeyCode;
-use std::collections::HashSet;
+use crate::keyboards::{KeyCode, Keyboard};
 use StoppedReason::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct HenkanTransformer {
   config: Config,
   transformer_type: TransformerTypes,
@@ -37,17 +36,14 @@ impl Transformable for HenkanTransformer {
 
   fn try_change_transformer(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
+    keyboard: &Box<dyn Keyboard>,
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     let new_transformer = self
       .send_target()
-      .try_change_transformer(pressing_keys, last_key_code);
+      .try_change_transformer(keyboard, last_key_code);
 
-    match new_transformer {
-      Some(tf) => Some(self.replace_last_element(tf)),
-      None => None,
-    }
+    Some(self.replace_last_element(new_transformer?))
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
@@ -72,40 +68,25 @@ impl Transformable for HenkanTransformer {
     self.replace_last_element(new_transformer)
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
-    let target = self.send_target();
-
-    let new_transformer = match key_code {
-      KeyCode::PrintableMeta(MetaKey::Space, _) | KeyCode::Meta(MetaKey::Space) => {
-        self.push_space()
-      }
-      _ => target.push_meta_key(key_code),
-    };
-
-    self.transformer_updated(new_transformer)
-  }
-
-  fn push_space(&self) -> Box<dyn Transformable> {
-    let buf = self.buffer_content();
-    match self.config.dictionary.transform(&buf) {
-      Some(dic_entry) => Box::new(SelectCandidateTransformer::new(
-        self.config(),
-        dic_entry,
-        None,
-      )),
-      None => Box::new(UnknownWordTransformer::new(
-        self.config(),
-        Word::new(&buf, None),
-      )),
+  fn push_escape(&self) -> Box<dyn Transformable> {
+    let new_transformer = self.send_target().push_escape();
+    match new_transformer.transformer_type() {
+      TransformerTypes::Stopped(Canceled) => self.pop().0,
+      _ => self.replace_last_element(new_transformer),
     }
   }
 
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
+  fn push_enter(&self) -> Box<dyn Transformable> {
+    let new_transformer = self.send_target().push_enter();
     match new_transformer.transformer_type() {
       TransformerTypes::Stopped(Compleated) => new_transformer,
       TransformerTypes::Stopped(Canceled) => self.pop().0,
       _ => self.replace_last_element(new_transformer),
     }
+  }
+
+  fn push_space(&self) -> Box<dyn Transformable> {
+    self.replace_last_element(self.send_target().push_space())
   }
 }
 
@@ -146,7 +127,7 @@ impl Stackable for HenkanTransformer {
 
     let item = ret.stack.pop();
     if ret.stack.len() == 0 {
-      return (Box::new(StoppedTransformer::canceled(self.config())), None);
+      return (Box::new(StoppedTransformer::canceled(self.config())), item);
     }
 
     (Box::new(ret), item)
@@ -159,6 +140,10 @@ impl Stackable for HenkanTransformer {
     ret.stack.push(item);
 
     Box::new(ret)
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    self.stack.clone()
   }
 }
 

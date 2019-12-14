@@ -1,20 +1,26 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, Transformable,
+  TransformerTypes, WithConfig, YomiTransformer,
 };
-
-use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct OkuriCompletedTransformer {
   config: Config,
+  transformer_type: TransformerTypes,
   yomi: String,
   okuri: String,
 }
 
 impl OkuriCompletedTransformer {
-  pub fn new<S: Into<String>>(config: Config, yomi: S, okuri: S) -> Self {
+  pub fn new<S: Into<String>>(
+    config: Config,
+    transformer_type: TransformerTypes,
+    yomi: S,
+    okuri: S,
+  ) -> Self {
     OkuriCompletedTransformer {
       config,
+      transformer_type,
       yomi: yomi.into(),
       okuri: okuri.into(),
     }
@@ -30,14 +36,6 @@ impl WithConfig for OkuriCompletedTransformer {
 impl Transformable for OkuriCompletedTransformer {
   fn transformer_type(&self) -> TransformerTypes {
     TransformerTypes::OkuriCompleted
-  }
-
-  fn try_change_transformer(
-    &self,
-    _: &HashSet<KeyCode>,
-    _: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    None
   }
 
   fn push_character(&self, _: char) -> Box<dyn Transformable> {
@@ -58,5 +56,36 @@ impl Displayable for OkuriCompletedTransformer {
 impl AsTransformerTrait for OkuriCompletedTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
+  }
+}
+
+impl Stackable for OkuriCompletedTransformer {
+  fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    box self.clone()
+  }
+
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
+    let ret = YomiTransformer::from_pair(
+      self.config(),
+      self.transformer_type,
+      (
+        box ContinuousTransformer::from_buffer(
+          self.config(),
+          self.transformer_type(),
+          self.yomi.clone(),
+        ),
+        None,
+      ),
+    );
+
+    (box ret, Some(box self.clone()))
+  }
+
+  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    box self.clone()
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    vec![]
   }
 }

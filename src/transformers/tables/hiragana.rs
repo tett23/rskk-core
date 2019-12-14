@@ -2,6 +2,8 @@ use super::super::BufferState;
 use super::super::BufferState::*;
 
 pub fn convert(current_buffer: &str, character: char) -> Option<(String, BufferState)> {
+  let character = character.to_lowercase().next()?;
+
   let pair = match (current_buffer, character) {
     ("", 'a') => Some(("あ", Stop)),
     ("", 'i') => Some(("い", Stop)),

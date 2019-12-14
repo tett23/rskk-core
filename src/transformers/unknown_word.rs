@@ -1,10 +1,8 @@
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, MetaKey, Stackable,
-  StoppedReason, StoppedTransformer, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, StoppedTransformer,
+  Transformable, TransformerTypes, WithConfig,
 };
-use crate::keyboards::KeyCode;
-use std::collections::HashSet;
-use StoppedReason::*;
+use crate::keyboards::{KeyCode, Keyboard};
 
 #[derive(Clone, Debug)]
 pub struct Word(String, Option<String>);
@@ -28,7 +26,7 @@ impl Word {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct UnknownWordTransformer {
   config: Config,
   word: Word,
@@ -40,10 +38,10 @@ impl UnknownWordTransformer {
     UnknownWordTransformer {
       config: config.clone(),
       word,
-      stack: vec![Box::new(ContinuousTransformer::new(
+      stack: vec![box ContinuousTransformer::new(
         config,
         TransformerTypes::Hiragana,
-      ))],
+      )],
     }
   }
 
@@ -52,41 +50,6 @@ impl UnknownWordTransformer {
     ret.stack = stack;
 
     ret
-  }
-
-  fn stopped_buffer_content(&self) -> String {
-    self
-      .stack
-      .iter()
-      .filter(|tf| tf.is_stopped())
-      .fold("".to_string(), |acc, tf| acc + &tf.buffer_content())
-  }
-}
-
-impl Stackable for UnknownWordTransformer {
-  fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    let mut ret = self.new_from_stack(self.stack.clone());
-
-    ret.stack.push(item);
-
-    Box::new(ret)
-  }
-
-  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    let mut ret = self.new_from_stack(self.stack.clone());
-
-    let item = ret.stack.pop();
-
-    (Box::new(ret), item)
-  }
-
-  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    let mut ret = self.clone();
-
-    ret.stack.pop();
-    ret.stack.push(item);
-
-    Box::new(ret)
   }
 }
 
@@ -103,13 +66,12 @@ impl Transformable for UnknownWordTransformer {
 
   fn try_change_transformer(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
+    keyboard: &Box<dyn Keyboard>,
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     let new_transformer = self
-      .stack
-      .last()?
-      .try_change_transformer(pressing_keys, last_key_code);
+      .send_target()
+      .try_change_transformer(keyboard, last_key_code);
 
     match new_transformer {
       Some(tf) => Some(self.replace_last_element(tf)),
@@ -118,67 +80,40 @@ impl Transformable for UnknownWordTransformer {
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    let last_tf = self.stack.last();
-    if last_tf.is_none() {
-      return Box::new(StoppedTransformer::empty(self.config.clone()));
+    if character == '\n' || character == ' ' {
+      return self.as_trait();
     }
-    let last_tf = last_tf.unwrap();
 
-    let new_transformer = last_tf.push_character(character);
-    match new_transformer.is_stopped() {
-      true => {
-        let mut ret = self.clone();
-        ret.stack.pop();
-        ret.stack.push(new_transformer);
-        ret.stack.push(Box::new(ContinuousTransformer::new(
-          self.config(),
-          TransformerTypes::Hiragana,
-        )));
-
-        Box::new(ret)
-      }
-      false => self.replace_last_element(new_transformer),
-    }
+    self.replace_last_element(self.send_target().push_character(character))
   }
 
-  fn transformer_updated(&self, new_transformer: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    match new_transformer.transformer_type() {
-      TransformerTypes::Stopped(Canceled) => new_transformer,
-      TransformerTypes::Stopped(_) => {
-        let mut ret = self.clone();
-        ret.stack.pop();
-        ret.stack.push(new_transformer);
-        ret.stack.push(Box::new(ContinuousTransformer::new(
-          self.config(),
-          TransformerTypes::Hiragana,
-        )));
-
-        Box::new(ret)
-      }
-      _ => self.replace_last_element(new_transformer),
-    }
+  fn push_space(&self) -> Box<dyn Transformable> {
+    self.replace_last_element(self.send_target().push_space())
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
-    let target = self.send_target();
+  fn push_enter(&self) -> Box<dyn Transformable> {
+    if self.send_target().is_empty() {
+      return box StoppedTransformer::completed(self.config(), self.buffer_content());
+    }
 
-    let new_transformer = match key_code {
-      KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter)
-        if target.is_empty() =>
-      {
-        return Box::new(StoppedTransformer::completed(
-          self.config(),
-          self.stopped_buffer_content(),
-        ))
-      }
-      _ => target.push_meta_key(key_code),
-    };
+    self.replace_last_element(self.send_target().push_enter())
+  }
 
-    self.transformer_updated(new_transformer)
+  fn push_backspace(&self) -> Box<dyn Transformable> {
+    self.pop().0
+  }
+
+  fn push_delete(&self) -> Box<dyn Transformable> {
+    self.push_backspace()
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    return Box::new(StoppedTransformer::canceled(self.config()));
+    match self.send_target().transformer_type() {
+      TransformerTypes::UnknownWord | TransformerTypes::Henkan => {
+        self.replace_last_element(self.send_target().push_escape())
+      }
+      _ => self.to_canceled(),
+    }
   }
 }
 
@@ -213,11 +148,75 @@ impl AsTransformerTrait for UnknownWordTransformer {
   }
 }
 
+impl Stackable for UnknownWordTransformer {
+  fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    let mut ret = self.new_from_stack(self.stack.clone());
+
+    ret.stack.push(item);
+
+    Box::new(ret)
+  }
+
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
+    let mut ret = self.clone();
+    if ret.send_target().is_empty() {
+      ret.stack.pop();
+    }
+
+    match ret.stack.last() {
+      Some(tf) => {
+        let (tf, pop) = tf.pop();
+
+        (ret.replace_last_element(tf), pop)
+      }
+      None => (self.to_canceled(), None),
+    }
+  }
+
+  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    let mut ret = self.clone();
+    match item.is_canceled() {
+      true => {
+        ret.stack.pop();
+
+        match ret.is_empty() {
+          true => ret.to_canceled(),
+          false => match ret.is_all_stopped() {
+            true => ret.push(box ContinuousTransformer::new(
+              ret.config(),
+              TransformerTypes::Hiragana,
+            )),
+            false => box ret,
+          },
+        }
+      }
+      false => {
+        ret.stack.pop();
+        ret.stack.push(item);
+
+        match ret.is_all_stopped() {
+          true => ret.push(box ContinuousTransformer::new(
+            ret.config(),
+            TransformerTypes::Hiragana,
+          )),
+          false => box ret,
+        }
+      }
+    }
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    self.stack.clone()
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
+  use crate::transformers::StoppedReason;
+  use crate::{tds, tfe};
+  use StoppedReason::*;
   use TransformerTypes::*;
 
   #[test]
@@ -225,17 +224,40 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, UnknownWordTransformer, Word::new("みちご", None);
-        ["[escape]", "", Stopped(Canceled)],
-        ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
-        ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
-        ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
-        ["Kannji \n","[登録: みちご]漢字", UnknownWord],
-        ["Kannji \n\n","漢字", Stopped(Compleated)],
-        ["Michi \nGo","[登録: みちご]未知▽ご", UnknownWord],
-        ["Michi \nGo ","[登録: みちご]未知▼語", UnknownWord],
-        ["Michi \nGo \n","[登録: みちご]未知語", UnknownWord],
-        ["Michi \nGo \n\n","未知語", Stopped(Compleated)]
+      ["[escape]", "", Stopped(Canceled)],
+      ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
+      ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
+      ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
+      ["Kannji \n","[登録: みちご]漢字", UnknownWord],
+      ["Kannji \n\n","漢字", Stopped(Compleated)],
+      ["Michi \nGo","[登録: みちご]未知▽ご", UnknownWord],
+      ["Michi \nGo ","[登録: みちご]未知▼語", UnknownWord],
+      ["Michi \nGo \n","[登録: みちご]未知語", UnknownWord],
+      ["Michi \nGo \n[backspace]","[登録: みちご]未知", UnknownWord],
+      ["Michi \nGo \n[backspace][backspace]","[登録: みちご]未", UnknownWord],
+      ["Michi \nGo \n\n","未知語", Stopped(Compleated)]
     ];
     test_transformer(items);
+  }
+
+  #[test]
+  fn stack() {
+    let conf = dummy_conf();
+
+    let tf = tfe!(conf, Continuous; "").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
+
+    let tf = tfe!(conf, Continuous; "a").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
+
+    let tf = tfe!(conf, Continuous; "aa").pop().0;
+    assert_eq!(tf.transformer_type(), Continuous);
+    assert_eq!(tf.buffer_content(), "あ");
+
+    let tf = tfe!(conf, Continuous; "aaa").pop().0;
+    assert_eq!(tf.transformer_type(), Continuous);
+    assert_eq!(tf.buffer_content(), "ああ");
   }
 }

@@ -1,8 +1,8 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, StoppedTransformer, Transformable, TransformerTypes,
-  WithConfig,
+  AsTransformerTrait, Config, Displayable, Stackable, StoppedTransformer, Transformable,
+  TransformerTypes, WithConfig,
 };
-use crate::keyboards::KeyCode;
+use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
 use std::collections::HashSet;
 
@@ -38,28 +38,44 @@ impl Transformable for DirectTransformer {
 
   fn try_change_transformer(
     &self,
-    pressing_keys: &HashSet<KeyCode>,
+    keyboard: &Box<dyn Keyboard>,
     _: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .config
       .key_config()
-      .try_change_transformer(&Self::allow_transformers(), pressing_keys);
-    match transformer_type {
-      Some(tft) => Some(tf!(self.config(), tft)),
-      None => None,
-    }
+      .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
+
+    Some(tf!(self.config(), transformer_type?))
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    return Box::new(StoppedTransformer::completed(
-      self.config(),
-      character.to_string(),
-    ));
+    return box StoppedTransformer::completed(self.config(), character.to_string());
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::canceled(self.config()))
+    self.to_canceled()
+  }
+}
+
+impl Stackable for DirectTransformer {
+  fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    unreachable!()
+  }
+
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
+    (
+      box StoppedTransformer::canceled(self.config()),
+      Some(box StoppedTransformer::canceled(self.config())),
+    )
+  }
+
+  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    self.as_trait()
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    vec![]
   }
 }
 
@@ -76,5 +92,38 @@ impl Displayable for DirectTransformer {
 impl AsTransformerTrait for DirectTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::tests::{dummy_conf, test_transformer};
+  use crate::transformers::StoppedReason::*;
+  use crate::transformers::TransformerTypes::*;
+  use crate::{tds, tfe};
+
+  #[test]
+  fn it_works() {
+    let conf = dummy_conf();
+
+    let items = tds![conf, Direct;
+      ["a", "a", Stopped(Compleated)],
+      ["A", "A", Stopped(Compleated)],
+      ["!", "!", Stopped(Compleated)],
+    ];
+    test_transformer(items);
+  }
+
+  #[test]
+  fn stack() {
+    let conf = dummy_conf();
+
+    let tf = tfe!(conf, Direct; "").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
+
+    let tf = tfe!(conf, Direct; "a").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
   }
 }

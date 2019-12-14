@@ -1,8 +1,6 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
 };
-
-use std::collections::HashSet;
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
 pub enum StoppedReason {
@@ -10,7 +8,7 @@ pub enum StoppedReason {
   Canceled,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct StoppedTransformer {
   config: Config,
   reason: StoppedReason,
@@ -50,14 +48,6 @@ impl Transformable for StoppedTransformer {
     TransformerTypes::Stopped(self.reason)
   }
 
-  fn try_change_transformer(
-    &self,
-    _: &HashSet<KeyCode>,
-    _: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    None
-  }
-
   fn push_character(&self, _: char) -> Box<dyn Transformable> {
     Box::new(self.clone())
   }
@@ -76,5 +66,61 @@ impl Displayable for StoppedTransformer {
 impl AsTransformerTrait for StoppedTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     Box::new(self.clone())
+  }
+}
+
+impl Stackable for StoppedTransformer {
+  fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    unreachable!()
+  }
+
+  fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
+    let mut ret = self.clone();
+    ret.buffer.pop();
+
+    if ret.buffer.len() == 0 {
+      return (
+        box StoppedTransformer::canceled(self.config()),
+        Some(box StoppedTransformer::canceled(self.config())),
+      );
+    }
+
+    (
+      box ret,
+      Some(box StoppedTransformer::canceled(self.config())),
+    )
+  }
+
+  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    box self.clone()
+  }
+
+  fn stack(&self) -> Vec<Box<dyn Transformable>> {
+    vec![]
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::tests::dummy_conf;
+  use crate::transformers::StoppedReason::*;
+  use crate::transformers::TransformerTypes::*;
+
+  #[test]
+  fn stack() {
+    let conf = dummy_conf();
+
+    let tf = StoppedTransformer::completed(conf.clone(), "aa").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Compleated));
+    assert_eq!(tf.buffer_content(), "a");
+
+    let tf = StoppedTransformer::completed(conf.clone(), "a").pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
+
+    let tf = StoppedTransformer::canceled(conf.clone()).pop().0;
+    assert_eq!(tf.transformer_type(), Stopped(Canceled));
+    assert_eq!(tf.buffer_content(), "");
   }
 }
