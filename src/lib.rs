@@ -1,5 +1,8 @@
 #![feature(box_syntax)]
 
+#[macro_use]
+extern crate lazy_static;
+
 mod composition;
 mod dictionary;
 mod keyboards;
@@ -7,16 +10,21 @@ mod rskk_config;
 mod tests;
 mod transformers;
 
+use std::convert::TryFrom;
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int};
+use std::sync::{Arc, Mutex};
+
 use composition::Composition;
-use std::rc::Rc;
+use keyboards::KeyEvents;
 use transformers::{Config, TransformerTypes};
 
 pub use dictionary::{Dictionary, DictionaryEntry};
 pub use rskk_config::{KeyConfig, RSKKConfig};
 
 pub struct RSKK {
-    config: Rc<RSKKConfig>,
-    dictionary: Rc<Dictionary>,
+    config: Arc<RSKKConfig>,
+    dictionary: Arc<Dictionary>,
     compositions: Vec<Composition>,
     default_composition_type: TransformerTypes,
 }
@@ -24,15 +32,23 @@ pub struct RSKK {
 impl RSKK {
     pub fn new(default_composition_type: TransformerTypes) -> Self {
         RSKK {
-            config: Rc::new(RSKKConfig::default_config()),
-            dictionary: Rc::new(Dictionary::new(set![])),
+            config: Arc::new(RSKKConfig::default_config()),
+            dictionary: Arc::new(Dictionary::new(set![])),
             compositions: vec![],
             default_composition_type,
         }
     }
 
+    pub fn last_composition(&self) -> Option<&Composition> {
+        self.compositions.last()
+    }
+
+    pub fn last_mut_composition(&mut self) -> Option<&mut Composition> {
+        self.compositions.last_mut()
+    }
+
     pub fn parse_dictionary(&mut self, dic: &str) {
-        self.dictionary = Rc::new(Dictionary::parse(dic));
+        self.dictionary = Arc::new(Dictionary::parse(dic));
     }
 
     pub fn start_composition(&mut self) -> &mut Composition {
@@ -47,6 +63,95 @@ impl RSKK {
 
         self.compositions.last_mut().unwrap()
     }
+}
+
+lazy_static! {
+    static ref RSKK_INSTANCE: Arc<Mutex<RSKK>> =
+        Arc::new(Mutex::new(RSKK::new(TransformerTypes::Direct)));
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_start_composition() -> c_int {
+    (*RSKK_INSTANCE)
+        .lock()
+        .as_mut()
+        .map(|rskk| {
+            rskk.start_composition();
+            1
+        })
+        .unwrap_or(-1)
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_push_key_event(event_type: u16, code: u16) -> bool {
+    let event = KeyEvents::try_from((event_type, code));
+    if event.is_err() {
+        return false;
+    }
+    let event = event.unwrap();
+
+    (*RSKK_INSTANCE)
+        .lock()
+        .as_mut()
+        .map(|rskk| {
+            rskk.last_mut_composition()
+                .map(|composition| {
+                    composition.push_key_event(&event);
+                    true
+                })
+                .unwrap_or(false)
+        })
+        .unwrap_or(false)
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_buffer_content() -> *mut c_char {
+    let buf = (*RSKK_INSTANCE)
+        .lock()
+        .map(|rskk| {
+            rskk.last_composition()
+                .map(|composition| composition.buffer_content())
+                .unwrap_or("".to_owned())
+        })
+        .unwrap_or("".to_owned());
+
+    CString::new(buf).unwrap().into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_display_string() -> *mut c_char {
+    let buf = (*RSKK_INSTANCE)
+        .lock()
+        .map(|rskk| {
+            rskk.last_composition()
+                .map(|composition| composition.display_string())
+                .unwrap_or("".to_owned())
+        })
+        .unwrap_or("".to_owned());
+
+    CString::new(buf).unwrap().into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_is_stopped() -> bool {
+    (*RSKK_INSTANCE)
+        .lock()
+        .map(|rskk| {
+            rskk.last_composition()
+                .map(|composition| composition.is_stopped())
+                .unwrap_or(false)
+        })
+        .unwrap_or(false)
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_free_string(s: *mut c_char) {
+    unsafe {
+        if s.is_null() {
+            return;
+        }
+        CString::from_raw(s)
+    };
 }
 
 #[macro_export]
@@ -97,7 +202,9 @@ macro_rules! combos {
 macro_rules! key {
     ( $v:expr ) => {
         match $v {
-            "ctrl" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Ctrl),
+            "ctrl" | "left control" | "right control" => {
+                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Ctrl)
+            }
             "shift" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Shift),
             "alt" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Alt),
             "super" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Super),

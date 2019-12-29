@@ -6,15 +6,15 @@ pub mod transformer;
 use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
 use crate::transformers::Config;
 use crate::{key, Dictionary, RSKKConfig};
-use std::rc::Rc;
+use std::sync::Arc;
 use KeyEvents::*;
 
 pub use transformer::*;
 
 pub fn dummy_conf() -> Config {
   Config::new(
-    Rc::new(RSKKConfig::default_config()),
-    Rc::new(Dictionary::parse(
+    Arc::new(RSKKConfig::default_config()),
+    Arc::new(Dictionary::parse(
       "
 かんじ/漢字/
 みち/未知/道/

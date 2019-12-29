@@ -1,10 +1,19 @@
 use super::{KeyCode, Keyboard};
 use std::collections::HashSet;
 
+#[derive(Clone)]
 pub struct US {
   pressing_keys: HashSet<KeyCode>,
   last_character: Option<char>,
 }
+
+// impl Clone for HashSet<KeyCode> {
+//   fn clone(&self) -> Self {
+//     let ret =HashSet::new();
+//     self.clone()
+//   }
+// }
+// impl Copy for HashSet<KeyCode> {}
 
 impl US {
   pub fn new() -> Self {

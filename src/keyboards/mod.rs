@@ -1,7 +1,9 @@
 pub mod keycodes;
 pub mod us;
 
+use objekt;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 pub use keycodes::{KeyCode, KeyCombination, KeyCombinations, MetaKey};
 
@@ -25,7 +27,21 @@ pub enum KeyEvents {
   KeyUp(KeyCode),
 }
 
-pub trait Keyboard {
+impl From<(u16, u16)> for KeyEvents {
+  fn from(pair: (u16, u16)) -> Self {
+    let (event_type, code) = pair;
+    let code = KeyCode::try_from(code).unwrap();
+
+    match event_type {
+      1 => Some(KeyEvents::KeyDown(code)),
+      2 => Some(KeyEvents::KeyUp(code)),
+      _ => None,
+    }
+    .unwrap()
+  }
+}
+
+pub trait Keyboard: objekt::Clone + Send + Sync {
   fn key_down(&mut self, key: &KeyCode);
   fn key_up(&mut self, key: &KeyCode);
   fn pressing_keys(&self) -> &HashSet<KeyCode>;
@@ -55,3 +71,5 @@ pub trait Keyboard {
     self.pressing_keys().contains(key)
   }
 }
+
+objekt::clone_trait_object!(Keyboard);

@@ -2,6 +2,7 @@ use super::keyboards::{KeyEvents, Keyboard};
 use super::transformers::{Config, Transformable, TransformerTypes};
 use crate::tf;
 
+#[derive(Clone)]
 pub struct Composition {
   transformer: Box<dyn Transformable>,
   keyboard: Box<dyn Keyboard>,
@@ -29,6 +30,10 @@ impl Composition {
       transformer,
       keyboard: keyboard,
     }
+  }
+
+  pub fn is_stopped(&self) -> bool {
+    self.transformer.is_stopped()
   }
 
   pub fn transformer_type(&self) -> TransformerTypes {
