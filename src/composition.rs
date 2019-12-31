@@ -1,4 +1,4 @@
-use super::keyboards::{KeyEvents, Keyboard};
+use super::keyboards::{KeyCode, KeyEvents, Keyboard, MetaKey};
 use super::transformers::{Config, Transformable, TransformerTypes};
 use crate::tf;
 
@@ -41,12 +41,22 @@ impl Composition {
   }
 
   pub fn push_key_events(&mut self, events: &Vec<KeyEvents>) {
-    events.iter().for_each(|e| self.push_key_event(e))
+    events.iter().for_each(|e| {
+      self.push_key_event(e);
+    })
   }
 
-  pub fn push_key_event(&mut self, event: &KeyEvents) {
+  pub fn push_key_event(&mut self, event: &KeyEvents) -> bool {
     self.keyboard.push_event(event);
+    if let (KeyEvents::KeyDown(KeyCode::Meta(MetaKey::Delete)), true) =
+      (event, self.transformer.is_empty())
+    {
+      return false;
+    }
+    dbg!("pressing keys", &self.keyboard.pressing_keys());
     self.transformer = self.transformer.push_key_event(&self.keyboard, event);
+
+    true
   }
 
   pub fn buffer_content(&self) -> String {

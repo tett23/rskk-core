@@ -76,7 +76,7 @@ pub extern "C" fn rskk_start_composition() -> c_int {
         .lock()
         .as_mut()
         .map(|rskk| {
-            rskk.start_composition();
+            rskk.start_composition_as(TransformerTypes::Direct);
             1
         })
         .unwrap_or(-1)
@@ -95,10 +95,7 @@ pub extern "C" fn rskk_push_key_event(event_type: u16, code: u16) -> bool {
         .as_mut()
         .map(|rskk| {
             rskk.last_mut_composition()
-                .map(|composition| {
-                    composition.push_key_event(&event);
-                    true
-                })
+                .map(|composition| composition.push_key_event(&event))
                 .unwrap_or(false)
         })
         .unwrap_or(false)
@@ -202,13 +199,19 @@ macro_rules! combos {
 macro_rules! key {
     ( $v:expr ) => {
         match $v {
-            "ctrl" | "left control" | "right control" => {
+            "ctrl" | "left_control" | "right_control" => {
                 crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Ctrl)
             }
-            "shift" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Shift),
-            "alt" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Alt),
-            "super" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Super),
-            "enter" | "\n" => {
+            "shift" | "left_shift" | "right_shift" => {
+                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Shift)
+            }
+            "alt" | "left_option" | "right_option" => {
+                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Alt)
+            }
+            "super" | "left_command" | "right_command" => {
+                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Super)
+            }
+            "enter" | "return" | "\n" => {
                 crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Enter, '\n')
             }
             "space" | " " => {

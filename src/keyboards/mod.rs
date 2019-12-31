@@ -27,17 +27,20 @@ pub enum KeyEvents {
   KeyUp(KeyCode),
 }
 
-impl From<(u16, u16)> for KeyEvents {
-  fn from(pair: (u16, u16)) -> Self {
-    let (event_type, code) = pair;
-    let code = KeyCode::try_from(code).unwrap();
+impl TryFrom<(u16, u16)> for KeyEvents {
+  type Error = &'static str;
 
-    match event_type {
-      1 => Some(KeyEvents::KeyDown(code)),
-      2 => Some(KeyEvents::KeyUp(code)),
-      _ => None,
-    }
-    .unwrap()
+  fn try_from(pair: (u16, u16)) -> Result<Self, Self::Error> {
+    dbg!("try_from", &pair);
+
+    let (event_type, code) = pair;
+    KeyCode::try_from(code)
+      .map(|code| match event_type {
+        1 => Ok(KeyEvents::KeyDown(code)),
+        2 => Ok(KeyEvents::KeyUp(code)),
+        _ => Err(""),
+      })
+      .unwrap_or(Err(""))
   }
 }
 
