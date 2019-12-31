@@ -4,7 +4,7 @@ use crate::tf;
 
 #[derive(Clone)]
 pub struct Composition {
-  transformer: Box<dyn Transformable>,
+  stack: Vec<Box<dyn Transformable>>,
   keyboard: Box<dyn Keyboard>,
   // TODO: 変更のあった辞書要素を保持できる必要あり？
   // 変更は読みと変換先だけあればいいかな。
@@ -17,7 +17,7 @@ impl Composition {
     let keyboard = config.rskk_config().keyboard_type.to_keyboard();
 
     Composition {
-      transformer: tf!(config, transformer_types),
+      stack: vec![tf!(config, transformer_types)],
       keyboard: keyboard,
     }
   }
@@ -27,17 +27,17 @@ impl Composition {
     let keyboard = config.rskk_config().keyboard_type.to_keyboard();
 
     Composition {
-      transformer,
+      stack: vec![transformer],
       keyboard: keyboard,
     }
   }
 
   pub fn is_stopped(&self) -> bool {
-    self.transformer.is_stopped()
+    self.stack.iter().all(|tf| tf.is_stopped())
   }
 
-  pub fn transformer_type(&self) -> TransformerTypes {
-    self.transformer.transformer_type()
+  pub fn is_empty(&self) -> bool {
+    self.stack.iter().all(|tf| tf.is_empty())
   }
 
   pub fn push_key_events(&mut self, events: &Vec<KeyEvents>) {
@@ -48,27 +48,44 @@ impl Composition {
 
   pub fn push_key_event(&mut self, event: &KeyEvents) -> bool {
     self.keyboard.push_event(event);
-    if let (KeyEvents::KeyDown(KeyCode::Meta(MetaKey::Delete)), true) =
-      (event, self.transformer.is_empty())
-    {
+    if let (KeyEvents::KeyDown(KeyCode::Meta(MetaKey::Delete)), true) = (event, self.is_empty()) {
       return false;
     }
-    dbg!("pressing keys", &self.keyboard.pressing_keys());
-    self.transformer = self.transformer.push_key_event(&self.keyboard, event);
+
+    let new_tf = self
+      .stack
+      .last()
+      .map(|tf| tf.push_key_event(&self.keyboard, event));
+    if new_tf.is_none() {
+      return false;
+    }
+    self.stack.pop();
+    self.stack.push(new_tf.unwrap());
 
     true
   }
 
   pub fn buffer_content(&self) -> String {
-    self.transformer.buffer_content()
+    self
+      .stack
+      .iter()
+      .fold("".to_string(), |acc, item| acc + &item.buffer_content())
   }
 
   pub fn display_string(&self) -> String {
-    self.transformer.display_string()
+    self
+      .stack
+      .iter()
+      .fold("".to_string(), |acc, item| acc + &item.display_string())
+  }
+
+  #[cfg(test)]
+  pub fn transformer_type(&self) -> TransformerTypes {
+    self.stack.last().unwrap().transformer_type()
   }
 
   #[cfg(test)]
   pub fn transformer(&self) -> Box<dyn Transformable> {
-    self.transformer.clone()
+    self.stack.last().unwrap().clone()
   }
 }
