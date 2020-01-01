@@ -151,6 +151,22 @@ pub extern "C" fn rskk_free_string(s: *mut c_char) {
     };
 }
 
+#[no_mangle]
+pub extern "C" fn rskk_next_composition() -> c_int {
+    (*RSKK_INSTANCE)
+        .lock()
+        .as_mut()
+        .map(|rskk| {
+            let tf = rskk
+                .last_composition()
+                .map({ |c| c.base_transformer_type() })
+                .unwrap_or(TransformerTypes::Direct);
+            rskk.start_composition_as(tf);
+            1
+        })
+        .unwrap_or(-1)
+}
+
 #[macro_export]
 macro_rules! set {
   ( $( $x:expr ),* ) => {

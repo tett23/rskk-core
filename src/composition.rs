@@ -5,6 +5,7 @@ use crate::tf;
 #[derive(Clone)]
 pub struct Composition {
   transformer: Box<dyn Transformable>,
+  base_transformer_type: TransformerTypes,
   config: Config,
   keyboard: Box<dyn Keyboard>,
   // TODO: 変更のあった辞書要素を保持できる必要あり？
@@ -19,6 +20,7 @@ impl Composition {
 
     Composition {
       transformer: tf!(config.clone(), transformer_types),
+      base_transformer_type: transformer_types,
       config: config,
       keyboard: keyboard,
     }
@@ -30,6 +32,7 @@ impl Composition {
 
     Composition {
       transformer,
+      base_transformer_type: TransformerTypes::Direct,
       config: config,
       keyboard: keyboard,
     }
@@ -60,6 +63,7 @@ impl Composition {
     }
     .map(|key| {
       if let Some(new_tf) = self.try_change_transformer(&self.keyboard, &key) {
+        self.base_transformer_type = new_tf.transformer_type();
         self.transformer = new_tf;
         true
       } else {
@@ -68,6 +72,10 @@ impl Composition {
       }
     })
     .unwrap_or(false)
+  }
+
+  pub fn next_composition(&self) -> Composition {
+    Composition::new(self.config.clone(), self.base_transformer_type)
   }
 
   fn try_change_transformer(
@@ -96,5 +104,9 @@ impl Composition {
 
   pub fn transformer(&self) -> Box<dyn Transformable> {
     self.transformer.clone()
+  }
+
+  pub fn base_transformer_type(&self) -> TransformerTypes {
+    self.base_transformer_type
   }
 }
