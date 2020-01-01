@@ -48,27 +48,26 @@ impl Transformable for HenkanTransformer {
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
     let new_transformer = self.send_target().push_character(character);
-    if new_transformer.transformer_type() == TransformerTypes::OkuriCompleted {
-      let yomi = YomiTransformer::from_pair(
-        self.config(),
-        self.current_transformer_type,
-        new_transformer.pair(),
-      )
-      .pop()
-      .0;
-      let ret = self.replace_last_element(yomi);
-      let buf = self.buffer_content();
-      let tf: Box<dyn Transformable> = match self.config.dictionary.transform(&buf) {
-        Some(dic_entry) => {
-          box SelectCandidateTransformer::new(self.config(), dic_entry, Some(character))
-        }
-        None => box UnknownWordTransformer::new(self.config(), Word::new(&buf, None)),
-      };
-
-      return ret.push(tf);
+    if new_transformer.transformer_type() != TransformerTypes::OkuriCompleted {
+      return self.replace_last_element(new_transformer);
     }
 
-    self.replace_last_element(new_transformer)
+    let (yomi, _) = YomiTransformer::from_pair(
+      self.config(),
+      self.current_transformer_type,
+      new_transformer.pair(),
+    )
+    .pop();
+
+    let buf = self.buffer_content();
+    let tf: Box<dyn Transformable> = match self.config.dictionary.transform(&buf) {
+      Some(dic_entry) => {
+        box SelectCandidateTransformer::new(self.config(), dic_entry, Some(character))
+      }
+      None => box UnknownWordTransformer::new(self.config(), Word::from(new_transformer.pair())),
+    };
+
+    self.replace_last_element(yomi).push(tf)
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {

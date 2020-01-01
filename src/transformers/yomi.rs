@@ -3,8 +3,7 @@ use super::{
   OkuriCompletedTransformer, SelectCandidateTransformer, Stackable, StoppedReason,
   StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
 };
-use crate::keyboards::{KeyCode, Keyboard};
-use crate::{set, tf};
+use crate::tf;
 use StoppedReason::*;
 
 #[derive(Clone, Debug)]
@@ -43,6 +42,17 @@ impl YomiTransformer {
       ),
     }
   }
+
+  fn try_okuri(&self, character: char) -> Option<Box<dyn Transformable>> {
+    if !character.is_uppercase() {
+      return None;
+    }
+    if self.pair.1.is_some() {
+      return None;
+    }
+
+    Some(self.push(tf!(self.config(), self.current_transformer_type)))
+  }
 }
 
 impl WithConfig for YomiTransformer {
@@ -56,48 +66,27 @@ impl Transformable for YomiTransformer {
     TransformerTypes::Yomi
   }
 
-  fn try_change_transformer(
-    &self,
-    keyboard: &Box<dyn Keyboard>,
-    last_key_code: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    match &self.pair {
-      (_, None) => {
-        let transformer_type = self
-          .config
-          .key_config()
-          .try_change_transformer(&set![TransformerTypes::Henkan], keyboard.pressing_keys());
-        match transformer_type? {
-          TransformerTypes::Henkan => {
-            let ret = self.clone();
-            let okuri = tf!(self.config(), self.current_transformer_type);
-            let okuri = okuri.push_character(last_key_code.printable_key()?);
-
-            Some(ret.push(okuri))
-          }
-          _ => None,
-        }
-      }
-      (_, Some(_)) => None,
-    }
-  }
-
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    let new_transformer = self.send_target().push_character(character);
+    let tf = self.try_okuri(character).unwrap_or(box self.clone());
+    let new_tf = tf
+      .send_target()
+      .push_character(character.to_lowercase().next().unwrap());
 
-    match (new_transformer.transformer_type(), &self.pair) {
-      (TransformerTypes::Stopped(_), (_, None)) => Box::new(StoppedTransformer::completed(
-        self.config(),
-        self.replace_last_element(new_transformer).buffer_content(),
-      )),
-      (TransformerTypes::Stopped(Canceled), (_, Some(_))) => self.pop().0,
-      (TransformerTypes::Stopped(_), (_, Some(_))) => Box::new(OkuriCompletedTransformer::new(
-        self.config(),
-        self.current_transformer_type,
-        self.pair.0.buffer_content(),
-        new_transformer.buffer_content(),
-      )),
-      (_, _) => self.replace_last_element(new_transformer),
+    match (new_tf.transformer_type(), &tf.pair()) {
+      (TransformerTypes::Stopped(_), (_, None)) => box StoppedTransformer::completed(
+        tf.config(),
+        tf.replace_last_element(new_tf).buffer_content(),
+      ),
+      (TransformerTypes::Stopped(Canceled), (_, Some(_))) => tf.pop().0,
+      (TransformerTypes::Stopped(Compleated), (yomi, Some(_))) => {
+        box OkuriCompletedTransformer::new(
+          tf.config(),
+          self.current_transformer_type,
+          yomi,
+          new_tf.buffer_content(),
+        )
+      }
+      (_, _) => tf.replace_last_element(new_tf),
     }
   }
 

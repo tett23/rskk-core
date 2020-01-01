@@ -4,7 +4,7 @@ use std::collections::HashSet;
 #[derive(Clone)]
 pub struct US {
   pressing_keys: HashSet<KeyCode>,
-  last_character: Option<char>,
+  last_character: Option<KeyCode>,
 }
 
 // impl Clone for HashSet<KeyCode> {
@@ -23,10 +23,10 @@ impl US {
     }
   }
 
-  fn convert(key: &KeyCode, is_shift_down: bool) -> Option<char> {
-    match (key.printable_key(), is_shift_down) {
-      (Some(character), false) => Some(character.clone()),
-      (Some(character), true) => Some(match character {
+  fn convert(character: char, is_shift_down: bool) -> Option<char> {
+    match is_shift_down {
+      false => Some(character),
+      true => Some(match character {
         'a' => 'A',
         'b' => 'B',
         'c' => 'C',
@@ -71,9 +71,8 @@ impl US {
         ',' => '<',
         '\\' => '|',
         '`' => '~',
-        _ => character.clone(),
+        _ => character,
       }),
-      _ => None,
     }
   }
 }
@@ -83,8 +82,18 @@ impl Keyboard for US {
     &self.pressing_keys
   }
 
-  fn last_character(&self) -> Option<char> {
-    self.last_character.clone()
+  fn last_character(&self) -> Option<KeyCode> {
+    match &self.last_character? {
+      KeyCode::Printable(c) => Some(KeyCode::Printable(US::convert(
+        *c,
+        self.is_pressing_shift(),
+      )?)),
+      KeyCode::PrintableMeta(meta, c) => Some(KeyCode::PrintableMeta(
+        *meta,
+        US::convert(*c, self.is_pressing_shift())?,
+      )),
+      _ => self.last_character.clone(),
+    }
   }
 
   fn key_down(&mut self, key: &KeyCode) {
@@ -92,7 +101,7 @@ impl Keyboard for US {
     // non USなキーボード時に記号入力がおかしくなりそう
     // キーボードの抽象化の層が必要では？
     self.pressing_keys.insert(key.clone());
-    self.last_character = US::convert(key, self.is_pressing_shift());
+    self.last_character = Some(key.clone());
   }
 
   fn key_up(&mut self, key: &KeyCode) {

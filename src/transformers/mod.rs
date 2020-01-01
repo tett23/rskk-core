@@ -10,7 +10,7 @@ mod tables;
 mod unknown_word;
 mod yomi;
 
-use crate::keyboards::{KeyCode, KeyEvents, Keyboard, MetaKey};
+use crate::keyboards::{KeyCode, Keyboard, MetaKey};
 use crate::{Dictionary, KeyConfig, RSKKConfig};
 use objekt;
 use std::fmt;
@@ -108,41 +108,21 @@ pub trait Transformable:
     box StoppedTransformer::canceled(self.config())
   }
 
-  fn push_key_event(
-    &self,
-    keyboard: &Box<dyn Keyboard>,
-    event: &KeyEvents,
-  ) -> Box<dyn Transformable> {
-    match event {
-      KeyEvents::KeyDown(key) => self.key_down(keyboard, key),
-      KeyEvents::KeyUp(_) => self.key_up(),
-      KeyEvents::KeyRepeat(_) => unimplemented!(),
-    }
-  }
-
-  fn key_down(&self, keyboard: &Box<dyn Keyboard>, key: &KeyCode) -> Box<dyn Transformable> {
+  fn push_key(&self, key: &KeyCode) -> Box<dyn Transformable> {
     println!("change transformer start {:?} {:?}", key, self.as_trait());
-    if let Some(new_transformer) = self.try_change_transformer(keyboard, key) {
-      return new_transformer;
-    };
-
-    println!(
-      "change transformer try_change_transformer {:?}",
-      self.transformer_type()
-    );
     let new_transformer = self.push_meta_key(key);
     println!(
       "change transformer push_meta key {:?}, {:?}",
       key,
       new_transformer.transformer_type()
     );
-    let new_transformer = match keyboard.last_character() {
+    let new_transformer = match key.printable_key() {
       Some(character) => new_transformer.push_character(character),
       None => new_transformer,
     };
     println!(
       "change transformer push_character {:?}, {:?}",
-      keyboard.last_character(),
+      key.printable_key(),
       new_transformer.transformer_type()
     );
     println!("{:?}", new_transformer);
@@ -151,9 +131,6 @@ pub trait Transformable:
     new_transformer
   }
 
-  fn key_up(&self) -> Box<dyn Transformable> {
-    self.push_meta_key(&KeyCode::Null)
-  }
   fn try_change_transformer(
     &self,
     _: &Box<dyn Keyboard>,

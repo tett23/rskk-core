@@ -35,6 +35,9 @@ pub fn test_transformer(items: Vec<TestData>) {
         "{}",
         input
       );
+      println!("");
+      println!("---------------");
+      println!("");
     },
   );
 }

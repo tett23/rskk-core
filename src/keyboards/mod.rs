@@ -31,8 +31,6 @@ impl TryFrom<(u16, u16)> for KeyEvents {
   type Error = &'static str;
 
   fn try_from(pair: (u16, u16)) -> Result<Self, Self::Error> {
-    dbg!("try_from", &pair);
-
     let (event_type, code) = pair;
     KeyCode::try_from(code)
       .map(|code| match event_type {
@@ -48,7 +46,7 @@ pub trait Keyboard: objekt::Clone + Send + Sync {
   fn key_down(&mut self, key: &KeyCode);
   fn key_up(&mut self, key: &KeyCode);
   fn pressing_keys(&self) -> &HashSet<KeyCode>;
-  fn last_character(&self) -> Option<char>;
+  fn last_character(&self) -> Option<KeyCode>;
 
   fn push_event(&mut self, event: &KeyEvents) {
     match event {

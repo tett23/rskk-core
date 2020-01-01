@@ -58,14 +58,9 @@ impl Transformable for ContinuousTransformer {
     keyboard: &Box<dyn Keyboard>,
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
-    let tf = self
+    self
       .send_target()
-      .try_change_transformer(keyboard, last_key_code);
-
-    match tf.clone()?.transformer_type() {
-      TransformerTypes::Henkan => tf,
-      _ => Some(self.replace_last_element(tf?)),
-    }
+      .try_change_transformer(keyboard, last_key_code)
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
@@ -73,9 +68,10 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
-    match self.send_target().is_stopped() {
-      true => box StoppedTransformer::canceled(self.config()),
-      false => self.pop().0,
+    match self.send_target().transformer_type() {
+      TransformerTypes::Henkan => self.send_target().push_escape(),
+      TransformerTypes::Stopped(_) => self.to_canceled(),
+      _ => self.pop().0,
     }
   }
 
@@ -90,6 +86,10 @@ impl Transformable for ContinuousTransformer {
   fn push_delete(&self) -> Box<dyn Transformable> {
     self.push_backspace()
   }
+
+  fn push_space(&self) -> Box<dyn Transformable> {
+    self.send_target().push_space()
+  }
 }
 
 impl Displayable for ContinuousTransformer {
@@ -101,7 +101,10 @@ impl Displayable for ContinuousTransformer {
   }
 
   fn display_string(&self) -> String {
-    self.buffer_content()
+    self
+      .stack
+      .iter()
+      .fold("".to_string(), |acc, tf| acc + &tf.display_string())
   }
 }
 
@@ -172,6 +175,10 @@ impl Stackable for ContinuousTransformer {
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
     self.stack.clone()
   }
+
+  fn child_transformer_type(&self) -> TransformerTypes {
+    self.stack.last().unwrap().child_transformer_type()
+  }
 }
 
 #[cfg(test)]
@@ -196,7 +203,7 @@ mod tests {
       ["ak\n", "あ", Stopped(Compleated)],
       ["hiragana", "ひらがな", Continuous],
       ["hiragana\n", "ひらがな", Stopped(Compleated)],
-      ["Kannji", "▽かんじ", Henkan],
+      ["Kannji", "▽かんじ", Continuous],
       ["Kannji \n", "漢字", Stopped(Compleated)],
     ];
     test_transformer(items);

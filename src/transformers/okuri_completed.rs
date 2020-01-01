@@ -12,11 +12,11 @@ pub struct OkuriCompletedTransformer {
 }
 
 impl OkuriCompletedTransformer {
-  pub fn new<S: Into<String>>(
+  pub fn new<S1: Into<String>, S2: Into<String>>(
     config: Config,
     transformer_type: TransformerTypes,
-    yomi: S,
-    okuri: S,
+    yomi: S1,
+    okuri: S2,
   ) -> Self {
     OkuriCompletedTransformer {
       config,

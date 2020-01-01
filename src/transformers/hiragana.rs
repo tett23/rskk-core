@@ -1,7 +1,7 @@
 use super::tables::hiragana_convert;
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, Stackable, StoppedTransformer,
-  Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, HenkanTransformer, Stackable,
+  StoppedTransformer, Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
@@ -42,12 +42,28 @@ impl HiraganaTransformer {
   fn allow_transformers() -> HashSet<TransformerTypes> {
     set![
       TransformerTypes::Direct,
-      TransformerTypes::Henkan,
       TransformerTypes::Abbr,
       TransformerTypes::Katakana,
       TransformerTypes::EnKatakana,
       TransformerTypes::EmEisu
     ]
+  }
+
+  fn try_enter_henkan(&self, character: char) -> Option<Box<dyn Transformable>> {
+    match character.is_uppercase() {
+      true => Some(box HenkanTransformer::new(
+        self.config(),
+        TransformerTypes::Hiragana,
+      )),
+      false => None,
+    }
+  }
+
+  fn try_enter_abbr(&self, character: char) -> Option<Box<dyn Transformable>> {
+    match character {
+      '/' => unimplemented!(),
+      _ => None,
+    }
   }
 }
 
@@ -71,17 +87,18 @@ impl Transformable for HiraganaTransformer {
       .config
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
-    match transformer_type? {
-      TransformerTypes::Henkan => {
-        let tf = tf!(self.config(), transformer_type?);
 
-        Some(tf.push_character(keyboard.last_character()?))
-      }
-      _ => Some(tf!(self.config(), transformer_type?)),
-    }
+    Some(tf!(self.config(), transformer_type?))
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
+    if let Some(tf) = self.try_enter_abbr(character) {
+      return tf;
+    }
+    if let Some(tf) = self.try_enter_henkan(character) {
+      return tf.push_character(character.to_lowercase().next().unwrap());
+    }
+
     match hiragana_convert(&self.buffer, character) {
       Some(vec) => match &*vec {
         [] => self.to_canceled(),
@@ -159,6 +176,10 @@ impl Stackable for HiraganaTransformer {
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
     vec![]
+  }
+
+  fn child_transformer_type(&self) -> TransformerTypes {
+    TransformerTypes::Hiragana
   }
 }
 

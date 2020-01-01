@@ -77,6 +77,10 @@ impl Stackable for DirectTransformer {
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
     vec![]
   }
+
+  fn child_transformer_type(&self) -> TransformerTypes {
+    TransformerTypes::Direct
+  }
 }
 
 impl Displayable for DirectTransformer {

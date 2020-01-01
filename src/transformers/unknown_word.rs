@@ -26,6 +26,12 @@ impl Word {
   }
 }
 
+impl From<(String, Option<String>)> for Word {
+  fn from((yomi, okuri): (String, Option<String>)) -> Self {
+    Word::new(yomi, okuri)
+  }
+}
+
 #[derive(Clone)]
 pub struct UnknownWordTransformer {
   config: Config,
@@ -73,10 +79,7 @@ impl Transformable for UnknownWordTransformer {
       .send_target()
       .try_change_transformer(keyboard, last_key_code);
 
-    match new_transformer {
-      Some(tf) => Some(self.replace_last_element(tf)),
-      None => None,
-    }
+    Some(self.replace_last_element(new_transformer?))
   }
 
   fn push_character(&self, character: char) -> Box<dyn Transformable> {
@@ -108,8 +111,10 @@ impl Transformable for UnknownWordTransformer {
   }
 
   fn push_escape(&self) -> Box<dyn Transformable> {
+    dbg!(&self.send_target());
     match self.send_target().transformer_type() {
-      TransformerTypes::UnknownWord | TransformerTypes::Henkan => {
+      TransformerTypes::Continuous if self.send_target().is_empty() => self.pop().0.pop().0,
+      TransformerTypes::UnknownWord | TransformerTypes::Henkan | TransformerTypes::Continuous => {
         self.replace_last_element(self.send_target().push_escape())
       }
       _ => self.to_canceled(),
@@ -137,13 +142,13 @@ impl Displayable for UnknownWordTransformer {
 
 impl AsTransformerTrait for UnknownWordTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
   }
 
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => Box::new(StoppedTransformer::empty(self.config())),
+      None => box StoppedTransformer::empty(self.config()),
     }
   }
 }
@@ -154,7 +159,7 @@ impl Stackable for UnknownWordTransformer {
 
     ret.stack.push(item);
 
-    Box::new(ret)
+    box ret
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
@@ -165,6 +170,7 @@ impl Stackable for UnknownWordTransformer {
       ret.stack.pop();
     }
 
+    dbg!(ret.stack().last());
     match ret.stack.last() {
       Some(tf) => {
         let (tf, pop) = tf.pop();
@@ -176,37 +182,33 @@ impl Stackable for UnknownWordTransformer {
   }
 
   fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    dbg!(&item);
     let mut ret = self.clone();
     match item.is_canceled() {
       true => {
         ret.stack.pop();
-        dbg!(ret.as_trait());
-
-        match ret.is_all_stopped() {
-          true => ret.push(box ContinuousTransformer::new(
-            ret.config(),
-            TransformerTypes::Hiragana,
-          )),
-          false => box ret,
-        }
       }
       false => {
         ret.stack.pop();
         ret.stack.push(item);
-
-        match ret.is_all_stopped() {
-          true => ret.push(box ContinuousTransformer::new(
-            ret.config(),
-            TransformerTypes::Hiragana,
-          )),
-          false => box ret,
-        }
       }
+    };
+
+    match ret.is_all_stopped() {
+      true => ret.push(box ContinuousTransformer::new(
+        ret.config(),
+        TransformerTypes::Hiragana,
+      )),
+      false => box ret,
     }
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
     self.stack.clone()
+  }
+
+  fn child_transformer_type(&self) -> TransformerTypes {
+    self.stack.last().unwrap().child_transformer_type()
   }
 }
 
@@ -236,14 +238,15 @@ mod tests {
       ["Michi \nGo \n[backspace]", "[登録: みちご]未知", UnknownWord],
       ["Michi \nGo \n[backspace][backspace]", "[登録: みちご]未", UnknownWord],
       ["Michi \nGo \n\n","未知語", Stopped(Compleated)],
-      ["AA", "[登録: みちご]▽あ*あ", UnknownWord],
-      ["AAA", "[登録: みちご][登録: ああ]", UnknownWord],
-      ["AAAOkuRi", "[登録: みちご][登録: ああ]▼送り", UnknownWord],
-      ["AAAOkuRi[escape]", "[登録: みちご][登録: ああ]▽おく", UnknownWord],
-      ["AAAOkuRi[escape][escape]", "[登録: みちご][登録: ああ]", UnknownWord],
-      ["AAAOkuRi[escape][escape][escape]", "[登録: みちご]▽あ", UnknownWord],
-      ["AAAOkuRi[escape][escape][escape][escape]", "[登録: みちご]", UnknownWord],
-      ["AAAOkuRi[escape][escape][escape][escape][escape]", "", Stopped(Canceled)],
+      ["AK", "[登録: みちご]▽あ*k", UnknownWord],
+      ["AA", "[登録: みちご][登録: あ*あ]", UnknownWord],
+      ["AAA", "[登録: みちご][登録: あ*あ]▽あ", UnknownWord],
+      ["AAOkuRi", "[登録: みちご][登録: あ*あ]▼送り", UnknownWord],
+      ["AAOkuRi[escape]", "[登録: みちご][登録: あ*あ]▽おく", UnknownWord],
+      ["AAOkuRi[escape][escape]", "[登録: みちご][登録: あ*あ]", UnknownWord],
+      ["AAOkuRi[escape][escape][escape]", "[登録: みちご]▽あ", UnknownWord],
+      ["AAOkuRi[escape][escape][escape][escape]", "[登録: みちご]", UnknownWord],
+      ["AAOkuRi[escape][escape][escape][escape][escape]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
   }
