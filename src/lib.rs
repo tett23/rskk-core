@@ -80,6 +80,18 @@ pub extern "C" fn rskk_parse_config_json(rskk: *mut RSKK, json: *const c_char) -
 }
 
 #[no_mangle]
+pub extern "C" fn rskk_parse_dictionary(rskk: *mut RSKK, dic: *const c_char) -> bool {
+    match (unsafe { rskk.as_mut() }, unsafe {
+        CStr::from_ptr(dic).to_str()
+    }) {
+        (Some(rskk), Ok(dic)) => Ok((rskk, dic)),
+        _ => Err(""),
+    }
+    .map(|(rskk, dic)| rskk.parse_dictionary(dic))
+    .map_or_else(|_| false, |_| true)
+}
+
+#[no_mangle]
 pub extern "C" fn rskk_free_rskk(raw: *mut RSKK) {
     unsafe { Box::from_raw(raw) };
 }
@@ -250,7 +262,6 @@ macro_rules! key {
 #[macro_export]
 macro_rules! tf {
     ( $conf:expr, $t:expr ) => {{
-        dbg!($t);
         let ret: Box<dyn crate::transformers::Transformable> = match $t {
             crate::transformers::TransformerTypes::Stopped(reason) => Box::new(
                 crate::transformers::StoppedTransformer::new($conf, reason, ""),

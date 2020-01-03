@@ -31,11 +31,15 @@ impl Dictionary {
 
   pub fn parse(string: &str) -> Self {
     let mut ret = Dictionary::new(HashSet::new());
-    for item in string.lines() {
-      if let Some(item) = DictionaryEntry::parse(item) {
-        ret.insert(item);
-      }
-    }
+    string
+      .lines()
+      .collect::<Vec<&str>>()
+      .iter()
+      .for_each(|item| {
+        if let Some(item) = DictionaryEntry::parse(item) {
+          ret.insert(item);
+        }
+      });
 
     ret
   }
