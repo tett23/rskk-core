@@ -12,4 +12,3 @@ crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 objekt = "0.1.2"
-lazy_static = "1.4.0"

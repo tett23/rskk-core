@@ -42,7 +42,7 @@ impl TryFrom<(u16, u16)> for KeyEvents {
   }
 }
 
-pub trait Keyboard: objekt::Clone + Send + Sync {
+pub trait Keyboard: objekt::Clone {
   fn key_down(&mut self, key: &KeyCode);
   fn key_up(&mut self, key: &KeyCode);
   fn pressing_keys(&self) -> &HashSet<KeyCode>;

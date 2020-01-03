@@ -14,7 +14,7 @@ use crate::keyboards::{KeyCode, Keyboard, MetaKey};
 use crate::{Dictionary, KeyConfig, RSKKConfig};
 use objekt;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub use continuous::ContinuousTransformer;
 pub use direct::DirectTransformer;
@@ -46,12 +46,12 @@ pub trait Displayable {
 
 #[derive(Clone, Debug)]
 pub struct Config {
-  rskk_config: Arc<RSKKConfig>,
-  dictionary: Arc<Dictionary>,
+  rskk_config: Rc<RSKKConfig>,
+  dictionary: Rc<Dictionary>,
 }
 
 impl Config {
-  pub fn new(rskk_config: Arc<RSKKConfig>, dictionary: Arc<Dictionary>) -> Self {
+  pub fn new(rskk_config: Rc<RSKKConfig>, dictionary: Rc<Dictionary>) -> Self {
     Config {
       rskk_config,
       dictionary,
@@ -76,7 +76,7 @@ pub trait WithConfig {
 }
 
 pub trait Transformable:
-  AsTransformerTrait + WithConfig + Displayable + Stackable + objekt::Clone + Send
+  AsTransformerTrait + WithConfig + Displayable + Stackable + objekt::Clone
 {
   fn transformer_type(&self) -> TransformerTypes;
   fn is_stopped(&self) -> bool {

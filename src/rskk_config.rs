@@ -2,12 +2,12 @@ use crate::keyboards::{KeyCode, KeyCombination, KeyCombinations, Keyboards};
 use crate::transformers::TransformerTypes;
 use crate::{combo, combos, key};
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::rc::Rc;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct RSKKConfig {
   pub keyboard_type: Keyboards,
-  pub key_config: Arc<KeyConfig>,
+  pub key_config: Rc<KeyConfig>,
   pub is_enable_sticky_shift: bool,
 }
 
@@ -15,7 +15,7 @@ impl RSKKConfig {
   pub fn default_config() -> Self {
     RSKKConfig {
       keyboard_type: Keyboards::US,
-      key_config: Arc::new(KeyConfig::default_config()),
+      key_config: Rc::new(KeyConfig::default_config()),
       is_enable_sticky_shift: false,
     }
   }
@@ -73,7 +73,7 @@ impl KeyConfig {
   pub fn default_config() -> Self {
     KeyConfig {
       enter: combos![combo![key!("enter")]],
-      enter_hiragana_transformer: combos![combo![key!("ctrl"), key!(",")]],
+      enter_hiragana_transformer: combos![combo![key!("ctrl"), key!("j")]],
       enter_katakana_transformer: combos![combo![key!("q")]],
       enter_en_katakana_transformer: combos![combo![key!("ctrl"), key!("q")]],
       enter_em_eisu_transformer: combos![combo![key!("shift"), key!("l")]],

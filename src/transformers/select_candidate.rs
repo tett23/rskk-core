@@ -195,14 +195,14 @@ mod tests {
   use super::*;
   use crate::transformers::StoppedReason::*;
   use crate::{key, set, Dictionary, RSKKConfig};
-  use std::sync::Arc;
+  use std::rc::Rc;
   use TransformerTypes::*;
 
   #[test]
   fn space() {
     let config = Config::new(
-      Arc::new(RSKKConfig::default_config()),
-      Arc::new(Dictionary::new(set![])),
+      Rc::new(RSKKConfig::default_config()),
+      Rc::new(Dictionary::new(set![])),
     );
     let candidate1 = Candidate::new("a", None);
     let candidate2 = Candidate::new("b", None);
@@ -223,8 +223,8 @@ mod tests {
   #[test]
   fn enter() {
     let config = Config::new(
-      Arc::new(RSKKConfig::default_config()),
-      Arc::new(Dictionary::new(set![])),
+      Rc::new(RSKKConfig::default_config()),
+      Rc::new(Dictionary::new(set![])),
     );
     let candidate1 = Candidate::new("a", None);
     let vec = vec![candidate1.clone()];
@@ -239,8 +239,8 @@ mod tests {
   #[test]
   fn delete() {
     let config = Config::new(
-      Arc::new(RSKKConfig::default_config()),
-      Arc::new(Dictionary::new(set![])),
+      Rc::new(RSKKConfig::default_config()),
+      Rc::new(Dictionary::new(set![])),
     );
     let candidate1 = Candidate::new("a", None);
     let candidate2 = Candidate::new("b", None);

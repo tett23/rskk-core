@@ -1,9 +1,6 @@
 #![feature(box_syntax)]
 #![feature(rustc_private)]
-
-#[macro_use]
-extern crate lazy_static;
-extern crate libc;
+#![allow(improper_ctypes)]
 
 mod composition;
 mod dictionary;
@@ -15,7 +12,7 @@ mod transformers;
 use std::convert::TryFrom;
 use std::ffi::CString;
 use std::os::raw::c_char;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 use composition::Composition;
 use keyboards::KeyEvents;
@@ -25,29 +22,29 @@ pub use dictionary::{Dictionary, DictionaryEntry};
 pub use rskk_config::{KeyConfig, RSKKConfig};
 
 pub struct RSKK {
-    config: Arc<RSKKConfig>,
-    dictionary: Arc<Dictionary>,
+    config: Rc<RSKKConfig>,
+    dictionary: Rc<Dictionary>,
     default_composition_type: TransformerTypes,
 }
 
 impl RSKK {
     pub fn new(default_composition_type: TransformerTypes) -> Self {
         RSKK {
-            config: Arc::new(RSKKConfig::default_config()),
-            dictionary: Arc::new(Dictionary::new(set![])),
+            config: Rc::new(RSKKConfig::default_config()),
+            dictionary: Rc::new(Dictionary::new(set![])),
             default_composition_type,
         }
     }
 
     pub fn parse_dictionary(&mut self, dic: &str) {
-        self.dictionary = Arc::new(Dictionary::parse(dic));
+        self.dictionary = Rc::new(Dictionary::parse(dic));
     }
 
-    pub fn start_composition(&mut self) -> Composition {
+    pub fn start_composition(&self) -> Composition {
         self.start_composition_as(self.default_composition_type)
     }
 
-    pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> Composition {
+    pub fn start_composition_as(&self, composition_type: TransformerTypes) -> Composition {
         Composition::new(
             Config::new(self.config.clone(), self.dictionary.clone()),
             composition_type,
@@ -55,16 +52,19 @@ impl RSKK {
     }
 }
 
-lazy_static! {
-    static ref RSKK_INSTANCE: Arc<Mutex<RSKK>> =
-        Arc::new(Mutex::new(RSKK::new(TransformerTypes::Direct)));
+#[no_mangle]
+pub extern "C" fn rskk_new() -> *mut RSKK {
+    Box::into_raw(box RSKK::new(TransformerTypes::Direct))
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_start_composition() -> *mut Composition {
-    (*RSKK_INSTANCE)
-        .lock()
-        .as_mut()
+pub extern "C" fn rskk_free_rskk(raw: *mut RSKK) {
+    unsafe { Box::from_raw(raw) };
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_start_composition(rskk: *mut RSKK) -> *mut Composition {
+    unsafe { rskk.as_ref() }
         .map(|rskk| Box::into_raw(box rskk.start_composition_as(TransformerTypes::Direct)))
         .unwrap()
 }
@@ -75,10 +75,11 @@ pub extern "C" fn rskk_free_composition(raw_composition: *mut Composition) {
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_next_composition(composition: *mut Composition) -> *mut Composition {
-    (*RSKK_INSTANCE)
-        .lock()
-        .as_mut()
+pub extern "C" fn rskk_next_composition(
+    rskk: *mut RSKK,
+    composition: *mut Composition,
+) -> *mut Composition {
+    unsafe { rskk.as_ref() }
         .map(|rskk| {
             let tf = unsafe {
                 composition
@@ -103,28 +104,15 @@ pub extern "C" fn rskk_push_key_event(
     }
     let event = event.unwrap();
 
-    (*RSKK_INSTANCE)
-        .lock()
-        .as_mut()
-        .map(|_| unsafe {
-            composition
-                .as_mut()
-                .map({ |c| c.push_key_event(&event) })
-                .unwrap_or(false)
-        })
+    unsafe { composition.as_mut() }
+        .map({ |c| c.push_key_event(&event) })
         .unwrap_or(false)
 }
 
 #[no_mangle]
 pub extern "C" fn rskk_buffer_content(composition: *mut Composition) -> *mut c_char {
-    let buf = (*RSKK_INSTANCE)
-        .lock()
-        .map(|_| unsafe {
-            composition
-                .as_ref()
-                .map(|c| c.buffer_content())
-                .unwrap_or("".to_owned())
-        })
+    let buf = unsafe { composition.as_ref() }
+        .map(|c| c.buffer_content())
         .unwrap_or("".to_owned());
 
     CString::new(buf).unwrap().into_raw()
@@ -132,14 +120,8 @@ pub extern "C" fn rskk_buffer_content(composition: *mut Composition) -> *mut c_c
 
 #[no_mangle]
 pub extern "C" fn rskk_display_string(composition: *mut Composition) -> *mut c_char {
-    let buf = (*RSKK_INSTANCE)
-        .lock()
-        .map(|_| unsafe {
-            composition
-                .as_ref()
-                .map(|c| c.display_string())
-                .unwrap_or("".to_owned())
-        })
+    let buf = unsafe { composition.as_ref() }
+        .map(|c| c.display_string())
         .unwrap_or("".to_owned());
 
     CString::new(buf).unwrap().into_raw()
