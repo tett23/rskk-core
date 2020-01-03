@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 
 pub use keycodes::{KeyCode, KeyCombination, KeyCombinations, MetaKey};
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash, Serialize, Deserialize)]
 pub enum Keyboards {
   US,
 }

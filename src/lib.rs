@@ -1,6 +1,9 @@
 #![feature(box_syntax)]
-#![feature(rustc_private)]
+#![feature(result_map_or_else)]
 #![allow(improper_ctypes)]
+
+#[macro_use]
+extern crate serde;
 
 mod composition;
 mod dictionary;
@@ -10,7 +13,7 @@ mod tests;
 mod transformers;
 
 use std::convert::TryFrom;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::rc::Rc;
 
@@ -40,6 +43,13 @@ impl RSKK {
         self.dictionary = Rc::new(Dictionary::parse(dic));
     }
 
+    pub fn parse_config(&mut self, config_json: &str) -> Result<(), &str> {
+        serde_json::from_str(config_json)
+            .map(|config| self.config = Rc::new(config))
+            .map(|_| ())
+            .or({ Err("") })
+    }
+
     pub fn start_composition(&self) -> Composition {
         self.start_composition_as(self.default_composition_type)
     }
@@ -55,6 +65,18 @@ impl RSKK {
 #[no_mangle]
 pub extern "C" fn rskk_new() -> *mut RSKK {
     Box::into_raw(box RSKK::new(TransformerTypes::Direct))
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_parse_config_json(rskk: *mut RSKK, json: *const c_char) -> bool {
+    match (unsafe { rskk.as_mut() }, unsafe {
+        CStr::from_ptr(json).to_str()
+    }) {
+        (Some(rskk), Ok(json)) => Ok((rskk, json)),
+        _ => Err(""),
+    }
+    .map(|(rskk, json)| rskk.parse_config(json))
+    .map_or_else(|_| false, |_| true)
 }
 
 #[no_mangle]

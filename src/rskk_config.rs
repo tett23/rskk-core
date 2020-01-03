@@ -1,13 +1,14 @@
+use serde::{Deserialize, Serialize};
+
 use crate::keyboards::{KeyCode, KeyCombination, KeyCombinations, Keyboards};
 use crate::transformers::TransformerTypes;
 use crate::{combo, combos, key};
 use std::collections::HashSet;
-use std::rc::Rc;
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct RSKKConfig {
   pub keyboard_type: Keyboards,
-  pub key_config: Rc<KeyConfig>,
+  pub key_config: KeyConfig,
   pub is_enable_sticky_shift: bool,
 }
 
@@ -15,13 +16,13 @@ impl RSKKConfig {
   pub fn default_config() -> Self {
     RSKKConfig {
       keyboard_type: Keyboards::US,
-      key_config: Rc::new(KeyConfig::default_config()),
+      key_config: KeyConfig::default_config(),
       is_enable_sticky_shift: false,
     }
   }
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct KeyConfig {
   pub enter: KeyCombinations,
   pub enter_hiragana_transformer: KeyCombinations,

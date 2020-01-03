@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::hash::{Hash, Hasher};
 use std::iter::Iterator;
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash, Serialize, Deserialize)]
 pub enum KeyCode {
   Null,
   Meta(MetaKey),
@@ -12,7 +12,7 @@ pub enum KeyCode {
   PrintableMeta(MetaKey, char),
 }
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash, Serialize, Deserialize)]
 pub enum MetaKey {
   Ctrl,
   Shift,
@@ -163,7 +163,7 @@ impl TryFrom<u16> for KeyCode {
   }
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct KeyCombination(HashSet<KeyCode>);
 
 impl KeyCombination {
@@ -186,7 +186,7 @@ impl Hash for KeyCombination {
   }
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct KeyCombinations(HashSet<KeyCombination>);
 
 impl KeyCombinations {
