@@ -345,7 +345,10 @@ mod lib_tests {
         let items = tds![conf, Direct;
             ["a", "a", Stopped(Compleated)],
             ["A", "A", Stopped(Compleated)],
-            ["[down:ctrl]j[up:ctrl]a", "あ", Stopped(Compleated)]
+            ["[down:ctrl]j[up:ctrl]a", "あ", Stopped(Compleated)],
+            ["[down:ctrl]j[up:ctrl]Henkann", "▽へんかん", Henkan],
+            ["[down:ctrl]j[up:ctrl]Henkann[backspace]", "▽へんか", Henkan],
+            ["[down:ctrl]j[up:ctrl]Henkann[backspace]nn", "▽へんかん", Henkan],
         ];
         test_transformer(items);
     }

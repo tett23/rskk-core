@@ -205,6 +205,7 @@ mod tests {
       ["hiragana\n", "ひらがな", Stopped(Compleated)],
       ["Kannji", "▽かんじ", Continuous],
       ["Kannji \n", "漢字", Stopped(Compleated)],
+      ["Kannji \n[backspace]", "漢", Stopped(Compleated)],
     ];
     test_transformer(items);
   }

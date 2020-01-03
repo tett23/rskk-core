@@ -56,6 +56,10 @@ impl Transformable for DirectTransformer {
   fn push_escape(&self) -> Box<dyn Transformable> {
     self.to_canceled()
   }
+
+  fn push_backspace(&self) -> Box<dyn Transformable> {
+    self.pop().0
+  }
 }
 
 impl Stackable for DirectTransformer {
@@ -111,9 +115,11 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, Direct;
+      ["[escape]", "", Stopped(Canceled)],
       ["a", "a", Stopped(Compleated)],
       ["A", "A", Stopped(Compleated)],
       ["!", "!", Stopped(Compleated)],
+      ["[backspace]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
   }

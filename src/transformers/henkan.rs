@@ -90,6 +90,10 @@ impl Transformable for HenkanTransformer {
   fn push_space(&self) -> Box<dyn Transformable> {
     self.replace_last_element(self.send_target().push_space())
   }
+
+  fn push_backspace(&self) -> Box<dyn Transformable> {
+    self.replace_last_element(self.send_target().push_backspace())
+  }
 }
 
 impl Displayable for HenkanTransformer {
@@ -104,13 +108,13 @@ impl Displayable for HenkanTransformer {
 
 impl AsTransformerTrait for HenkanTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
   }
 
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => Box::new(StoppedTransformer::empty(self.config())),
+      None => box StoppedTransformer::empty(self.config()),
     }
   }
 }
@@ -121,7 +125,7 @@ impl Stackable for HenkanTransformer {
 
     ret.stack.push(item);
 
-    Box::new(ret)
+    box ret
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
@@ -129,19 +133,23 @@ impl Stackable for HenkanTransformer {
 
     let item = ret.stack.pop();
     if ret.stack.len() == 0 {
-      return (Box::new(StoppedTransformer::canceled(self.config())), item);
+      return (self.to_canceled(), item);
     }
 
-    (Box::new(ret), item)
+    (box ret, item)
   }
 
   fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
     let mut ret = self.clone();
 
+    if ret.stack.len() == 1 && item.transformer_type() == TransformerTypes::Stopped(Canceled) {
+      return self.to_canceled();
+    }
+
     ret.stack.pop();
     ret.stack.push(item);
 
-    Box::new(ret)
+    box ret
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
@@ -173,6 +181,12 @@ mod tests {
       ["okuRi[escape]", "▽おく", Henkan],
       ["okuRi\n", "送り", Stopped(Compleated)],
       ["michigo ", "[登録: みちご]", Henkan],
+      ["michigo ", "[登録: みちご]", Henkan],
+      ["michigo [backspace]", "[登録: みちご]", Henkan],
+      ["aa[backspace]", "▽あ", Henkan],
+      ["aa[backspace]", "▽あ", Henkan],
+      ["aa[backspace][backspace]", "▽", Henkan],
+      ["aa[backspace][backspace][backspace]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
 

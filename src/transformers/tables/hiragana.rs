@@ -175,6 +175,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<(String, Buf
     ("xy", 'o') => Some(vec![("ぉ", Stop)]),
 
     // 「tte」 -> 「って」のような促音のルール
+    // TODO: 「kkkk」 -> 「っっっk」のような連続した促音のルールが未実装
     ("w", 'w') => Some(vec![("っ", Stop), ("w", Continue)]),
     ("r", 'r') => Some(vec![("っ", Stop), ("r", Continue)]),
     ("t", 't') => Some(vec![("っ", Stop), ("t", Continue)]),

@@ -92,7 +92,7 @@ impl Transformable for YomiTransformer {
 
   fn push_escape(&self) -> Box<dyn Transformable> {
     match &self.pair {
-      (_, None) => Box::new(StoppedTransformer::canceled(self.config())),
+      (_, None) => box StoppedTransformer::canceled(self.config()),
       (_, Some(_)) => self.pop().0,
     }
   }
@@ -100,27 +100,30 @@ impl Transformable for YomiTransformer {
   fn push_space(&self) -> Box<dyn Transformable> {
     let buf = self.buffer_content();
     match self.config.dictionary.transform(&buf) {
-      Some(dic_entry) => Box::new(SelectCandidateTransformer::new(
-        self.config(),
-        dic_entry,
-        None,
-      )),
-      None => Box::new(UnknownWordTransformer::new(
-        self.config(),
-        Word::new(&buf, None),
-      )),
+      Some(dic_entry) => box SelectCandidateTransformer::new(self.config(), dic_entry, None),
+      None => box UnknownWordTransformer::new(self.config(), Word::new(&buf, None)),
     }
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
     match &self.pair {
-      (yomi, None) => Box::new(StoppedTransformer::completed(
-        self.config(),
-        yomi.buffer_content(),
-      )),
+      (yomi, None) => box StoppedTransformer::completed(self.config(), yomi.buffer_content()),
       (_, Some(okuri)) => match okuri.push_enter().is_canceled() {
         true => self.pop().0,
         false => self.as_trait(),
+      },
+    }
+  }
+
+  fn push_backspace(&self) -> Box<dyn Transformable> {
+    match &self.pair {
+      (yomi, None) => match yomi.is_empty() {
+        true => self.to_canceled(),
+        false => self.replace_last_element(self.send_target().push_backspace()),
+      },
+      (_, Some(okuri)) => match okuri.is_empty() {
+        true => self.pop().0,
+        false => self.replace_last_element(self.send_target().push_backspace()),
       },
     }
   }
@@ -153,7 +156,7 @@ impl Displayable for YomiTransformer {
 
 impl AsTransformerTrait for YomiTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
   }
 
   fn send_target(&self) -> Box<dyn Transformable> {
@@ -170,20 +173,20 @@ impl Stackable for YomiTransformer {
 
     ret.pair.1 = Some(item);
 
-    Box::new(ret)
+    box ret
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
     match &self.pair {
       (yomi, None) => (
-        Box::new(StoppedTransformer::canceled(self.config())),
+        box StoppedTransformer::canceled(self.config()),
         Some(yomi.clone()),
       ),
       (_, Some(okuri)) => {
         let mut ret = self.clone();
         ret.pair.1 = None;
 
-        (Box::new(ret), Some(okuri.clone()))
+        (box ret, Some(okuri.clone()))
       }
     }
   }
@@ -192,15 +195,25 @@ impl Stackable for YomiTransformer {
     match &self.pair {
       (_, None) => {
         let mut ret = self.clone();
-        ret.pair.0 = item;
+        ret.pair.0 = match item.transformer_type() {
+          TransformerTypes::Stopped(Canceled) => {
+            box ContinuousTransformer::new(self.config(), self.current_transformer_type)
+          }
+          _ => item,
+        };
 
-        Box::new(ret)
+        box ret
       }
       (_, Some(_)) => {
         let mut ret = self.clone();
-        ret.pair.1 = Some(item);
+        ret.pair.1 = match item.transformer_type() {
+          TransformerTypes::Stopped(Canceled) => {
+            Some(tf!(self.config(), self.current_transformer_type))
+          }
+          _ => Some(item),
+        };
 
-        Box::new(ret)
+        box ret
       }
     }
   }
@@ -227,6 +240,7 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, YomiTransformer, Hiragana;
+      ["[escape]", "", Stopped(Canceled)],
       ["hiragana", "▽ひらがな", Yomi],
       ["hiragana\n", "ひらがな", Stopped(Compleated)],
       ["oku[escape]", "", Stopped(Canceled)],
@@ -237,6 +251,17 @@ mod tests {
       ["kannji ", "▼漢字", SelectCandidate],
       ["kannji [escape]", "", Stopped(Canceled)],
       ["michigo ", "[登録: みちご]", UnknownWord],
+      ["a[backspace]", "▽", Yomi],
+      ["aa[backspace]", "▽あ", Yomi],
+      ["aa[backspace]a", "▽ああ", Yomi],
+      ["aa[backspace][backspace]i", "▽い", Yomi],
+      ["a[backspace][backspace]", "", Stopped(Canceled)],
+      ["aK", "▽あ*k", Yomi],
+      ["aK[backspace]", "▽あ*", Yomi],
+      ["aK[backspace][backspace]", "▽あ", Yomi],
+      ["aK[backspace][backspace]a", "▽ああ", Yomi],
+      ["aK[backspace][backspace]K", "▽あ*k", Yomi],
+      ["henka[backspace][backspace]", "▽へ", Yomi],
     ];
     test_transformer(items);
 
