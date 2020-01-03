@@ -1,7 +1,9 @@
 #![feature(box_syntax)]
+#![feature(rustc_private)]
 
 #[macro_use]
 extern crate lazy_static;
+extern crate libc;
 
 mod composition;
 mod dictionary;
@@ -12,7 +14,7 @@ mod transformers;
 
 use std::convert::TryFrom;
 use std::ffi::CString;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::c_char;
 use std::sync::{Arc, Mutex};
 
 use composition::Composition;
@@ -25,7 +27,6 @@ pub use rskk_config::{KeyConfig, RSKKConfig};
 pub struct RSKK {
     config: Arc<RSKKConfig>,
     dictionary: Arc<Dictionary>,
-    compositions: Vec<Composition>,
     default_composition_type: TransformerTypes,
 }
 
@@ -34,34 +35,23 @@ impl RSKK {
         RSKK {
             config: Arc::new(RSKKConfig::default_config()),
             dictionary: Arc::new(Dictionary::new(set![])),
-            compositions: vec![],
             default_composition_type,
         }
-    }
-
-    pub fn last_composition(&self) -> Option<&Composition> {
-        self.compositions.last()
-    }
-
-    pub fn last_mut_composition(&mut self) -> Option<&mut Composition> {
-        self.compositions.last_mut()
     }
 
     pub fn parse_dictionary(&mut self, dic: &str) {
         self.dictionary = Arc::new(Dictionary::parse(dic));
     }
 
-    pub fn start_composition(&mut self) -> &mut Composition {
+    pub fn start_composition(&mut self) -> Composition {
         self.start_composition_as(self.default_composition_type)
     }
 
-    pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> &mut Composition {
-        self.compositions.push(Composition::new(
+    pub fn start_composition_as(&mut self, composition_type: TransformerTypes) -> Composition {
+        Composition::new(
             Config::new(self.config.clone(), self.dictionary.clone()),
             composition_type,
-        ));
-
-        self.compositions.last_mut().unwrap()
+        )
     }
 }
 
@@ -71,19 +61,42 @@ lazy_static! {
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_start_composition() -> c_int {
+pub extern "C" fn rskk_start_composition() -> *mut Composition {
+    (*RSKK_INSTANCE)
+        .lock()
+        .as_mut()
+        .map(|rskk| Box::into_raw(box rskk.start_composition_as(TransformerTypes::Direct)))
+        .unwrap()
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_free_composition(raw_composition: *mut Composition) {
+    unsafe { Box::from_raw(raw_composition) };
+}
+
+#[no_mangle]
+pub extern "C" fn rskk_next_composition(composition: *mut Composition) -> *mut Composition {
     (*RSKK_INSTANCE)
         .lock()
         .as_mut()
         .map(|rskk| {
-            rskk.start_composition_as(TransformerTypes::Direct);
-            1
+            let tf = unsafe {
+                composition
+                    .as_ref()
+                    .map(|c| c.base_transformer_type())
+                    .unwrap_or(TransformerTypes::Direct)
+            };
+            Box::into_raw(box rskk.start_composition_as(tf))
         })
-        .unwrap_or(-1)
+        .unwrap()
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_push_key_event(event_type: u16, code: u16) -> bool {
+pub extern "C" fn rskk_push_key_event(
+    composition: *mut Composition,
+    event_type: u16,
+    code: u16,
+) -> bool {
     let event = KeyEvents::try_from((event_type, code));
     if event.is_err() {
         return false;
@@ -93,21 +106,23 @@ pub extern "C" fn rskk_push_key_event(event_type: u16, code: u16) -> bool {
     (*RSKK_INSTANCE)
         .lock()
         .as_mut()
-        .map(|rskk| {
-            rskk.last_mut_composition()
-                .map(|composition| composition.push_key_event(&event))
+        .map(|_| unsafe {
+            composition
+                .as_mut()
+                .map({ |c| c.push_key_event(&event) })
                 .unwrap_or(false)
         })
         .unwrap_or(false)
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_buffer_content() -> *mut c_char {
+pub extern "C" fn rskk_buffer_content(composition: *mut Composition) -> *mut c_char {
     let buf = (*RSKK_INSTANCE)
         .lock()
-        .map(|rskk| {
-            rskk.last_composition()
-                .map(|composition| composition.buffer_content())
+        .map(|_| unsafe {
+            composition
+                .as_ref()
+                .map(|c| c.buffer_content())
                 .unwrap_or("".to_owned())
         })
         .unwrap_or("".to_owned());
@@ -116,12 +131,13 @@ pub extern "C" fn rskk_buffer_content() -> *mut c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_display_string() -> *mut c_char {
+pub extern "C" fn rskk_display_string(composition: *mut Composition) -> *mut c_char {
     let buf = (*RSKK_INSTANCE)
         .lock()
-        .map(|rskk| {
-            rskk.last_composition()
-                .map(|composition| composition.display_string())
+        .map(|_| unsafe {
+            composition
+                .as_ref()
+                .map(|c| c.display_string())
                 .unwrap_or("".to_owned())
         })
         .unwrap_or("".to_owned());
@@ -130,15 +146,8 @@ pub extern "C" fn rskk_display_string() -> *mut c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn rskk_is_stopped() -> bool {
-    (*RSKK_INSTANCE)
-        .lock()
-        .map(|rskk| {
-            rskk.last_composition()
-                .map(|composition| composition.is_stopped())
-                .unwrap_or(false)
-        })
-        .unwrap_or(false)
+pub extern "C" fn rskk_is_stopped(composition: *mut Composition) -> bool {
+    unsafe { composition.as_ref().map(|c| c.is_stopped()).unwrap_or(true) }
 }
 
 #[no_mangle]
@@ -149,22 +158,6 @@ pub extern "C" fn rskk_free_string(s: *mut c_char) {
         }
         CString::from_raw(s)
     };
-}
-
-#[no_mangle]
-pub extern "C" fn rskk_next_composition() -> c_int {
-    (*RSKK_INSTANCE)
-        .lock()
-        .as_mut()
-        .map(|rskk| {
-            let tf = rskk
-                .last_composition()
-                .map({ |c| c.base_transformer_type() })
-                .unwrap_or(TransformerTypes::Direct);
-            rskk.start_composition_as(tf);
-            1
-        })
-        .unwrap_or(-1)
 }
 
 #[macro_export]

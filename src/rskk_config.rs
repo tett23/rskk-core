@@ -73,7 +73,7 @@ impl KeyConfig {
   pub fn default_config() -> Self {
     KeyConfig {
       enter: combos![combo![key!("enter")]],
-      enter_hiragana_transformer: combos![combo![key!("ctrl"), key!("j")]],
+      enter_hiragana_transformer: combos![combo![key!("ctrl"), key!(",")]],
       enter_katakana_transformer: combos![combo![key!("q")]],
       enter_en_katakana_transformer: combos![combo![key!("ctrl"), key!("q")]],
       enter_em_eisu_transformer: combos![combo![key!("shift"), key!("l")]],
