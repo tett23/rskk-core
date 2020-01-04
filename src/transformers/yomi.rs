@@ -66,13 +66,13 @@ impl Transformable for YomiTransformer {
     TransformerTypes::Yomi
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformable> {
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
     let tf = self.try_okuri(character).unwrap_or(box self.clone());
     let new_tf = tf
       .send_target()
-      .push_character(character.to_lowercase().next().unwrap());
+      .push_character(character.to_lowercase().next()?)?;
 
-    match (new_tf.transformer_type(), &tf.pair()) {
+    let ret = match (new_tf.transformer_type(), &tf.pair()) {
       (TransformerTypes::Stopped(_), (_, None)) => box StoppedTransformer::completed(
         tf.config(),
         tf.replace_last_element(new_tf).buffer_content(),
@@ -87,45 +87,54 @@ impl Transformable for YomiTransformer {
         )
       }
       (_, _) => tf.replace_last_element(new_tf),
-    }
+    };
+
+    Some(ret)
   }
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    match &self.pair {
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    Some(match &self.pair {
       (_, None) => box StoppedTransformer::canceled(self.config()),
       (_, Some(_)) => self.pop().0,
-    }
+    })
   }
 
-  fn push_space(&self) -> Box<dyn Transformable> {
+  fn push_space(&self) -> Option<Box<dyn Transformable>> {
     let buf = self.buffer_content();
-    match self.config.dictionary.transform(&buf) {
+    Some(match self.config.dictionary.transform(&buf) {
       Some(dic_entry) => box SelectCandidateTransformer::new(self.config(), dic_entry, None),
       None => box UnknownWordTransformer::new(self.config(), Word::new(&buf, None)),
-    }
+    })
   }
 
-  fn push_enter(&self) -> Box<dyn Transformable> {
+  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
     match &self.pair {
-      (yomi, None) => box StoppedTransformer::completed(self.config(), yomi.buffer_content()),
-      (_, Some(okuri)) => match okuri.push_enter().is_canceled() {
-        true => self.pop().0,
-        false => self.as_trait(),
+      (yomi, None) => Some(box StoppedTransformer::completed(
+        self.config(),
+        yomi.buffer_content(),
+      )),
+      (_, Some(okuri)) => match okuri.push_enter()?.is_canceled() {
+        true => Some(self.pop().0),
+        false => Some(self.as_trait()),
       },
     }
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    match &self.pair {
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    Some(match &self.pair {
       (yomi, None) => match yomi.is_empty() {
         true => self.to_canceled(),
-        false => self.replace_last_element(self.send_target().push_backspace()),
+        false => self.replace_last_element(self.send_target().push_backspace()?),
       },
       (_, Some(okuri)) => match okuri.is_empty() {
         true => self.pop().0,
-        false => self.replace_last_element(self.send_target().push_backspace()),
+        false => self.replace_last_element(self.send_target().push_backspace()?),
       },
-    }
+    })
+  }
+
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+    self.push_backspace()
   }
 }
 

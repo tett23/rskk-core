@@ -46,10 +46,10 @@ impl Transformable for HenkanTransformer {
     Some(self.replace_last_element(new_transformer?))
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    let new_transformer = self.send_target().push_character(character);
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+    let new_transformer = self.send_target().push_character(character)?;
     if new_transformer.transformer_type() != TransformerTypes::OkuriCompleted {
-      return self.replace_last_element(new_transformer);
+      return Some(self.replace_last_element(new_transformer));
     }
 
     let (yomi, _) = YomiTransformer::from_pair(
@@ -67,32 +67,32 @@ impl Transformable for HenkanTransformer {
       None => box UnknownWordTransformer::new(self.config(), Word::from(new_transformer.pair())),
     };
 
-    self.replace_last_element(yomi).push(tf)
+    Some(self.replace_last_element(yomi).push(tf))
   }
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    let new_transformer = self.send_target().push_escape();
-    match new_transformer.transformer_type() {
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    let new_transformer = self.send_target().push_escape()?;
+    Some(match new_transformer.transformer_type() {
       TransformerTypes::Stopped(Canceled) => self.pop().0,
       _ => self.replace_last_element(new_transformer),
-    }
+    })
   }
 
-  fn push_enter(&self) -> Box<dyn Transformable> {
-    let new_transformer = self.send_target().push_enter();
-    match new_transformer.transformer_type() {
-      TransformerTypes::Stopped(Compleated) => new_transformer,
+  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
+    let new_tf = self.send_target().push_enter()?;
+    Some(match new_tf.transformer_type() {
+      TransformerTypes::Stopped(Compleated) => new_tf,
       TransformerTypes::Stopped(Canceled) => self.pop().0,
-      _ => self.replace_last_element(new_transformer),
-    }
+      _ => self.replace_last_element(new_tf),
+    })
   }
 
-  fn push_space(&self) -> Box<dyn Transformable> {
-    self.replace_last_element(self.send_target().push_space())
+  fn push_space(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.replace_last_element(self.send_target().push_space()?))
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.replace_last_element(self.send_target().push_backspace())
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.replace_last_element(self.send_target().push_backspace()?))
   }
 }
 

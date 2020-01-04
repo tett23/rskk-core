@@ -63,31 +63,34 @@ impl Transformable for ContinuousTransformer {
       .try_change_transformer(keyboard, last_key_code)
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    self.replace_last_element(self.send_target().push_character(character))
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+    Some(self.replace_last_element(self.send_target().push_character(character)?))
   }
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    match self.send_target().transformer_type() {
-      TransformerTypes::Henkan => self.send_target().push_escape(),
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    Some(match self.send_target().transformer_type() {
+      TransformerTypes::Henkan => self.send_target().push_escape()?,
       TransformerTypes::Stopped(_) => self.to_canceled(),
       _ => self.pop().0,
-    }
+    })
   }
 
-  fn push_enter(&self) -> Box<dyn Transformable> {
-    box StoppedTransformer::completed(self.config(), self.stopped_buffer_content())
+  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
+    Some(box StoppedTransformer::completed(
+      self.config(),
+      self.stopped_buffer_content(),
+    ))
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.pop().0
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.pop().0)
   }
 
-  fn push_delete(&self) -> Box<dyn Transformable> {
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
     self.push_backspace()
   }
 
-  fn push_space(&self) -> Box<dyn Transformable> {
+  fn push_space(&self) -> Option<Box<dyn Transformable>> {
     self.send_target().push_space()
   }
 }

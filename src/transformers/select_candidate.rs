@@ -41,50 +41,54 @@ impl Transformable for SelectCandidateTransformer {
     TransformerTypes::SelectCandidate
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_character(&self, _: char) -> Option<Box<dyn Transformable>> {
+    None
   }
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    self.to_canceled()
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.to_canceled())
   }
 
-  fn push_enter(&self) -> Box<dyn Transformable> {
-    box StoppedTransformer::completed(self.config(), self.buffer_content())
+  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
+    Some(box StoppedTransformer::completed(
+      self.config(),
+      self.buffer_content(),
+    ))
   }
 
-  fn push_space(&self) -> Box<dyn Transformable> {
+  fn push_space(&self) -> Option<Box<dyn Transformable>> {
     let mut new_state = self.clone();
-    match new_state.candidates.next() {
+    Some(match new_state.candidates.next() {
       Some(_) => box new_state,
       None => {
         // TODO: 単語登録に遷移
         unimplemented!()
       }
-    }
+    })
   }
 
-  fn push_delete(&self) -> Box<dyn Transformable> {
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
     let mut new_state = self.clone();
-    match new_state.candidates.prev() {
+    Some(match new_state.candidates.prev() {
       Some(_) => box new_state,
       None => box StoppedTransformer::canceled(self.config()),
-    }
+    })
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
     self.push_delete()
   }
 
-  fn push_any_character(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
+  fn push_any_character(&self, key_code: &KeyCode) -> Option<Box<dyn Transformable>> {
     match key_code.is_printable() {
       true => match self.candidates.current() {
-        Some(candidate) => {
-          box StoppedTransformer::completed(self.config(), candidate.entry.clone())
-        }
-        None => box StoppedTransformer::canceled(self.config()),
+        Some(candidate) => Some(box StoppedTransformer::completed(
+          self.config(),
+          candidate.entry.clone(),
+        )),
+        None => Some(box StoppedTransformer::canceled(self.config())),
       },
-      false => self.as_trait(),
+      false => None,
     }
   }
 }
@@ -132,7 +136,10 @@ impl Stackable for SelectCandidateTransformer {
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    (self.push_delete(), Some(box self.clone()))
+    (
+      self.push_delete().unwrap_or(self.as_trait()),
+      Some(box self.clone()),
+    )
   }
 
   fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
@@ -210,6 +217,7 @@ mod tests {
     assert_eq!(
       select_candidate
         .push_meta_key(&key!("space"))
+        .unwrap()
         .buffer_content(),
       "b"
     );
@@ -227,7 +235,7 @@ mod tests {
     let dictionary_entry = DictionaryEntry::new("test", vec);
     let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
 
-    let stopped = select_candidate.push_meta_key(&key!("enter"));
+    let stopped = select_candidate.push_meta_key(&key!("enter")).unwrap();
     assert_eq!(stopped.transformer_type(), Stopped(Compleated));
     assert_eq!(stopped.buffer_content(), "a");
   }
@@ -244,11 +252,11 @@ mod tests {
     let dictionary_entry = DictionaryEntry::new("test", vec);
     let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
 
-    let select_candidate = select_candidate.push_meta_key(&key!("space"));
-    let select_candidate = select_candidate.push_meta_key(&key!("delete"));
+    let select_candidate = select_candidate.push_meta_key(&key!("space")).unwrap();
+    let select_candidate = select_candidate.push_meta_key(&key!("delete")).unwrap();
     assert_eq!(select_candidate.buffer_content(), "a");
 
-    let canceled = select_candidate.push_meta_key(&key!("delete"));
+    let canceled = select_candidate.push_meta_key(&key!("delete")).unwrap();
     assert_eq!(canceled.transformer_type(), Stopped(Canceled));
   }
 

@@ -38,8 +38,8 @@ impl Transformable for OkuriCompletedTransformer {
     TransformerTypes::OkuriCompleted
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+  fn push_character(&self, _: char) -> Option<Box<dyn Transformable>> {
+    None
   }
 }
 

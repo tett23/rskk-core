@@ -49,16 +49,11 @@ impl Transformable for DirectTransformer {
     Some(tf!(self.config(), transformer_type?))
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    return box StoppedTransformer::completed(self.config(), character.to_string());
-  }
-
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    self.to_canceled()
-  }
-
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.pop().0
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+    Some(box StoppedTransformer::completed(
+      self.config(),
+      character.to_string(),
+    ))
   }
 }
 
@@ -68,10 +63,7 @@ impl Stackable for DirectTransformer {
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    (
-      box StoppedTransformer::canceled(self.config()),
-      Some(box StoppedTransformer::canceled(self.config())),
-    )
+    unreachable!()
   }
 
   fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
@@ -105,34 +97,21 @@ impl AsTransformerTrait for DirectTransformer {
 
 #[cfg(test)]
 mod tests {
+  use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
-  use crate::{tds, tfe};
 
   #[test]
   fn it_works() {
     let conf = dummy_conf();
 
     let items = tds![conf, Direct;
-      ["[escape]", "", Stopped(Canceled)],
+      ["[escape]", "", Direct],
       ["a", "a", Stopped(Compleated)],
       ["A", "A", Stopped(Compleated)],
       ["!", "!", Stopped(Compleated)],
     ];
     test_transformer(items);
-  }
-
-  #[test]
-  fn stack() {
-    let conf = dummy_conf();
-
-    let tf = tfe!(conf, Direct; "").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
-
-    let tf = tfe!(conf, Direct; "a").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
   }
 }

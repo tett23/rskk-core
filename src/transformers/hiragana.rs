@@ -91,16 +91,16 @@ impl Transformable for HiraganaTransformer {
     Some(tf!(self.config(), transformer_type?))
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformable> {
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
     if let Some(tf) = self.try_enter_abbr(character) {
-      return tf;
+      return Some(tf);
     }
     if let Some(tf) = self.try_enter_henkan(character) {
       return tf.push_character(character.to_lowercase().next().unwrap());
     }
 
-    match hiragana_convert(&self.buffer, character) {
-      Some(vec) => match &*vec {
+    hiragana_convert(&self.buffer, character)
+      .map(|vec| match &*vec {
         [] => self.to_canceled(),
         [(new_buffer, Continue)] => {
           box Self::from_stopped_and_buffer(self.config(), &self.stopped, &new_buffer)
@@ -113,24 +113,30 @@ impl Transformable for HiraganaTransformer {
           let stopped = elems.iter().fold("".to_string(), |acc, (s, _)| acc + &s);
 
           match last {
-            (s, Continue) => box Self::from_stopped_and_buffer(self.config(), stopped, s.clone()),
+            (s, Continue) => box Self::from_stopped_and_buffer(self.config(), stopped, s.clone())
+              as Box<dyn Transformable>,
             (s, Stop) => box StoppedTransformer::completed(self.config(), stopped + s),
           }
         }
-      },
-      None => box StoppedTransformer::canceled(self.config()),
+      })
+      .or(Some(box StoppedTransformer::canceled(self.config())))
+  }
+
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    match self.is_empty() {
+      true => None,
+      false => Some(self.pop().0),
     }
   }
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    self.to_canceled()
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    match self.is_empty() {
+      true => None,
+      false => Some(self.pop().0),
+    }
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.pop().0
-  }
-
-  fn push_delete(&self) -> Box<dyn Transformable> {
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
     self.push_backspace()
   }
 }
@@ -206,7 +212,6 @@ mod tests {
       ["tte", "って", Stopped(Compleated)],
       ["tte[backspace]", "っ", Stopped(Compleated)],
       ["k[escape]", "", Stopped(Canceled)],
-      ["[escape]", "", Stopped(Canceled)],
       ["Kannji", "▽かんじ", Henkan],
       ["Kanji", "▽かんじ", Henkan],
     ];

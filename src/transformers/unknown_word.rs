@@ -82,43 +82,41 @@ impl Transformable for UnknownWordTransformer {
     Some(self.replace_last_element(new_transformer?))
   }
 
-  fn push_character(&self, character: char) -> Box<dyn Transformable> {
-    if character == '\n' || character == ' ' {
-      return self.as_trait();
-    }
-
-    self.replace_last_element(self.send_target().push_character(character))
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+    Some(self.replace_last_element(self.send_target().push_character(character)?))
   }
 
-  fn push_space(&self) -> Box<dyn Transformable> {
-    self.replace_last_element(self.send_target().push_space())
+  fn push_space(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.replace_last_element(self.send_target().push_space()?))
   }
 
-  fn push_enter(&self) -> Box<dyn Transformable> {
+  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
     if self.send_target().is_empty() {
-      return box StoppedTransformer::completed(self.config(), self.buffer_content());
+      return Some(box StoppedTransformer::completed(
+        self.config(),
+        self.buffer_content(),
+      ));
     }
 
-    self.replace_last_element(self.send_target().push_enter())
+    Some(self.replace_last_element(self.send_target().push_enter()?))
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.pop().0
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.pop().0)
   }
 
-  fn push_delete(&self) -> Box<dyn Transformable> {
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
     self.push_backspace()
   }
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    dbg!(&self.send_target());
-    match self.send_target().transformer_type() {
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    Some(match self.send_target().transformer_type() {
       TransformerTypes::Continuous if self.send_target().is_empty() => self.pop().0.pop().0,
       TransformerTypes::UnknownWord | TransformerTypes::Henkan | TransformerTypes::Continuous => {
-        self.replace_last_element(self.send_target().push_escape())
+        self.replace_last_element(self.send_target().push_escape()?)
       }
       _ => self.to_canceled(),
-    }
+    })
   }
 }
 

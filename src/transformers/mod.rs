@@ -118,27 +118,18 @@ pub trait Transformable:
     box StoppedTransformer::canceled(self.config())
   }
 
-  fn push_key(&self, key: &KeyCode) -> Box<dyn Transformable> {
+  fn push_key(&self, key: &KeyCode) -> Option<Box<dyn Transformable>> {
     println!("change transformer start {:?} {:?}", key, self.as_trait());
-    let new_transformer = self.push_meta_key(key);
-    println!(
-      "change transformer push_meta key {:?}, {:?}",
-      key,
-      new_transformer.transformer_type()
-    );
-    let new_transformer = match key.printable_key() {
-      Some(character) => new_transformer.push_character(character),
-      None => new_transformer,
-    };
-    println!(
-      "change transformer push_character {:?}, {:?}",
-      key.printable_key(),
-      new_transformer.transformer_type()
-    );
-    println!("{:?}", new_transformer);
-    println!();
-
-    new_transformer
+    match (
+      self.push_meta_key(key),
+      key
+        .printable_key()
+        .and_then(|character| self.push_character(character)),
+    ) {
+      (Some(tf), _) => Some(tf),
+      (_, Some(tf)) => Some(tf),
+      _ => None,
+    }
   }
 
   fn try_change_transformer(
@@ -149,7 +140,7 @@ pub trait Transformable:
     None
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Option<Box<dyn Transformable>> {
     match key_code {
       KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
@@ -172,43 +163,43 @@ pub trait Transformable:
       _ => self.push_any_character(key_code),
     }
   }
-  fn push_character(&self, character: char) -> Box<dyn Transformable>;
+  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>>;
 
-  fn push_escape(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_enter(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_space(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_space(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_delete(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_tab(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_tab(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_null(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_null(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_arrow_right(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_arrow_right(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_arrow_down(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_arrow_down(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_arrow_left(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_arrow_left(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_arrow_up(&self) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_arrow_up(&self) -> Option<Box<dyn Transformable>> {
+    None
   }
-  fn push_any_character(&self, _: &KeyCode) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn push_any_character(&self, _: &KeyCode) -> Option<Box<dyn Transformable>> {
+    None
   }
 }
 

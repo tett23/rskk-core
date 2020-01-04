@@ -48,15 +48,15 @@ impl Transformable for StoppedTransformer {
     TransformerTypes::Stopped(self.reason)
   }
 
-  fn push_character(&self, _: char) -> Box<dyn Transformable> {
-    box self.clone()
+  fn push_character(&self, _: char) -> Option<Box<dyn Transformable>> {
+    None
   }
 
-  fn push_backspace(&self) -> Box<dyn Transformable> {
-    self.pop().0
+  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.pop().0)
   }
 
-  fn push_delete(&self) -> Box<dyn Transformable> {
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
     self.push_backspace()
   }
 }

@@ -130,10 +130,13 @@ impl<'a> KeyEventProcessor<'a> {
         self
           .transformer
           .try_change_transformer(&self.keyboard, &key)
-          .map(|tf| Some(KeyEventProcessorResult::TransformerChanged(tf)))
-          .unwrap_or(Some(KeyEventProcessorResult::KeyProcessed(
-            self.transformer.push_key(&key),
-          )))
+          .and_then(|tf| Some(KeyEventProcessorResult::TransformerChanged(tf)))
+          .or_else(|| {
+            self
+              .transformer
+              .push_key(&key)
+              .map(|tf| KeyEventProcessorResult::KeyProcessed(tf))
+          })
       })
       .unwrap_or(None)
   }
