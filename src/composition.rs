@@ -56,34 +56,21 @@ impl Composition {
     self.keyboard.push_event(event);
     dbg!(&self.transformer);
 
-    match event {
-      KeyEvents::KeyDown(KeyCode::Meta(MetaKey::Delete)) if self.is_empty() => None,
-      KeyEvents::KeyDown(_) => self.keyboard.last_character(),
-      _ => None,
-    }
-    .map(|key| {
-      if let Some(new_tf) = self.try_change_transformer(&self.keyboard, &key) {
-        self.base_transformer_type = new_tf.transformer_type();
-        self.transformer = new_tf;
-        true
-      } else {
-        self.transformer = self.transformer.push_key(&key);
-        true
-      }
-    })
-    .unwrap_or(false)
+    KeyEventProcessor::new(event, &self.keyboard, &self.transformer)
+      .next()
+      .map(|result| match result {
+        KeyEventProcessorResult::KeyProcessed(new_tf) => self.transformer = new_tf,
+        KeyEventProcessorResult::TransformerChanged(new_tf) => {
+          self.base_transformer_type = new_tf.transformer_type();
+          self.transformer = new_tf;
+        }
+      })
+      .and(Some(true))
+      .unwrap_or(false)
   }
 
   pub fn next_composition(&self) -> Composition {
     Composition::new(self.config.clone(), self.base_transformer_type)
-  }
-
-  fn try_change_transformer(
-    &self,
-    keyboard: &Box<dyn Keyboard>,
-    key: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    self.transformer().try_change_transformer(keyboard, key)
   }
 
   pub fn buffer_content(&self) -> String {
@@ -108,5 +95,73 @@ impl Composition {
 
   pub fn base_transformer_type(&self) -> TransformerTypes {
     self.base_transformer_type
+  }
+}
+
+struct KeyEventProcessor<'a> {
+  event: &'a KeyEvents,
+  keyboard: &'a Box<dyn Keyboard>,
+  transformer: &'a Box<dyn Transformable>,
+}
+
+enum KeyEventProcessorResult {
+  KeyProcessed(Box<dyn Transformable>),
+  TransformerChanged(Box<dyn Transformable>),
+}
+
+impl<'a> KeyEventProcessor<'a> {
+  pub fn new(
+    event: &'a KeyEvents,
+    keyboard: &'a Box<dyn Keyboard>,
+    transformer: &'a Box<dyn Transformable>,
+  ) -> Self {
+    Self {
+      event,
+      keyboard,
+      transformer,
+    }
+  }
+
+  pub fn next(&self) -> Option<KeyEventProcessorResult> {
+    Self::next_key_code(self.event)
+      .and_then(|key| Self::is_process_key(key, self.transformer.is_empty()))
+      .and(self.keyboard.last_character())
+      .map(|key| {
+        self
+          .transformer
+          .try_change_transformer(&self.keyboard, &key)
+          .map(|tf| Some(KeyEventProcessorResult::TransformerChanged(tf)))
+          .unwrap_or(Some(KeyEventProcessorResult::KeyProcessed(
+            self.transformer.push_key(&key),
+          )))
+      })
+      .unwrap_or(None)
+  }
+
+  fn next_key_code(event: &KeyEvents) -> Option<&KeyCode> {
+    match event {
+      KeyEvents::KeyDown(key) => Some(key),
+      _ => None,
+    }
+  }
+
+  fn is_process_key(key: &KeyCode, is_empty: bool) -> Option<()> {
+    match is_empty {
+      true => match key {
+        KeyCode::Meta(MetaKey::Delete) => None,
+        KeyCode::Meta(MetaKey::Backspace) => None,
+        KeyCode::Meta(MetaKey::ArrowRight) => None,
+        KeyCode::Meta(MetaKey::ArrowDown) => None,
+        KeyCode::Meta(MetaKey::ArrowLeft) => None,
+        KeyCode::Meta(MetaKey::ArrowUp) => None,
+        KeyCode::PrintableMeta(MetaKey::Space, _) => None,
+        KeyCode::PrintableMeta(MetaKey::Enter, _) => None,
+        KeyCode::PrintableMeta(MetaKey::Tab, _) => None,
+        _ => Some(()),
+      },
+      false => match key {
+        _ => Some(()),
+      },
+    }
   }
 }

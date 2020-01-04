@@ -357,6 +357,7 @@ mod lib_tests {
             ["[down:ctrl]j[up:ctrl]Henkann", "▽へんかん", Henkan],
             ["[down:ctrl]j[up:ctrl]Henkann[backspace]", "▽へんか", Henkan],
             ["[down:ctrl]j[up:ctrl]Henkann[backspace]nn", "▽へんかん", Henkan],
+            ["[down:ctrl]j[up:ctrl]Kanji \n", "漢字", Stopped(Compleated)],
         ];
         test_transformer(items);
     }
