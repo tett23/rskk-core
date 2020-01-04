@@ -79,6 +79,16 @@ pub trait Transformable:
   AsTransformerTrait + WithConfig + Displayable + Stackable + objekt::Clone
 {
   fn transformer_type(&self) -> TransformerTypes;
+  fn is_base_transformer(&self) -> bool {
+    match self.transformer_type() {
+      TransformerTypes::Direct => true,
+      TransformerTypes::Hiragana => true,
+      TransformerTypes::Katakana => true,
+      TransformerTypes::EnKatakana => true,
+      TransformerTypes::EmEisu => true,
+      _ => false,
+    }
+  }
   fn is_stopped(&self) -> bool {
     match self.transformer_type() {
       TransformerTypes::Stopped(_) => true,

@@ -119,7 +119,6 @@ mod tests {
       ["a", "a", Stopped(Compleated)],
       ["A", "A", Stopped(Compleated)],
       ["!", "!", Stopped(Compleated)],
-      ["[backspace]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
   }

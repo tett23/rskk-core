@@ -205,7 +205,6 @@ mod tests {
       ["tt[backspace]", "っ", Stopped(Compleated)],
       ["tte", "って", Stopped(Compleated)],
       ["tte[backspace]", "っ", Stopped(Compleated)],
-      ["[backspace]", "", Stopped(Canceled)],
       ["k[escape]", "", Stopped(Canceled)],
       ["[escape]", "", Stopped(Canceled)],
       ["Kannji", "▽かんじ", Henkan],

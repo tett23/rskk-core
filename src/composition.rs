@@ -124,7 +124,7 @@ impl<'a> KeyEventProcessor<'a> {
 
   pub fn next(&self) -> Option<KeyEventProcessorResult> {
     Self::next_key_code(self.event)
-      .and_then(|key| Self::is_process_key(key, self.transformer.is_empty()))
+      .and_then(|key| Self::is_process_key(key, self.transformer))
       .and(self.keyboard.last_character())
       .map(|key| {
         self
@@ -145,18 +145,18 @@ impl<'a> KeyEventProcessor<'a> {
     }
   }
 
-  fn is_process_key(key: &KeyCode, is_empty: bool) -> Option<()> {
-    match is_empty {
+  fn is_process_key(key: &KeyCode, transformer: &Box<dyn Transformable>) -> Option<()> {
+    match transformer.is_empty() {
       true => match key {
-        KeyCode::Meta(MetaKey::Delete) => None,
-        KeyCode::Meta(MetaKey::Backspace) => None,
-        KeyCode::Meta(MetaKey::ArrowRight) => None,
-        KeyCode::Meta(MetaKey::ArrowDown) => None,
-        KeyCode::Meta(MetaKey::ArrowLeft) => None,
-        KeyCode::Meta(MetaKey::ArrowUp) => None,
-        KeyCode::PrintableMeta(MetaKey::Space, _) => None,
-        KeyCode::PrintableMeta(MetaKey::Enter, _) => None,
-        KeyCode::PrintableMeta(MetaKey::Tab, _) => None,
+        KeyCode::Meta(MetaKey::Delete) if transformer.is_base_transformer() => None,
+        KeyCode::Meta(MetaKey::Backspace) if transformer.is_base_transformer() => None,
+        KeyCode::Meta(MetaKey::ArrowRight) if transformer.is_base_transformer() => None,
+        KeyCode::Meta(MetaKey::ArrowDown) if transformer.is_base_transformer() => None,
+        KeyCode::Meta(MetaKey::ArrowLeft) if transformer.is_base_transformer() => None,
+        KeyCode::Meta(MetaKey::ArrowUp) if transformer.is_base_transformer() => None,
+        KeyCode::PrintableMeta(MetaKey::Space, _) if transformer.is_base_transformer() => None,
+        KeyCode::PrintableMeta(MetaKey::Enter, _) if transformer.is_base_transformer() => None,
+        KeyCode::PrintableMeta(MetaKey::Tab, _) if transformer.is_base_transformer() => None,
         _ => Some(()),
       },
       false => match key {
