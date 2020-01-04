@@ -50,16 +50,13 @@ impl Transformable for SelectCandidateTransformer {
   }
 
   fn push_enter(&self) -> Box<dyn Transformable> {
-    Box::new(StoppedTransformer::completed(
-      self.config(),
-      self.buffer_content(),
-    ))
+    box StoppedTransformer::completed(self.config(), self.buffer_content())
   }
 
   fn push_space(&self) -> Box<dyn Transformable> {
     let mut new_state = self.clone();
     match new_state.candidates.next() {
-      Some(_) => Box::new(new_state),
+      Some(_) => box new_state,
       None => {
         // TODO: 単語登録に遷移
         unimplemented!()
@@ -70,8 +67,8 @@ impl Transformable for SelectCandidateTransformer {
   fn push_delete(&self) -> Box<dyn Transformable> {
     let mut new_state = self.clone();
     match new_state.candidates.prev() {
-      Some(_) => Box::new(new_state),
-      None => Box::new(StoppedTransformer::canceled(self.config())),
+      Some(_) => box new_state,
+      None => box StoppedTransformer::canceled(self.config()),
     }
   }
 
@@ -82,11 +79,10 @@ impl Transformable for SelectCandidateTransformer {
   fn push_any_character(&self, key_code: &KeyCode) -> Box<dyn Transformable> {
     match key_code.is_printable() {
       true => match self.candidates.current() {
-        Some(candidate) => Box::new(StoppedTransformer::completed(
-          self.config(),
-          candidate.entry.clone(),
-        )),
-        None => Box::new(StoppedTransformer::canceled(self.config())),
+        Some(candidate) => {
+          box StoppedTransformer::completed(self.config(), candidate.entry.clone())
+        }
+        None => box StoppedTransformer::canceled(self.config()),
       },
       false => self.as_trait(),
     }
@@ -126,7 +122,7 @@ impl Displayable for SelectCandidateTransformer {
 
 impl AsTransformerTrait for SelectCandidateTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
   }
 }
 
