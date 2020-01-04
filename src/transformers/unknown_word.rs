@@ -102,6 +102,10 @@ impl Transformable for UnknownWordTransformer {
   }
 
   fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+    if self.is_empty() {
+      return Some(box self.clone());
+    }
+
     Some(self.pop().0)
   }
 

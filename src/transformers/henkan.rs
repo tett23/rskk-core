@@ -88,7 +88,15 @@ impl Transformable for HenkanTransformer {
   }
 
   fn push_space(&self) -> Option<Box<dyn Transformable>> {
-    Some(self.replace_last_element(self.send_target().push_space()?))
+    let new_tf = self.send_target().push_space()?;
+    Some(match self.send_target().transformer_type() {
+      TransformerTypes::Yomi => self.push(new_tf),
+      _ => self.replace_last_element(new_tf),
+    })
+  }
+
+  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+    Some(self.replace_last_element(self.send_target().push_delete()?))
   }
 
   fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
@@ -142,14 +150,15 @@ impl Stackable for HenkanTransformer {
   fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
     let mut ret = self.clone();
 
-    if ret.stack.len() == 1 && item.transformer_type() == TransformerTypes::Stopped(Canceled) {
-      return self.to_canceled();
-    }
-
     ret.stack.pop();
-    ret.stack.push(item);
-
-    box ret
+    match item.transformer_type() {
+      TransformerTypes::Stopped(Canceled) if ret.stack.len() == 0 => ret.to_canceled(),
+      TransformerTypes::Stopped(Canceled) => box ret,
+      _ => {
+        ret.stack.push(item);
+        box ret
+      }
+    }
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
@@ -173,6 +182,7 @@ mod tests {
       ["hiragana\n", "ひらがな", Stopped(Compleated)],
       ["hiragana[escape]", "", Stopped(Canceled)],
       ["kannji ", "▼漢字", Henkan],
+      ["kannji [backspace]", "▽かんじ", Henkan],
       ["kannji \n", "漢字", Stopped(Compleated)],
       ["okuR", "▽おく*r", Henkan],
       ["okuR\n", "▽おく", Henkan],
