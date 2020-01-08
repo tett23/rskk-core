@@ -48,15 +48,20 @@ impl Transformable for StoppedTransformer {
     TransformerTypes::Stopped(self.reason)
   }
 
-  fn push_character(&self, _: char) -> Option<Box<dyn Transformable>> {
+  fn push_character(&self, _: char) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
 
-  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
-    Some(self.pop().0)
+  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    let tf = self.pop().0;
+    if tf.is_canceled() {
+      return Some(vec![]);
+    }
+
+    Some(vec![tf])
   }
 
-  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_backspace()
   }
 }
@@ -99,8 +104,8 @@ impl Stackable for StoppedTransformer {
     )
   }
 
-  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    box self.clone()
+  fn replace_last_element(&self, _: Vec<Box<dyn Transformable>>) -> Vec<Box<dyn Transformable>> {
+    vec![box self.clone()]
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {

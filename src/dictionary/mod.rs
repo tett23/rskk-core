@@ -20,9 +20,10 @@ impl Dictionary {
     self.entries.insert(entry);
   }
 
-  pub fn transform(&self, word: &str) -> Option<&DictionaryEntry> {
+  pub fn transform<S: Into<String>>(&self, word: S) -> Option<&DictionaryEntry> {
     // TODO: wordがカタカナの場合があるので正規化する
     // abbrの場合もある
+    let word = word.into();
     match self.entries.iter().find(|&item| item.read == word) {
       Some(v) => Some(&v),
       None => None,

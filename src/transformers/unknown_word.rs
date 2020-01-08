@@ -2,7 +2,6 @@ use super::{
   AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, StoppedTransformer,
   Transformable, TransformerTypes, WithConfig,
 };
-use crate::keyboards::{KeyCode, Keyboard};
 
 #[derive(Clone, Debug)]
 pub struct Word(String, Option<String>);
@@ -44,10 +43,7 @@ impl UnknownWordTransformer {
     UnknownWordTransformer {
       config: config.clone(),
       word,
-      stack: vec![
-        box StoppedTransformer::empty(config.clone()),
-        box ContinuousTransformer::new(config, TransformerTypes::Hiragana),
-      ],
+      stack: vec![],
     }
   }
 
@@ -70,57 +66,41 @@ impl Transformable for UnknownWordTransformer {
     TransformerTypes::UnknownWord
   }
 
-  fn try_change_transformer(
-    &self,
-    keyboard: &Box<dyn Keyboard>,
-    last_key_code: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    let new_transformer = self
-      .send_target()
-      .try_change_transformer(keyboard, last_key_code);
-
-    Some(self.replace_last_element(new_transformer?))
-  }
-
-  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+  fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
     Some(self.replace_last_element(self.send_target().push_character(character)?))
   }
 
-  fn push_space(&self) -> Option<Box<dyn Transformable>> {
+  fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
     Some(self.replace_last_element(self.send_target().push_space()?))
   }
 
-  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
-    if self.send_target().is_empty() {
-      return Some(box StoppedTransformer::completed(
-        self.config(),
-        self.buffer_content(),
-      ));
+  fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    let tfs = self.send_target().push_enter()?;
+    if tfs.last()?.is_compleated() {
+      return Some(vec![tfs.last()?.clone()]);
     }
 
-    Some(self.replace_last_element(self.send_target().push_enter()?))
+    Some(self.replace_last_element(tfs))
   }
 
-  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     if self.is_empty() {
-      return Some(box self.clone());
+      return Some(vec![box self.clone()]);
     }
 
-    Some(self.pop().0)
+    Some(self.replace_last_element(self.stack.last()?.push_backspace()?))
   }
 
-  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_backspace()
   }
 
-  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
-    Some(match self.send_target().transformer_type() {
-      TransformerTypes::Continuous if self.send_target().is_empty() => self.pop().0.pop().0,
-      TransformerTypes::UnknownWord | TransformerTypes::Henkan | TransformerTypes::Continuous => {
-        self.replace_last_element(self.send_target().push_escape()?)
-      }
-      _ => self.to_canceled(),
-    })
+  fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    if self.stack.is_empty() {
+      return Some(vec![]);
+    }
+
+    Some(self.replace_last_element(self.stack.last()?.push_escape()?))
   }
 }
 
@@ -148,10 +128,14 @@ impl AsTransformerTrait for UnknownWordTransformer {
   }
 
   fn send_target(&self) -> Box<dyn Transformable> {
-    match self.stack.last() {
-      Some(tf) => tf.clone(),
-      None => box StoppedTransformer::empty(self.config()),
-    }
+    self
+      .stack
+      .last()
+      .map(|tf| tf.clone())
+      .unwrap_or(box ContinuousTransformer::new(
+        self.config(),
+        TransformerTypes::Hiragana,
+      ))
   }
 }
 
@@ -166,43 +150,24 @@ impl Stackable for UnknownWordTransformer {
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
     let mut ret = self.clone();
-    if ret.send_target().transformer_type() == TransformerTypes::Continuous
-      && ret.send_target().is_empty()
-    {
-      ret.stack.pop();
-    }
+    let item = ret.stack.pop();
 
-    dbg!(ret.stack().last());
-    match ret.stack.last() {
-      Some(tf) => {
-        let (tf, pop) = tf.pop();
-
-        (ret.replace_last_element(tf), pop)
-      }
-      None => (self.to_canceled(), None),
-    }
+    (box ret, item)
   }
 
-  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    dbg!(&item);
+  fn replace_last_element(
+    &self,
+    items: Vec<Box<dyn Transformable>>,
+  ) -> Vec<Box<dyn Transformable>> {
     let mut ret = self.clone();
-    match item.is_canceled() {
-      true => {
-        ret.stack.pop();
-      }
-      false => {
-        ret.stack.pop();
-        ret.stack.push(item);
-      }
-    };
 
-    match ret.is_all_stopped() {
-      true => ret.push(box ContinuousTransformer::new(
-        ret.config(),
-        TransformerTypes::Hiragana,
-      )),
-      false => box ret,
-    }
+    ret.stack.pop();
+    items.iter().for_each(|item| ret.stack.push(item.clone()));
+    // if ret.stack.len() == 0 {
+    //   return vec![];
+    // }
+
+    vec![box ret]
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
@@ -217,9 +182,9 @@ impl Stackable for UnknownWordTransformer {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
   use crate::transformers::StoppedReason;
-  use crate::{tds, tfe};
   use StoppedReason::*;
   use TransformerTypes::*;
 
@@ -251,26 +216,5 @@ mod tests {
       ["AAOkuRi[escape][escape][escape][escape][escape]", "", Stopped(Canceled)],
     ];
     test_transformer(items);
-  }
-
-  #[test]
-  fn stack() {
-    let conf = dummy_conf();
-
-    let tf = tfe!(conf, Continuous; "").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
-
-    let tf = tfe!(conf, Continuous; "a").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
-
-    let tf = tfe!(conf, Continuous; "aa").pop().0;
-    assert_eq!(tf.transformer_type(), Continuous);
-    assert_eq!(tf.buffer_content(), "あ");
-
-    let tf = tfe!(conf, Continuous; "aaa").pop().0;
-    assert_eq!(tf.transformer_type(), Continuous);
-    assert_eq!(tf.buffer_content(), "ああ");
   }
 }
