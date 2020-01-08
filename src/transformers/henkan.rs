@@ -1,10 +1,7 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, SelectCandidateTransformer, Stackable, StoppedReason,
-  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
-  YomiTransformer,
+  AsTransformerTrait, Config, Displayable, Stackable, StoppedTransformer, Transformable,
+  TransformerTypes, WithConfig, YomiTransformer,
 };
-use crate::keyboards::{KeyCode, Keyboard};
-use StoppedReason::*;
 
 #[derive(Clone)]
 pub struct HenkanTransformer {
@@ -18,7 +15,7 @@ impl HenkanTransformer {
     HenkanTransformer {
       config: config.clone(),
       current_transformer_type: transformer_type,
-      stack: vec![Box::new(YomiTransformer::new(config, transformer_type))],
+      stack: vec![box YomiTransformer::new(config, transformer_type)],
     }
   }
 }
@@ -34,72 +31,43 @@ impl Transformable for HenkanTransformer {
     TransformerTypes::Henkan
   }
 
-  fn try_change_transformer(
-    &self,
-    keyboard: &Box<dyn Keyboard>,
-    last_key_code: &KeyCode,
-  ) -> Option<Box<dyn Transformable>> {
-    let new_transformer = self
-      .send_target()
-      .try_change_transformer(keyboard, last_key_code);
-
-    Some(self.replace_last_element(new_transformer?))
+  fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
+    Some(self.replace_last_element(self.stack.last()?.push_character(character)?))
   }
 
-  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
-    let new_transformer = self.send_target().push_character(character)?;
-    if new_transformer.transformer_type() != TransformerTypes::OkuriCompleted {
-      return Some(self.replace_last_element(new_transformer));
+  fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    Some(self.replace_last_element(self.stack.last()?.push_escape()?))
+  }
+
+  fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    let tfs = self.stack.last()?.push_enter()?;
+    match &*tfs {
+      [] => Some(vec![]),
+      [last] if last.is_stopped() => Some(vec![last.clone()]),
+      _ => Some(self.replace_last_element(tfs)),
     }
+  }
 
-    let (yomi, _) = YomiTransformer::from_pair(
-      self.config(),
-      self.current_transformer_type,
-      new_transformer.pair(),
-    )
-    .pop();
+  fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    let mut new_tf = self.send_target().push_space()?;
+    let vec = match self.send_target().transformer_type() {
+      TransformerTypes::Yomi => {
+        let mut tf = self.clone();
+        tf.stack.append(&mut new_tf);
 
-    let buf = self.buffer_content();
-    let tf: Box<dyn Transformable> = match self.config.dictionary.transform(&buf) {
-      Some(dic_entry) => {
-        box SelectCandidateTransformer::new(self.config(), dic_entry, Some(character))
+        return Some(vec![box tf]);
       }
-      None => box UnknownWordTransformer::new(self.config(), Word::from(new_transformer.pair())),
+      _ => new_tf,
     };
 
-    Some(self.replace_last_element(yomi).push(tf))
+    Some(self.replace_last_element(vec))
   }
 
-  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
-    let new_transformer = self.send_target().push_escape()?;
-    Some(match new_transformer.transformer_type() {
-      TransformerTypes::Stopped(Canceled) => self.pop().0,
-      _ => self.replace_last_element(new_transformer),
-    })
-  }
-
-  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
-    let new_tf = self.send_target().push_enter()?;
-    Some(match new_tf.transformer_type() {
-      TransformerTypes::Stopped(Compleated) => new_tf,
-      TransformerTypes::Stopped(Canceled) => self.pop().0,
-      _ => self.replace_last_element(new_tf),
-    })
-  }
-
-  fn push_space(&self) -> Option<Box<dyn Transformable>> {
-    let new_tf = self.send_target().push_space()?;
-    Some(match self.send_target().transformer_type() {
-      TransformerTypes::Yomi => self.push(new_tf),
-      _ => self.replace_last_element(new_tf),
-    })
-  }
-
-  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     Some(self.replace_last_element(self.send_target().push_delete()?))
   }
 
-  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     Some(self.replace_last_element(self.send_target().push_backspace()?))
   }
 }
@@ -147,18 +115,19 @@ impl Stackable for HenkanTransformer {
     (box ret, item)
   }
 
-  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
+  fn replace_last_element(
+    &self,
+    items: Vec<Box<dyn Transformable>>,
+  ) -> Vec<Box<dyn Transformable>> {
     let mut ret = self.clone();
 
     ret.stack.pop();
-    match item.transformer_type() {
-      TransformerTypes::Stopped(Canceled) if ret.stack.len() == 0 => ret.to_canceled(),
-      TransformerTypes::Stopped(Canceled) => box ret,
-      _ => {
-        ret.stack.push(item);
-        box ret
-      }
+    items.iter().for_each(|item| ret.stack.push(item.clone()));
+    if ret.stack.len() == 0 {
+      return vec![];
     }
+
+    vec![box ret]
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
@@ -191,12 +160,19 @@ mod tests {
       ["okuRi[escape]", "▽おく", Henkan],
       ["okuRi\n", "送り", Stopped(Compleated)],
       ["michigo ", "[登録: みちご]", Henkan],
-      ["michigo ", "[登録: みちご]", Henkan],
+      ["aA", "[登録: あ*あ]", Henkan],
       ["michigo [backspace]", "[登録: みちご]", Henkan],
       ["aa[backspace]", "▽あ", Henkan],
       ["aa[backspace]", "▽あ", Henkan],
       ["aa[backspace][backspace]", "▽", Henkan],
       ["aa[backspace][backspace][backspace]", "", Stopped(Canceled)],
+      ["aA", "[登録: あ*あ]", Henkan],
+      ["aA[escape]", "▽あ", Henkan],
+      ["aKa", "[登録: あ*か]", Henkan],
+      ["aA[escape]", "▽あ", Henkan],
+      ["aTte", "[登録: あ*って]", Henkan],
+      ["aA[escape]", "▽あ", Henkan],
+      ["aTsu", "[登録: あ*つ]", Henkan],
     ];
     test_transformer(items);
 

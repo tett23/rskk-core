@@ -49,11 +49,11 @@ impl Transformable for DirectTransformer {
     Some(tf!(self.config(), transformer_type?))
   }
 
-  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
-    Some(box StoppedTransformer::completed(
+  fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
+    Some(vec![box StoppedTransformer::completed(
       self.config(),
       character.to_string(),
-    ))
+    )])
   }
 }
 
@@ -66,8 +66,8 @@ impl Stackable for DirectTransformer {
     unreachable!()
   }
 
-  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    self.as_trait()
+  fn replace_last_element(&self, _: Vec<Box<dyn Transformable>>) -> Vec<Box<dyn Transformable>> {
+    vec![box self.clone()]
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {

@@ -1,7 +1,8 @@
+use super::tables::hiragana_convert;
 use super::{
   AsTransformerTrait, Config, ContinuousTransformer, Displayable, HiraganaTransformer,
-  OkuriCompletedTransformer, SelectCandidateTransformer, Stackable, StoppedReason,
-  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
+  SelectCandidateTransformer, Stackable, StoppedReason, StoppedTransformer, Transformable,
+  TransformerTypes, UnknownWordTransformer, WithConfig, Word,
 };
 use crate::tf;
 use StoppedReason::*;
@@ -47,11 +48,35 @@ impl YomiTransformer {
     if !character.is_uppercase() {
       return None;
     }
+    if self.pair.0.is_empty() {
+      return None;
+    }
     if self.pair.1.is_some() {
       return None;
     }
 
     Some(self.push(tf!(self.config(), self.current_transformer_type)))
+  }
+
+  fn try_composition(&self, okuri: Option<char>) -> Box<dyn Transformable> {
+    match self.config.dictionary.transform(self.buffer_content()) {
+      Some(dic_entry) => box SelectCandidateTransformer::new(self.config(), dic_entry, okuri),
+      None => box UnknownWordTransformer::new(self.config(), {
+        Word::from((self.pair.0.buffer_content(), self.okuri(okuri)))
+      }),
+    }
+  }
+
+  fn okuri(&self, okuri: Option<char>) -> Option<String> {
+    let okuri = okuri?;
+    let tf = self
+      .pair
+      .clone()
+      .1
+      .unwrap_or(tf!(self.config(), self.current_transformer_type));
+    let buf = tf.push_character(okuri)?.first()?.buffer_content();
+
+    Some(buf)
   }
 }
 
@@ -66,74 +91,73 @@ impl Transformable for YomiTransformer {
     TransformerTypes::Yomi
   }
 
-  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+  fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
+    let lowercase = character.to_lowercase().next()?;
     let tf = self.try_okuri(character).unwrap_or(box self.clone());
-    let new_tf = tf
-      .send_target()
-      .push_character(character.to_lowercase().next()?)?;
+    let tfs = tf
+      .stack()
+      .last()?
+      .push_character(lowercase)
+      .map(|vec| tf.replace_last_element(vec))?;
+    let new_tf = tfs.first()?;
 
-    let ret = match (new_tf.transformer_type(), &tf.pair()) {
-      (TransformerTypes::Stopped(_), (_, None)) => box StoppedTransformer::completed(
-        tf.config(),
-        tf.replace_last_element(new_tf).buffer_content(),
-      ),
-      (TransformerTypes::Stopped(Canceled), (_, Some(_))) => tf.pop().0,
-      (TransformerTypes::Stopped(Compleated), (yomi, Some(_))) => {
-        box OkuriCompletedTransformer::new(
-          tf.config(),
-          self.current_transformer_type,
-          yomi,
-          new_tf.buffer_content(),
-        )
+    Some(match &*new_tf.stack() {
+      [_, okuri] if okuri.is_stopped() => {
+        vec![new_tf.pop().0, self.try_composition(Some(lowercase))]
       }
-      (_, _) => tf.replace_last_element(new_tf),
-    };
-
-    Some(ret)
-  }
-
-  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
-    Some(match &self.pair {
-      (_, None) => box StoppedTransformer::canceled(self.config()),
-      (_, Some(_)) => self.pop().0,
+      _ => vec![new_tf.clone()],
     })
   }
 
-  fn push_space(&self) -> Option<Box<dyn Transformable>> {
+  fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    Some(match &self.pair {
+      (_, None) => vec![],
+      (_, Some(_)) => vec![self.pop().0],
+    })
+  }
+
+  fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
     let buf = self.buffer_content();
     Some(match self.config.dictionary.transform(&buf) {
-      Some(dic_entry) => box SelectCandidateTransformer::new(self.config(), dic_entry, None),
-      None => box UnknownWordTransformer::new(self.config(), Word::new(&buf, None)),
+      Some(dic_entry) => vec![box SelectCandidateTransformer::new(
+        self.config(),
+        dic_entry,
+        None,
+      )],
+      None => vec![box UnknownWordTransformer::new(
+        self.config(),
+        Word::new(&buf, None),
+      )],
     })
   }
 
-  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
+  fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
     match &self.pair {
-      (yomi, None) => Some(box StoppedTransformer::completed(
+      (yomi, None) => Some(vec![box StoppedTransformer::completed(
         self.config(),
         yomi.buffer_content(),
-      )),
-      (_, Some(okuri)) => match okuri.push_enter()?.is_canceled() {
-        true => Some(self.pop().0),
-        false => Some(self.as_trait()),
+      )]),
+      (_, Some(okuri)) => match okuri.push_enter()?.is_empty() {
+        true => Some(vec![self.pop().0]),
+        false => Some(vec![box self.clone()]),
       },
     }
   }
 
-  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     Some(match &self.pair {
       (yomi, None) => match yomi.is_empty() {
-        true => self.to_canceled(),
-        false => self.replace_last_element(self.send_target().push_backspace()?),
+        true => vec![],
+        false => self.replace_last_element(self.stack().last()?.push_backspace()?),
       },
       (_, Some(okuri)) => match okuri.is_empty() {
-        true => self.pop().0,
-        false => self.replace_last_element(self.send_target().push_backspace()?),
+        true => vec![self.pop().0],
+        false => self.replace_last_element(self.stack().last()?.push_backspace()?),
       },
     })
   }
 
-  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_backspace()
   }
 }
@@ -200,7 +224,16 @@ impl Stackable for YomiTransformer {
     }
   }
 
-  fn replace_last_element(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
+  fn replace_last_element(
+    &self,
+    items: Vec<Box<dyn Transformable>>,
+  ) -> Vec<Box<dyn Transformable>> {
+    let item = match &*items {
+      [] => return vec![self.pop().0],
+      [item] => item,
+      _ => unreachable!(),
+    };
+
     match &self.pair {
       (_, None) => {
         let mut ret = self.clone();
@@ -208,10 +241,10 @@ impl Stackable for YomiTransformer {
           TransformerTypes::Stopped(Canceled) => {
             box ContinuousTransformer::new(self.config(), self.current_transformer_type)
           }
-          _ => item,
+          _ => item.clone(),
         };
 
-        box ret
+        vec![box ret]
       }
       (_, Some(_)) => {
         let mut ret = self.clone();
@@ -219,10 +252,10 @@ impl Stackable for YomiTransformer {
           TransformerTypes::Stopped(Canceled) => {
             Some(tf!(self.config(), self.current_transformer_type))
           }
-          _ => Some(item),
+          _ => Some(item.clone()),
         };
 
-        box ret
+        vec![box ret]
       }
     }
   }
@@ -256,20 +289,24 @@ mod tests {
       ["okuR", "▽おく*r", Yomi],
       ["okuR[escape]", "▽おく", Yomi],
       ["okuR\n", "▽おく", Yomi],
-      ["okuRi", "おくり", OkuriCompleted],
+      ["okuRi", "▼送り", SelectCandidate],
       ["kannji ", "▼漢字", SelectCandidate],
       ["kannji [escape]", "", Stopped(Canceled)],
       ["michigo ", "[登録: みちご]", UnknownWord],
+      ["aA", "[登録: あ*あ]", UnknownWord],
+      ["aKa", "[登録: あ*か]", UnknownWord],
+      ["aTte", "[登録: あ*って]", UnknownWord],
+      ["aTsu", "[登録: あ*つ]", UnknownWord],
       ["a[backspace]", "▽", Yomi],
       ["aa[backspace]", "▽あ", Yomi],
       ["aa[backspace]a", "▽ああ", Yomi],
       ["aa[backspace][backspace]i", "▽い", Yomi],
       ["a[backspace][backspace]", "", Stopped(Canceled)],
       ["aK", "▽あ*k", Yomi],
-      ["aK[backspace]", "▽あ*", Yomi],
-      ["aK[backspace][backspace]", "▽あ", Yomi],
-      ["aK[backspace][backspace]a", "▽ああ", Yomi],
-      ["aK[backspace][backspace]K", "▽あ*k", Yomi],
+      ["aK[backspace]", "▽あ", Yomi],
+      ["aK[backspace][backspace]", "▽", Yomi],
+      ["aK[backspace][backspace]a", "▽あ", Yomi],
+      ["aK[backspace][backspace]K", "▽k", Yomi],
       ["henka[backspace][backspace]", "▽へ", Yomi],
     ];
     test_transformer(items);

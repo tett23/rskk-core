@@ -38,7 +38,7 @@ impl Transformable for OkuriCompletedTransformer {
     TransformerTypes::OkuriCompleted
   }
 
-  fn push_character(&self, _: char) -> Option<Box<dyn Transformable>> {
+  fn push_character(&self, _: char) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
 }
@@ -78,8 +78,8 @@ impl Stackable for OkuriCompletedTransformer {
     (box ret, Some(box self.clone()))
   }
 
-  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    box self.clone()
+  fn replace_last_element(&self, _: Vec<Box<dyn Transformable>>) -> Vec<Box<dyn Transformable>> {
+    vec![box self.clone()]
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {

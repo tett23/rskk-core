@@ -91,52 +91,71 @@ impl Transformable for HiraganaTransformer {
     Some(tf!(self.config(), transformer_type?))
   }
 
-  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>> {
+  fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
     if let Some(tf) = self.try_enter_abbr(character) {
-      return Some(tf);
+      return Some(vec![tf]);
     }
     if let Some(tf) = self.try_enter_henkan(character) {
-      return tf.push_character(character.to_lowercase().next().unwrap());
+      return tf.push_character(character.to_lowercase().next()?);
     }
 
     hiragana_convert(&self.buffer, character)
       .map(|vec| match &*vec {
-        [] => self.to_canceled(),
+        [] => vec![],
         [(new_buffer, Continue)] => {
-          box Self::from_stopped_and_buffer(self.config(), &self.stopped, &new_buffer)
+          vec![
+            box Self::from_stopped_and_buffer(self.config(), &self.stopped, &new_buffer)
+              as Box<dyn Transformable>,
+          ]
         }
         [(new_buffer, Stop)] => {
-          box StoppedTransformer::completed(self.config(), self.stopped.clone() + &new_buffer)
+          vec![
+            box StoppedTransformer::completed(self.config(), self.stopped.clone() + &new_buffer)
+              as Box<dyn Transformable>,
+          ]
         }
         vec => {
           let (last, elems) = vec.split_last().unwrap();
           let stopped = elems.iter().fold("".to_string(), |acc, (s, _)| acc + &s);
 
           match last {
-            (s, Continue) => box Self::from_stopped_and_buffer(self.config(), stopped, s.clone())
-              as Box<dyn Transformable>,
-            (s, Stop) => box StoppedTransformer::completed(self.config(), stopped + s),
+            (s, Continue) => {
+              vec![
+                box Self::from_stopped_and_buffer(self.config(), stopped, s.clone())
+                  as Box<dyn Transformable>,
+              ]
+            }
+            (s, Stop) => vec![
+              box StoppedTransformer::completed(self.config(), stopped + s)
+                as Box<dyn Transformable>,
+            ],
           }
         }
       })
-      .or(Some(box StoppedTransformer::canceled(self.config())))
+      .or(Some(vec![]))
   }
 
-  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+  fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
     match self.is_empty() {
-      true => None,
-      false => Some(self.pop().0),
+      true => Some(vec![]),
+      false => Some(vec![self.pop().0]),
     }
   }
 
-  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     match self.is_empty() {
       true => None,
-      false => Some(self.pop().0),
+      false => {
+        let tf = self.pop().0;
+        match tf.is_canceled() {
+          true => Some(vec![]),
+          false => Some(vec![tf]),
+        }
+      }
     }
   }
 
-  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_backspace()
   }
 }
@@ -176,8 +195,8 @@ impl Stackable for HiraganaTransformer {
     (ret, Some(self.to_canceled()))
   }
 
-  fn replace_last_element(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    box self.clone()
+  fn replace_last_element(&self, _: Vec<Box<dyn Transformable>>) -> Vec<Box<dyn Transformable>> {
+    vec![box self.clone()]
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {

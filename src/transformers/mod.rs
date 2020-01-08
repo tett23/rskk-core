@@ -126,8 +126,10 @@ pub trait Transformable:
         .printable_key()
         .and_then(|character| self.push_character(character)),
     ) {
-      (Some(tf), _) => Some(tf),
-      (_, Some(tf)) => Some(tf),
+      (Some(tfs), _) if tfs.is_empty() => Some(self.to_canceled()),
+      (Some(tfs), _) => Some(tfs.last()?.clone()),
+      (_, Some(tfs)) if tfs.is_empty() => Some(self.to_canceled()),
+      (_, Some(tfs)) => Some(tfs.last()?.clone()),
       _ => None,
     }
   }
@@ -140,7 +142,7 @@ pub trait Transformable:
     None
   }
 
-  fn push_meta_key(&self, key_code: &KeyCode) -> Option<Box<dyn Transformable>> {
+  fn push_meta_key(&self, key_code: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
     match key_code {
       KeyCode::Meta(MetaKey::Escape) => self.push_escape(),
       KeyCode::PrintableMeta(MetaKey::Enter, _) | KeyCode::Meta(MetaKey::Enter) => {
@@ -163,42 +165,42 @@ pub trait Transformable:
       _ => self.push_any_character(key_code),
     }
   }
-  fn push_character(&self, character: char) -> Option<Box<dyn Transformable>>;
+  fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>>;
 
-  fn push_escape(&self) -> Option<Box<dyn Transformable>> {
+  fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_enter(&self) -> Option<Box<dyn Transformable>> {
+  fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_space(&self) -> Option<Box<dyn Transformable>> {
+  fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_backspace(&self) -> Option<Box<dyn Transformable>> {
+  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_delete(&self) -> Option<Box<dyn Transformable>> {
+  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_tab(&self) -> Option<Box<dyn Transformable>> {
+  fn push_tab(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_null(&self) -> Option<Box<dyn Transformable>> {
+  fn push_null(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_arrow_right(&self) -> Option<Box<dyn Transformable>> {
+  fn push_arrow_right(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_arrow_down(&self) -> Option<Box<dyn Transformable>> {
+  fn push_arrow_down(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_arrow_left(&self) -> Option<Box<dyn Transformable>> {
+  fn push_arrow_left(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_arrow_up(&self) -> Option<Box<dyn Transformable>> {
+  fn push_arrow_up(&self) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-  fn push_any_character(&self, _: &KeyCode) -> Option<Box<dyn Transformable>> {
+  fn push_any_character(&self, _: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
 }
