@@ -1,5 +1,5 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, Stackable, StoppedTransformer, Transformable,
+  AsTransformerTrait, Config, Displayable, KeyCode, Stackable, StoppedTransformer, Transformable,
   TransformerTypes, WithConfig, YomiTransformer,
 };
 
@@ -69,6 +69,15 @@ impl Transformable for HenkanTransformer {
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     Some(self.replace_last_element(self.send_target().push_backspace()?))
+  }
+
+  fn push_any_character(&self, key_code: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
+    let tfs = self.stack.last()?.push_any_character(key_code)?;
+    match &*tfs {
+      [] => Some(vec![]),
+      [last] if last.is_stopped() => Some(vec![last.clone()]),
+      _ => Some(self.replace_last_element(tfs)),
+    }
   }
 }
 
@@ -159,6 +168,7 @@ mod tests {
       ["okuRi", "▼送り", Henkan],
       ["okuRi[escape]", "▽おく", Henkan],
       ["okuRi\n", "送り", Stopped(Compleated)],
+      ["okuRia", "送り", Stopped(Compleated)],
       ["michigo ", "[登録: みちご]", Henkan],
       ["aA", "[登録: あ*あ]", Henkan],
       ["michigo [backspace]", "[登録: みちご]", Henkan],

@@ -1,8 +1,8 @@
 use super::tables::hiragana_convert;
 use super::StoppedTransformer;
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, Stackable, Transformable, TransformerTypes,
-  WithConfig,
+  AsTransformerTrait, BufferState, Config, Displayable, KeyCode, Stackable, Transformable,
+  TransformerTypes, WithConfig,
 };
 use crate::dictionary::{Candidate, DictionaryEntry};
 use crate::transformers::tables::convert_from_str;
@@ -101,6 +101,13 @@ impl Transformable for SelectCandidateTransformer {
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_delete()
+  }
+
+  fn push_any_character(&self, key_code: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
+    match key_code.is_printable() {
+      true => self.try_transition_to_stopped().map(|tf| vec![tf]),
+      false => None,
+    }
   }
 }
 
