@@ -34,10 +34,7 @@ impl SelectCandidateTransformer {
       .candidates
       .current()
       .map(|candidate| -> Box<dyn Transformable> {
-        box StoppedTransformer::completed(
-          self.config(),
-          Self::append_okuri(&self.dictionary_entry.read, &candidate.entry, self.okuri),
-        )
+        box StoppedTransformer::completed(self.config(), self.buffer_content())
       })
   }
 
@@ -113,28 +110,13 @@ impl Transformable for SelectCandidateTransformer {
 
 impl Displayable for SelectCandidateTransformer {
   fn buffer_content(&self) -> String {
-    match (self.candidates.current(), &self.okuri) {
-      (Some(candidate), Some(okuri)) => {
-        let character = self.dictionary_entry.read.clone().pop();
-        if character.is_none() {
-          return candidate.entry.clone();
-        }
-        let character = character.unwrap();
-
-        let okuri = hiragana_convert(&character.to_string(), okuri.clone());
-        if okuri.is_none() {
-          return candidate.entry.clone();
-        }
-        let okuri = okuri
-          .unwrap()
-          .iter()
-          .fold("".to_string(), |acc, (s, _)| acc + &s);
-
-        candidate.entry.clone() + &okuri
-      }
-      (Some(candidate), None) => candidate.entry.clone(),
-      (None, _) => "".to_string(),
-    }
+    self
+      .candidates
+      .current()
+      .map(|candidate| {
+        Self::append_okuri(&self.dictionary_entry.read, &candidate.entry, self.okuri)
+      })
+      .unwrap_or("".to_owned())
   }
 
   fn display_string(&self) -> String {
