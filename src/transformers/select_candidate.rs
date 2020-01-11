@@ -1,4 +1,3 @@
-use super::tables::hiragana_convert;
 use super::StoppedTransformer;
 use super::{
   AsTransformerTrait, BufferState, Config, Displayable, KeyCode, Stackable, Transformable,
@@ -33,9 +32,10 @@ impl SelectCandidateTransformer {
     self
       .candidates
       .current()
-      .map(|candidate| -> Box<dyn Transformable> {
-        box StoppedTransformer::completed(self.config(), self.buffer_content())
-      })
+      .and(Some(box StoppedTransformer::completed(
+        self.config(),
+        self.buffer_content(),
+      )))
   }
 
   fn append_okuri(stem: &str, yomi: &str, okuri: Option<char>) -> String {
@@ -251,7 +251,7 @@ mod tests {
     assert_eq!(stopped.buffer_content(), "a");
   }
 
-  #[ignore]
+  #[test]
   fn delete() {
     let config = Config::new(
       Rc::new(RSKKConfig::default_config()),
@@ -270,8 +270,8 @@ mod tests {
     assert_eq!(select_candidate.buffer_content(), "a");
 
     let canceled = select_candidate.push_meta_key(&key!("delete")).unwrap();
-    let canceled = canceled.first().unwrap();
-    assert_eq!(canceled.transformer_type(), Stopped(Canceled));
+    let canceled = canceled.first();
+    assert_eq!(canceled.is_none(), true);
   }
 
   mod candidates {

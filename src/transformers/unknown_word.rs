@@ -1,6 +1,6 @@
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, StoppedTransformer,
-  Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, Transformable,
+  TransformerTypes, WithConfig,
 };
 
 #[derive(Clone, Debug)]

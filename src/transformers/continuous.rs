@@ -21,18 +21,6 @@ impl ContinuousTransformer {
     }
   }
 
-  pub fn from_buffer<S: Into<String>>(
-    config: Config,
-    transformer_type: TransformerTypes,
-    buffer: S,
-  ) -> Self {
-    ContinuousTransformer {
-      config: config.clone(),
-      current_transformer_type: transformer_type,
-      stack: vec![box StoppedTransformer::completed(config, buffer)],
-    }
-  }
-
   fn stopped_buffer_content(&self) -> String {
     self
       .stack

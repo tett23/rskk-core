@@ -1,7 +1,7 @@
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, HiraganaTransformer,
-  SelectCandidateTransformer, Stackable, StoppedReason, StoppedTransformer, Transformable,
-  TransformerTypes, UnknownWordTransformer, WithConfig, Word,
+  AsTransformerTrait, Config, ContinuousTransformer, Displayable, SelectCandidateTransformer,
+  Stackable, StoppedReason, StoppedTransformer, Transformable, TransformerTypes,
+  UnknownWordTransformer, WithConfig, Word,
 };
 use crate::tf;
 use StoppedReason::*;
@@ -21,24 +21,6 @@ impl YomiTransformer {
       pair: (
         box ContinuousTransformer::new(config, transformer_type),
         None,
-      ),
-    }
-  }
-
-  pub fn from_pair<S: Into<String>>(
-    config: Config,
-    transformer_type: TransformerTypes,
-    pair: (S, Option<S>),
-  ) -> Self {
-    YomiTransformer {
-      config: config.clone(),
-      current_transformer_type: transformer_type,
-      pair: (
-        box ContinuousTransformer::from_buffer(config.clone(), transformer_type, pair.0),
-        match pair.1 {
-          Some(s) => Some(box HiraganaTransformer::from_buffer(config.clone(), s)),
-          None => None,
-        },
       ),
     }
   }
