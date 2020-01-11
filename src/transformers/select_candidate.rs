@@ -5,7 +5,7 @@ use super::{
   WithConfig,
 };
 use crate::dictionary::{Candidate, DictionaryEntry};
-use crate::keyboards::KeyCode;
+use crate::transformers::tables::convert_from_str;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidateTransformer {
@@ -27,6 +27,33 @@ impl SelectCandidateTransformer {
       candidates: Candidates::new(&dictionary_entry.candidates),
       okuri,
     }
+  }
+
+  fn try_transition_to_stopped(&self) -> Option<Box<dyn Transformable>> {
+    self
+      .candidates
+      .current()
+      .map(|candidate| -> Box<dyn Transformable> {
+        box StoppedTransformer::completed(
+          self.config(),
+          Self::append_okuri(&self.dictionary_entry.read, &candidate.entry, self.okuri),
+        )
+      })
+  }
+
+  fn append_okuri(stem: &str, yomi: &str, okuri: Option<char>) -> String {
+    stem
+      .rfind(|c: char| c.is_ascii_lowercase())
+      .map(|idx| stem.split_at(idx))
+      .and_then(|pair| match pair {
+        (_, "") => None,
+        (_, c) => Some(c),
+      })
+      .and_then(|consonant| Some((consonant, okuri?)))
+      .map(|(consonant, vowel)| format!("{}{}", consonant, vowel))
+      .and_then(|al| convert_from_str(&al))
+      .map(|a| yomi.to_owned() + &a)
+      .unwrap_or(yomi.to_owned())
   }
 }
 
@@ -50,10 +77,7 @@ impl Transformable for SelectCandidateTransformer {
   }
 
   fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    Some(vec![box StoppedTransformer::completed(
-      self.config(),
-      self.buffer_content(),
-    )])
+    self.try_transition_to_stopped().map(|tf| vec![tf])
   }
 
   fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
@@ -77,20 +101,6 @@ impl Transformable for SelectCandidateTransformer {
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_delete()
-  }
-
-  fn push_any_character(&self, _: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
-    None
-    //   match key_code.is_printable() {
-    //     true => match self.candidates.current() {
-    //       Some(candidate) => Some(box StoppedTransformer::completed(
-    //         self.config(),
-    //         candidate.entry.clone(),
-    //       )),
-    //       None => Some(box StoppedTransformer::canceled(self.config())),
-    //     },
-    //     false => None,
-    //   }
   }
 }
 
@@ -198,6 +208,18 @@ mod tests {
   use crate::{key, set, Dictionary, RSKKConfig};
   use std::rc::Rc;
   use TransformerTypes::*;
+
+  #[test]
+  fn append_okuri() {
+    let item = SelectCandidateTransformer::append_okuri("かんじ", "漢字", None);
+    assert_eq!(item, "漢字");
+
+    let item = SelectCandidateTransformer::append_okuri("かんじ", "漢字", Some('a'));
+    assert_eq!(item, "漢字");
+
+    let item = SelectCandidateTransformer::append_okuri("おくr", "送", Some('i'));
+    assert_eq!(item, "送り");
+  }
 
   #[test]
   fn space() {

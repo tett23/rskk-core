@@ -1,4 +1,3 @@
-use super::tables::hiragana_convert;
 use super::{
   AsTransformerTrait, Config, ContinuousTransformer, Displayable, HiraganaTransformer,
   SelectCandidateTransformer, Stackable, StoppedReason, StoppedTransformer, Transformable,

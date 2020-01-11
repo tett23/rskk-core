@@ -163,9 +163,6 @@ impl Stackable for UnknownWordTransformer {
 
     ret.stack.pop();
     items.iter().for_each(|item| ret.stack.push(item.clone()));
-    // if ret.stack.len() == 0 {
-    //   return vec![];
-    // }
 
     vec![box ret]
   }
