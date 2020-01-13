@@ -1,7 +1,7 @@
-use super::super::BufferState;
 use super::super::BufferState::*;
+use super::BufferPair;
 
-pub fn convert(current_buffer: &str, character: char) -> Option<Vec<(String, BufferState)>> {
+pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>> {
   let character = character.to_lowercase().next()?;
 
   let pairs = match (current_buffer, character) {
@@ -277,8 +277,8 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<(String, Buf
 
   Some(
     pairs
-      .iter()
-      .map(|(c, state)| (c.to_string(), state.clone()))
-      .collect::<Vec<(String, BufferState)>>(),
+      .into_iter()
+      .map(|(c, state)| BufferPair::new(c, state))
+      .collect::<Vec<BufferPair>>(),
   )
 }

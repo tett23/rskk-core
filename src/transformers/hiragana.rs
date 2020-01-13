@@ -99,36 +99,39 @@ impl Transformable for HiraganaTransformer {
       return tf.push_character(character.to_lowercase().next()?);
     }
 
+    // TODO: 停止したバッファを複数返せるようにする
     hiragana_convert(&self.buffer, character)
       .map(|vec| match &*vec {
         [] => vec![],
-        [(new_buffer, Continue)] => {
+        [pair] if !pair.is_stopped() => {
           vec![
-            box Self::from_stopped_and_buffer(self.config(), &self.stopped, &new_buffer)
+            box Self::from_stopped_and_buffer(self.config(), &self.stopped, &pair.to_string())
               as Box<dyn Transformable>,
           ]
         }
-        [(new_buffer, Stop)] => {
-          vec![
-            box StoppedTransformer::completed(self.config(), self.stopped.clone() + &new_buffer)
-              as Box<dyn Transformable>,
-          ]
-        }
+        [pair] => vec![box StoppedTransformer::completed(
+          self.config(),
+          self.stopped.clone() + &pair.to_string(),
+        ) as Box<dyn Transformable>],
         vec => {
           let (last, elems) = vec.split_last().unwrap();
-          let stopped = elems.iter().fold("".to_string(), |acc, (s, _)| acc + &s);
+          let stopped = elems
+            .iter()
+            .fold("".to_string(), |acc, pair| acc + &pair.to_string());
 
-          match last {
-            (s, Continue) => {
+          match last.state() {
+            Continue => {
               vec![
-                box Self::from_stopped_and_buffer(self.config(), stopped, s.clone())
+                box Self::from_stopped_and_buffer(self.config(), stopped, last.to_string())
                   as Box<dyn Transformable>,
               ]
             }
-            (s, Stop) => vec![
-              box StoppedTransformer::completed(self.config(), stopped + s)
-                as Box<dyn Transformable>,
-            ],
+            Stop => {
+              vec![
+                box StoppedTransformer::completed(self.config(), stopped + &last.to_string())
+                  as Box<dyn Transformable>,
+              ]
+            }
           }
         }
       })

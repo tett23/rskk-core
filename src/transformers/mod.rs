@@ -7,6 +7,7 @@ mod stackable;
 mod stopped;
 mod tables;
 mod unknown_word;
+mod word;
 mod yomi;
 
 use crate::keyboards::{KeyCode, Keyboard, MetaKey};
@@ -22,7 +23,8 @@ pub use hiragana::HiraganaTransformer;
 pub use select_candidate::SelectCandidateTransformer;
 pub use stackable::Stackable;
 pub use stopped::{StoppedReason, StoppedTransformer};
-pub use unknown_word::{UnknownWordTransformer, Word};
+pub use unknown_word::UnknownWordTransformer;
+pub use word::Word;
 pub use yomi::YomiTransformer;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -36,9 +38,6 @@ pub trait Displayable {
   fn display_string(&self) -> String;
   fn is_empty(&self) -> bool {
     self.buffer_content().len() == 0
-  }
-  fn pair(&self) -> (String, Option<String>) {
-    (self.buffer_content(), None)
   }
 }
 

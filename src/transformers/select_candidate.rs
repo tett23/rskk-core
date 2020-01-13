@@ -1,10 +1,9 @@
 use super::StoppedTransformer;
 use super::{
   AsTransformerTrait, BufferState, Config, Displayable, KeyCode, Stackable, Transformable,
-  TransformerTypes, WithConfig,
+  TransformerTypes, UnknownWordTransformer, WithConfig, Word,
 };
 use crate::dictionary::{Candidate, DictionaryEntry};
-use crate::transformers::tables::convert_from_str;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidateTransformer {
@@ -13,18 +12,18 @@ pub struct SelectCandidateTransformer {
   buffer_state: BufferState,
   dictionary_entry: DictionaryEntry,
   candidates: Candidates,
-  okuri: Option<char>,
+  word: Word,
 }
 
 impl SelectCandidateTransformer {
-  pub fn new(config: Config, dictionary_entry: &DictionaryEntry, okuri: Option<char>) -> Self {
+  pub fn new(config: Config, dictionary_entry: &DictionaryEntry, word: Word) -> Self {
     SelectCandidateTransformer {
       config,
       buffer: "".to_string(),
       buffer_state: BufferState::Continue,
       dictionary_entry: dictionary_entry.clone(),
       candidates: Candidates::new(&dictionary_entry.candidates),
-      okuri,
+      word,
     }
   }
 
@@ -38,19 +37,15 @@ impl SelectCandidateTransformer {
       )))
   }
 
-  fn append_okuri(stem: &str, yomi: &str, okuri: Option<char>) -> String {
-    stem
-      .rfind(|c: char| c.is_ascii_lowercase())
-      .map(|idx| stem.split_at(idx))
-      .and_then(|pair| match pair {
-        (_, "") => None,
-        (_, c) => Some(c),
-      })
-      .and_then(|consonant| Some((consonant, okuri?)))
-      .map(|(consonant, vowel)| format!("{}{}", consonant, vowel))
-      .and_then(|al| convert_from_str(&al))
-      .map(|a| yomi.to_owned() + &a)
-      .unwrap_or(yomi.to_owned())
+  fn append_okuri(&self) -> Option<String> {
+    self
+      .candidates
+      .current()
+      .map(|candidate| candidate.entry.clone() + &self.word.okuri_string().unwrap_or("".to_owned()))
+  }
+
+  fn transition_to_unknown_word(&self) -> UnknownWordTransformer {
+    UnknownWordTransformer::new(self.config(), self.word.clone())
   }
 }
 
@@ -81,10 +76,7 @@ impl Transformable for SelectCandidateTransformer {
     let mut new_state = self.clone();
     Some(match new_state.candidates.next() {
       Some(_) => vec![box new_state],
-      None => {
-        // TODO: 単語登録に遷移
-        unimplemented!()
-      }
+      None => vec![box self.transition_to_unknown_word()],
     })
   }
 
@@ -110,13 +102,7 @@ impl Transformable for SelectCandidateTransformer {
 
 impl Displayable for SelectCandidateTransformer {
   fn buffer_content(&self) -> String {
-    self
-      .candidates
-      .current()
-      .map(|candidate| {
-        Self::append_okuri(&self.dictionary_entry.read, &candidate.entry, self.okuri)
-      })
-      .unwrap_or("".to_owned())
+    self.append_okuri().unwrap_or("".to_owned())
   }
 
   fn display_string(&self) -> String {
@@ -199,18 +185,6 @@ mod tests {
   use TransformerTypes::*;
 
   #[test]
-  fn append_okuri() {
-    let item = SelectCandidateTransformer::append_okuri("かんじ", "漢字", None);
-    assert_eq!(item, "漢字");
-
-    let item = SelectCandidateTransformer::append_okuri("かんじ", "漢字", Some('a'));
-    assert_eq!(item, "漢字");
-
-    let item = SelectCandidateTransformer::append_okuri("おくr", "送", Some('i'));
-    assert_eq!(item, "送り");
-  }
-
-  #[test]
   fn space() {
     let config = Config::new(
       Rc::new(RSKKConfig::default_config()),
@@ -220,7 +194,8 @@ mod tests {
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
+    let select_candidate =
+      SelectCandidateTransformer::new(config.clone(), &dictionary_entry, Word::new());
 
     assert_eq!(select_candidate.buffer_content(), "a");
     assert_eq!(
@@ -243,7 +218,8 @@ mod tests {
     let candidate1 = Candidate::new("a", None);
     let vec = vec![candidate1.clone()];
     let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
+    let select_candidate =
+      SelectCandidateTransformer::new(config.clone(), &dictionary_entry, Word::new());
 
     let stopped = select_candidate.push_meta_key(&key!("enter")).unwrap();
     let stopped = stopped.first().unwrap();
@@ -261,7 +237,8 @@ mod tests {
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate = SelectCandidateTransformer::new(config.clone(), &dictionary_entry, None);
+    let select_candidate =
+      SelectCandidateTransformer::new(config.clone(), &dictionary_entry, Word::new());
 
     let select_candidate = select_candidate.push_meta_key(&key!("space")).unwrap();
     let select_candidate = select_candidate.first().unwrap();

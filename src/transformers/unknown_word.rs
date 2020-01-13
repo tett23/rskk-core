@@ -1,35 +1,7 @@
 use super::{
   AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, Transformable,
-  TransformerTypes, WithConfig,
+  TransformerTypes, WithConfig, Word,
 };
-
-#[derive(Clone, Debug)]
-pub struct Word(String, Option<String>);
-
-impl Word {
-  pub fn new<S: Into<String>>(yomi: S, okuri: Option<S>) -> Self {
-    Word(
-      yomi.into(),
-      match okuri {
-        Some(s) => Some(s.into()),
-        None => None,
-      },
-    )
-  }
-
-  pub fn display_string(&self) -> String {
-    match &self.1 {
-      Some(okuri) => self.0.clone() + "*" + &okuri,
-      None => self.0.clone(),
-    }
-  }
-}
-
-impl From<(String, Option<String>)> for Word {
-  fn from((yomi, okuri): (String, Option<String>)) -> Self {
-    Word::new(yomi, okuri)
-  }
-}
 
 #[derive(Clone)]
 pub struct UnknownWordTransformer {
@@ -118,6 +90,7 @@ impl Displayable for UnknownWordTransformer {
       .iter()
       .fold("".to_string(), |acc, item| acc + &item.display_string());
 
+    dbg!(self.word.display_string());
     "[登録: ".to_string() + &self.word.display_string() + "]" + &buf
   }
 }
@@ -189,7 +162,7 @@ mod tests {
   fn it_works() {
     let conf = dummy_conf();
 
-    let items = tds![conf, UnknownWordTransformer, Word::new("みちご", None);
+    let items = tds![conf, UnknownWordTransformer, Word::from("michigo");
       ["[escape]", "", Stopped(Canceled)],
       ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
       ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
