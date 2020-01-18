@@ -1,5 +1,7 @@
+use super::direct;
 use super::hiragana;
 use super::{BufferState, LetterType};
+use LetterType::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BufferPair {
@@ -22,7 +24,13 @@ impl BufferPair {
   }
 
   pub fn push(&self, character: char) -> Option<Vec<BufferPair>> {
-    hiragana::convert(&self.buffer, character)
+    match &self.letter_type {
+      &Direct => direct::convert(&self.buffer, character),
+      &Hiragana => hiragana::convert(&self.buffer, character),
+      &Katakana => unimplemented!(),
+      &EnKatakana => unimplemented!(),
+      &EmEisu => unimplemented!(),
+    }
   }
 
   pub fn is_stopped(&self) -> bool {
@@ -57,7 +65,6 @@ impl BufferPair {
 mod tests {
   use super::BufferState::*;
   use super::*;
-  use LetterType::*;
 
   #[test]
   fn push() {

@@ -1,6 +1,6 @@
+use super::tables::{BufferPairs, LetterType};
 use super::{
-  AsTransformerTrait, Config, Displayable, Stackable, StoppedTransformer, Transformable,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
@@ -9,14 +9,14 @@ use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct DirectTransformer {
   config: Config,
-  buffer: String,
+  buffer: BufferPairs,
 }
 
 impl DirectTransformer {
   pub fn new(config: Config) -> Self {
     DirectTransformer {
       config,
-      buffer: "".to_string(),
+      buffer: BufferPairs::new(LetterType::Direct),
     }
   }
 
@@ -50,10 +50,13 @@ impl Transformable for DirectTransformer {
   }
 
   fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
-    Some(vec![box StoppedTransformer::completed(
-      self.config(),
-      character.to_string(),
-    )])
+    let mut tf = self.clone();
+
+    tf.buffer.push(character);
+    Some(vec![match tf.buffer.is_stopped() {
+      true => tf.to_completed(),
+      false => box tf,
+    }])
   }
 }
 
@@ -81,11 +84,11 @@ impl Stackable for DirectTransformer {
 
 impl Displayable for DirectTransformer {
   fn buffer_content(&self) -> String {
-    self.buffer.clone()
+    self.buffer.to_string()
   }
 
   fn display_string(&self) -> String {
-    self.buffer.clone()
+    self.buffer_content()
   }
 }
 
