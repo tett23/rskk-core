@@ -178,6 +178,7 @@ impl Candidates {
 
 #[cfg(test)]
 mod tests {
+  use super::super::tables::LetterType;
   use super::*;
   use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
@@ -193,7 +194,7 @@ mod tests {
     let tf = SelectCandidateTransformer::new(
       conf.clone(),
       &DictionaryEntry::new("test", vec),
-      Word::from("michigo"),
+      Word::from((LetterType::Hiragana, "michigo")),
     );
 
     let items = tds![tf;

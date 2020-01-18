@@ -151,6 +151,7 @@ impl Stackable for UnknownWordTransformer {
 
 #[cfg(test)]
 mod tests {
+  use super::super::tables::LetterType;
   use super::*;
   use crate::tds;
   use crate::tests::{dummy_conf, test_transformer};
@@ -162,7 +163,7 @@ mod tests {
   fn it_works() {
     let conf = dummy_conf();
 
-    let items = tds![conf, UnknownWordTransformer, Word::from("michigo");
+    let items = tds![conf, UnknownWordTransformer, Word::from((LetterType::Hiragana, "michigo"));
       ["[escape]", "", Stopped(Canceled)],
       ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
       ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],

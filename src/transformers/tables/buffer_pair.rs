@@ -1,5 +1,6 @@
 use super::direct;
 use super::hiragana;
+use super::katakana;
 use super::{BufferState, LetterType};
 use LetterType::*;
 
@@ -12,7 +13,7 @@ pub struct BufferPair {
 
 impl BufferPair {
   pub fn new<S: Into<String>>(letter_type: LetterType, buffer: S, state: BufferState) -> Self {
-    BufferPair {
+    Self {
       buffer: buffer.into(),
       state,
       letter_type,
@@ -27,7 +28,7 @@ impl BufferPair {
     match &self.letter_type {
       &Direct => direct::convert(&self.buffer, character),
       &Hiragana => hiragana::convert(&self.buffer, character),
-      &Katakana => unimplemented!(),
+      &Katakana => katakana::convert(&self.buffer, character),
       &EnKatakana => unimplemented!(),
       &EmEisu => unimplemented!(),
     }

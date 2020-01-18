@@ -2,6 +2,7 @@ mod buffer_pair;
 mod buffer_pairs;
 mod direct;
 mod hiragana;
+mod katakana;
 
 use super::BufferState;
 

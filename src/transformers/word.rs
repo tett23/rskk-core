@@ -6,8 +6,8 @@ use super::LetterType;
 pub struct YomiPair(BufferPairs, Option<BufferPairs>);
 
 impl YomiPair {
-  pub fn new() -> Self {
-    YomiPair(BufferPairs::new(LetterType::Hiragana), None)
+  pub fn new(letter_type: LetterType) -> Self {
+    YomiPair(BufferPairs::new(letter_type), None)
   }
 
   pub fn push(&mut self, character: char) {
@@ -31,7 +31,7 @@ impl YomiPair {
   }
 
   pub fn start_okuri(&mut self) {
-    self.1 = Some(BufferPairs::new(LetterType::Hiragana))
+    self.1 = Some(BufferPairs::new(self.0.letter_type()))
   }
 
   pub fn is_empty(&self) -> bool {
@@ -61,9 +61,9 @@ pub struct Word {
 }
 
 impl Word {
-  pub fn new() -> Self {
+  pub fn new(letter_type: LetterType) -> Self {
     Word {
-      pair: YomiPair::new(),
+      pair: YomiPair::new(letter_type),
       okuri: None,
     }
   }
@@ -143,9 +143,9 @@ impl Displayable for Word {
   }
 }
 
-impl From<&str> for Word {
-  fn from(item: &str) -> Self {
-    item.chars().fold(Word::new(), |mut acc, c| {
+impl From<(LetterType, &str)> for Word {
+  fn from((letter_type, item): (LetterType, &str)) -> Self {
+    item.chars().fold(Word::new(letter_type), |mut acc, c| {
       acc.push(c);
       acc
     })
@@ -154,34 +154,47 @@ impl From<&str> for Word {
 
 #[cfg(test)]
 mod tests {
+  use super::LetterType::*;
   use super::*;
 
   #[test]
   fn to_dic_read() {
-    assert_eq!(Word::from("").to_dic_read(), None);
-    assert_eq!(&Word::from("a").to_dic_read().unwrap(), "あ");
-    assert_eq!(&Word::from("aTte").to_dic_read().unwrap(), "あt");
+    assert_eq!(Word::from((Hiragana, "")).to_dic_read(), None);
+    assert_eq!(&Word::from((Hiragana, "a")).to_dic_read().unwrap(), "あ");
+    assert_eq!(
+      &Word::from((Hiragana, "aTte")).to_dic_read().unwrap(),
+      "あt"
+    );
   }
 
   #[test]
   fn to_string_pair() {
-    assert_eq!(Word::from("").to_string_pair(), ("".to_owned(), None));
-    assert_eq!(Word::from("a").to_string_pair(), ("あ".to_owned(), None));
     assert_eq!(
-      Word::from("aTte").to_string_pair(),
+      Word::from((Hiragana, "")).to_string_pair(),
+      ("".to_owned(), None)
+    );
+    assert_eq!(
+      Word::from((Hiragana, "a")).to_string_pair(),
+      ("あ".to_owned(), None)
+    );
+    assert_eq!(
+      Word::from((Hiragana, "aTte")).to_string_pair(),
       ("あ".to_owned(), Some("って".to_owned()))
     );
     assert_eq!(
-      Word::from("okuR").to_string_pair(),
+      Word::from((Hiragana, "okuR")).to_string_pair(),
       ("おく".to_owned(), Some("r".to_owned()))
     );
   }
 
   #[test]
   fn display_string() {
-    assert_eq!(&Word::from("").display_string(), "");
-    assert_eq!(&Word::from("hiragana").display_string(), "ひらがな");
-    assert_eq!(&Word::from("aTte").display_string(), "あ*って");
-    assert_eq!(&Word::from("okuR").display_string(), "おく*r");
+    assert_eq!(&Word::from((Hiragana, "")).display_string(), "");
+    assert_eq!(
+      &Word::from((Hiragana, "hiragana")).display_string(),
+      "ひらがな"
+    );
+    assert_eq!(&Word::from((Hiragana, "aTte")).display_string(), "あ*って");
+    assert_eq!(&Word::from((Hiragana, "okuR")).display_string(), "おく*r");
   }
 }

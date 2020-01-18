@@ -1,3 +1,4 @@
+use super::tables::LetterType;
 use super::{
   AsTransformerTrait, Config, Displayable, SelectCandidateTransformer, Stackable,
   StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
@@ -15,7 +16,13 @@ impl YomiTransformer {
     YomiTransformer {
       config: config.clone(),
       current_transformer_type: transformer_type,
-      word: Word::new(),
+      word: Word::new(match transformer_type {
+        TransformerTypes::Hiragana => LetterType::Hiragana,
+        TransformerTypes::Katakana => LetterType::Katakana,
+        TransformerTypes::EnKatakana => unimplemented!(),
+        TransformerTypes::EmEisu => unimplemented!(),
+        _ => unreachable!(),
+      }),
     }
   }
 

@@ -8,23 +8,23 @@ use crate::{set, tf};
 use std::collections::HashSet;
 
 #[derive(Clone)]
-pub struct HiraganaTransformer {
+pub struct KatakanaTransformer {
   config: Config,
   buffer: BufferPairs,
 }
 
-impl HiraganaTransformer {
+impl KatakanaTransformer {
   pub fn new(config: Config) -> Self {
-    HiraganaTransformer {
+    KatakanaTransformer {
       config,
-      buffer: BufferPairs::new(LetterType::Hiragana),
+      buffer: BufferPairs::new(LetterType::Katakana),
     }
   }
 
   fn allow_transformers() -> HashSet<TransformerTypes> {
     set![
       TransformerTypes::Direct,
-      TransformerTypes::Katakana,
+      TransformerTypes::Hiragana,
       TransformerTypes::EnKatakana,
       TransformerTypes::EmEisu
     ]
@@ -34,7 +34,7 @@ impl HiraganaTransformer {
     match character.is_uppercase() {
       true => Some(box HenkanTransformer::new(
         self.config(),
-        TransformerTypes::Hiragana,
+        TransformerTypes::Katakana,
       )),
       false => None,
     }
@@ -48,15 +48,15 @@ impl HiraganaTransformer {
   }
 }
 
-impl WithConfig for HiraganaTransformer {
+impl WithConfig for KatakanaTransformer {
   fn config(&self) -> Config {
     self.config.clone()
   }
 }
 
-impl Transformable for HiraganaTransformer {
+impl Transformable for KatakanaTransformer {
   fn transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::Hiragana
+    TransformerTypes::Katakana
   }
 
   fn try_change_transformer(
@@ -81,7 +81,11 @@ impl Transformable for HiraganaTransformer {
     }
 
     let mut tf = self.clone();
+    dbg!(&tf.as_trait());
+    dbg!(&tf.buffer);
     tf.buffer.push(character);
+    dbg!(&tf.as_trait());
+    dbg!(&tf.buffer);
     // TODO: 停止したバッファを複数返せるようにする
     Some(vec![match tf.buffer.is_stopped() {
       true => tf.to_completed(),
@@ -117,7 +121,7 @@ impl Transformable for HiraganaTransformer {
   }
 }
 
-impl Displayable for HiraganaTransformer {
+impl Displayable for KatakanaTransformer {
   fn buffer_content(&self) -> String {
     self.buffer.to_string()
   }
@@ -127,13 +131,13 @@ impl Displayable for HiraganaTransformer {
   }
 }
 
-impl AsTransformerTrait for HiraganaTransformer {
+impl AsTransformerTrait for KatakanaTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
     box self.clone()
   }
 }
 
-impl Stackable for HiraganaTransformer {
+impl Stackable for KatakanaTransformer {
   fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
     unreachable!()
   }
@@ -160,7 +164,7 @@ impl Stackable for HiraganaTransformer {
   }
 
   fn child_transformer_type(&self) -> TransformerTypes {
-    TransformerTypes::Hiragana
+    TransformerTypes::Katakana
   }
 }
 
@@ -175,20 +179,20 @@ mod tests {
   fn it_works() {
     let conf = dummy_conf();
 
-    let items = tds![conf, Hiragana;
-      ["a", "あ", Stopped(Compleated)],
-      ["k", "k", Hiragana],
+    let items = tds![conf, Katakana;
+      ["a", "ア", Stopped(Compleated)],
+      ["k", "k", Katakana],
       ["k[escape]", "", Stopped(Canceled)],
       ["k[backspace]", "", Stopped(Canceled)],
-      ["ts[backspace]", "t", Hiragana],
-      ["ka", "か", Stopped(Compleated)],
-      ["tt", "っt", Hiragana],
-      ["tt[backspace]", "っ", Stopped(Compleated)],
-      ["tte", "って", Stopped(Compleated)],
-      ["tte[backspace]", "っ", Stopped(Compleated)],
+      ["ts[backspace]", "t", Katakana],
+      ["ka", "カ", Stopped(Compleated)],
+      ["tt", "ッt", Katakana],
+      ["tt[backspace]", "ッ", Stopped(Compleated)],
+      ["tte", "ッテ", Stopped(Compleated)],
+      ["tte[backspace]", "ッ", Stopped(Compleated)],
       ["k[escape]", "", Stopped(Canceled)],
-      ["Kannji", "▽かんじ", Henkan],
-      ["Kanji", "▽かんじ", Henkan],
+      ["Kannji", "▽カンジ", Henkan],
+      ["Kanji", "▽カンジ", Henkan],
     ];
     test_transformer(items);
   }
@@ -197,12 +201,12 @@ mod tests {
   fn stack() {
     let conf = dummy_conf();
 
-    let tf = tfe!(conf, Hiragana; "").pop().0;
+    let tf = tfe!(conf, Katakana; "").pop().0;
     assert_eq!(tf.transformer_type(), Stopped(Canceled));
     assert_eq!(tf.buffer_content(), "");
 
-    let tf = tfe!(conf, Hiragana; "ts").pop().0;
-    assert_eq!(tf.transformer_type(), Hiragana);
+    let tf = tfe!(conf, Katakana; "ts").pop().0;
+    assert_eq!(tf.transformer_type(), Katakana);
     assert_eq!(tf.buffer_content(), "t");
   }
 }

@@ -63,6 +63,10 @@ impl BufferPairs {
     self.buffer.is_empty()
   }
 
+  pub fn letter_type(&self) -> LetterType {
+    self.letter_type
+  }
+
   fn push_new_pair(&mut self) {
     self.buffer.push(BufferPair::new_empty(self.letter_type))
   }
@@ -70,13 +74,14 @@ impl BufferPairs {
 
 impl From<(LetterType, &str)> for BufferPairs {
   fn from((letter_type, buffer): (LetterType, &str)) -> Self {
-    buffer.chars().collect::<Vec<char>>().into_iter().fold(
-      BufferPairs::new(letter_type),
-      |mut acc, c| {
+    buffer
+      .chars()
+      .collect::<Vec<char>>()
+      .into_iter()
+      .fold(Self::new(letter_type), |mut acc, c| {
         acc.push(c);
         acc
-      },
-    )
+      })
   }
 }
 

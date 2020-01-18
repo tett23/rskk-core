@@ -43,7 +43,13 @@ impl LetterTransformer {
     match character.is_uppercase() {
       true => Some(box HenkanTransformer::new(
         self.config(),
-        TransformerTypes::Hiragana,
+        match &self.letter_type {
+          &Direct => unreachable!(),
+          &Hiragana => TransformerTypes::Hiragana,
+          &Katakana => TransformerTypes::Katakana,
+          &EnKatakana => unimplemented!(),
+          &EmEisu => unimplemented!(),
+        },
       )),
       false => None,
     }

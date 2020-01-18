@@ -293,7 +293,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
   Some(
     pairs
       .into_iter()
-      .map(|(c, state)| BufferPair::new(Hiragana, c, state))
+      .map(|(c, state)| BufferPair::new(Katakana, c, state))
       .collect::<Vec<BufferPair>>(),
   )
 }

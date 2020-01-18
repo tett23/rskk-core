@@ -278,6 +278,9 @@ macro_rules! tf {
             crate::transformers::TransformerTypes::Hiragana => {
                 Box::new(crate::transformers::HiraganaTransformer::new($conf))
             }
+            crate::transformers::TransformerTypes::Katakana => {
+                Box::new(crate::transformers::KatakanaTransformer::new($conf))
+            }
             crate::transformers::TransformerTypes::Henkan => {
                 Box::new(crate::transformers::HenkanTransformer::new(
                     $conf,
