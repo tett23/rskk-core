@@ -57,6 +57,7 @@ impl YomiPair {
 #[derive(Clone, Debug)]
 pub struct Word {
   pair: YomiPair,
+  dic_read: BufferPairs,
   okuri: Option<char>,
 }
 
@@ -64,6 +65,7 @@ impl Word {
   pub fn new(letter_type: LetterType) -> Self {
     Word {
       pair: YomiPair::new(letter_type),
+      dic_read: BufferPairs::new(LetterType::Hiragana),
       okuri: None,
     }
   }
@@ -77,6 +79,10 @@ impl Word {
     if character.is_ascii_uppercase() {
       self.pair.start_okuri();
       self.okuri = Some(lowercase);
+    }
+
+    if self.okuri.is_none() {
+      self.dic_read.push(lowercase);
     }
 
     self.pair.push(lowercase);
@@ -111,15 +117,14 @@ impl Word {
   }
 
   pub fn to_dic_read(&self) -> Option<String> {
-    let yomi = self.pair.yomi_string();
-    if yomi.is_empty() {
+    if self.dic_read.is_empty() {
       return None;
     }
 
-    Some(match self.okuri {
-      Some(character) => self.pair.yomi_string() + &character.to_string(),
-      None => self.pair.yomi_string(),
-    })
+    let read =
+      self.dic_read.to_string() + &self.okuri.map(|c| c.to_string()).unwrap_or("".to_owned());
+
+    Some(read)
   }
 
   fn to_string_pair(&self) -> (String, Option<String>) {
@@ -165,6 +170,13 @@ mod tests {
       &Word::from((Hiragana, "aTte")).to_dic_read().unwrap(),
       "あt"
     );
+
+    assert_eq!(Word::from((Katakana, "")).to_dic_read(), None);
+    assert_eq!(&Word::from((Katakana, "a")).to_dic_read().unwrap(), "あ");
+    assert_eq!(
+      &Word::from((Katakana, "aTte")).to_dic_read().unwrap(),
+      "あt"
+    );
   }
 
   #[test]
@@ -185,6 +197,23 @@ mod tests {
       Word::from((Hiragana, "okuR")).to_string_pair(),
       ("おく".to_owned(), Some("r".to_owned()))
     );
+
+    assert_eq!(
+      Word::from((Katakana, "")).to_string_pair(),
+      ("".to_owned(), None)
+    );
+    assert_eq!(
+      Word::from((Katakana, "a")).to_string_pair(),
+      ("ア".to_owned(), None)
+    );
+    assert_eq!(
+      Word::from((Katakana, "aTte")).to_string_pair(),
+      ("ア".to_owned(), Some("ッテ".to_owned()))
+    );
+    assert_eq!(
+      Word::from((Katakana, "okuR")).to_string_pair(),
+      ("オク".to_owned(), Some("r".to_owned()))
+    );
   }
 
   #[test]
@@ -196,5 +225,13 @@ mod tests {
     );
     assert_eq!(&Word::from((Hiragana, "aTte")).display_string(), "あ*って");
     assert_eq!(&Word::from((Hiragana, "okuR")).display_string(), "おく*r");
+
+    assert_eq!(&Word::from((Katakana, "")).display_string(), "");
+    assert_eq!(
+      &Word::from((Katakana, "hiragana")).display_string(),
+      "ヒラガナ"
+    );
+    assert_eq!(&Word::from((Katakana, "aTte")).display_string(), "ア*ッテ");
+    assert_eq!(&Word::from((Katakana, "okuR")).display_string(), "オク*r");
   }
 }
