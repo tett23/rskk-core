@@ -300,6 +300,9 @@ macro_rules! tf {
     ( $conf:expr, YomiTransformer, $v:expr ) => {
         Box::new(crate::transformers::YomiTransformer::new($conf, $v))
     };
+    ( $tf:expr ) => {
+        box $tf
+    };
 }
 
 #[macro_export]
@@ -322,6 +325,9 @@ macro_rules! td {
     ($conf:expr, $tf:tt, $tf_v1:expr; [$input:expr, $out:expr, $out_tf:expr]) => {{
         crate::tests::TestData::new(crate::tf!($conf, $tf, $tf_v1), $input, $out, $out_tf)
     }};
+    ($tf:expr; [$input:expr, $out:expr, $out_tf:expr]) => {{
+        crate::tests::TestData::new(crate::tf!($tf), $input, $out, $out_tf)
+    }};
 }
 
 #[macro_export]
@@ -334,6 +340,11 @@ macro_rules! tds {
     ( $conf:expr, $tf:tt, $tf_v1:expr; $( [ $($x:expr),* $(,)? ] ),* $(,)? ) => {{
         vec![
             $( crate::td![$conf.clone(), $tf, $tf_v1; [ $($x),* ] ], )*
+        ]
+    }};
+    ( $tf:expr; $( [ $($x:expr),* $(,)? ] ),* $(,)? ) => {{
+        vec![
+            $( crate::td![$tf.clone(); [ $($x),* ] ], )*
         ]
     }};
 }
