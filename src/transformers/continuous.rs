@@ -1,6 +1,5 @@
 use super::{
-  AsTransformerTrait, Config, Displayable, Stackable, StoppedTransformer, Transformable,
-  TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::{KeyCode, Keyboard};
 use crate::tf;
@@ -17,20 +16,16 @@ impl ContinuousTransformer {
     ContinuousTransformer {
       config: config.clone(),
       current_transformer_type: transformer_type,
-      stack: vec![tf!(config, transformer_type)],
+      stack: vec![],
     }
-  }
-
-  fn stopped_buffer_content(&self) -> String {
-    self
-      .stack
-      .iter()
-      .filter(|tf| tf.is_stopped())
-      .fold("".to_string(), |acc, tf| acc + &tf.buffer_content())
   }
 
   fn base_transformer(&self) -> Box<dyn Transformable> {
     tf!(self.config(), self.current_transformer_type)
+  }
+
+  fn push_new_base_transformer(&mut self) {
+    self.stack.push(self.base_transformer())
   }
 }
 
@@ -57,12 +52,16 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
-    let mut vec = self.stack.last()?.push_character(character)?;
-    if vec.last().map(|last| last.is_stopped()).unwrap_or(false) {
-      vec.push(self.base_transformer());
+    let mut tf = self.clone();
+    match &*tf.stack {
+      [] => tf.push_new_base_transformer(),
+      [.., last] if last.is_stopped() => tf.push_new_base_transformer(),
+      _ => {}
     }
 
-    Some(self.replace_last_element(vec))
+    tf.stack
+      .last()
+      .and_then(|last| Some(tf.replace_last_element(last.push_character(character)?)))
   }
 
   fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
@@ -74,41 +73,18 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    if self.stack.last()?.is_empty() {
-      return Some(vec![box StoppedTransformer::completed(
-        self.config(),
-        self.stopped_buffer_content(),
-      )]);
+    match &*self.stack {
+      [] => Some(vec![]),
+      [.., last] if last.is_stopped() => Some(vec![self.to_completed()]),
+      [.., last] => Some(self.replace_last_element(last.push_enter()?)),
     }
-
-    let mut tfs = self.stack.last()?.push_enter()?;
-    if tfs.last().map(|last| last.is_stopped()).unwrap_or(false) {
-      tfs.push(self.base_transformer())
-    }
-
-    Some(self.replace_last_element(tfs))
   }
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    if self.is_empty() {
-      return Some(vec![]);
+    match &*self.stack {
+      [] => Some(vec![]),
+      [.., last] => Some(self.replace_last_element(last.push_backspace()?)),
     }
-
-    self
-      .stack
-      .last()?
-      .push_backspace()
-      .and_then(|tfs| Some(self.replace_last_element(tfs)))
-      .or_else(|| {
-        let mut tf = self.clone();
-        tf.stack.pop();
-        let stopped_tf = tf.stack.pop();
-        let mut stopped_tf = stopped_tf.unwrap().push_backspace()?;
-        tf.stack.append(&mut stopped_tf);
-        tf.stack.push(self.base_transformer());
-
-        Some(vec![box tf])
-      })
   }
 
   fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {

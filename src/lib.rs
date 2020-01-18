@@ -1,4 +1,5 @@
 #![feature(box_syntax)]
+#![feature(slice_patterns)]
 #![allow(improper_ctypes)]
 
 #[macro_use]

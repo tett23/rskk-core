@@ -1,42 +1,24 @@
-use super::tables::hiragana_convert;
+use super::tables::{BufferPairs, LetterType};
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, HenkanTransformer, Stackable,
-  StoppedTransformer, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Config, Displayable, HenkanTransformer, Stackable, Transformable,
+  TransformerTypes, WithConfig,
 };
 use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
 use std::collections::HashSet;
-use BufferState::*;
 
 #[derive(Clone)]
 pub struct HiraganaTransformer {
   config: Config,
-  stopped: String,
-  buffer: String,
+  buffer: BufferPairs,
 }
 
 impl HiraganaTransformer {
   pub fn new(config: Config) -> Self {
     HiraganaTransformer {
       config,
-      stopped: "".to_string(),
-      buffer: "".to_string(),
+      buffer: BufferPairs::new(LetterType::Hiragana),
     }
-  }
-
-  pub fn from_buffer<S: Into<String>>(config: Config, buffer: S) -> Self {
-    let mut ret = Self::new(config);
-    ret.buffer = buffer.into();
-
-    ret
-  }
-
-  pub fn from_stopped_and_buffer<S: Into<String>>(config: Config, stopped: S, buffer: S) -> Self {
-    let mut ret = Self::new(config);
-    ret.stopped = stopped.into();
-    ret.buffer = buffer.into();
-
-    ret
   }
 
   fn allow_transformers() -> HashSet<TransformerTypes> {
@@ -99,60 +81,33 @@ impl Transformable for HiraganaTransformer {
       return tf.push_character(character.to_lowercase().next()?);
     }
 
+    let mut tf = self.clone();
+    tf.buffer.push(character);
     // TODO: 停止したバッファを複数返せるようにする
-    hiragana_convert(&self.buffer, character)
-      .map(|vec| match &*vec {
-        [] => vec![],
-        [pair] if !pair.is_stopped() => {
-          vec![
-            box Self::from_stopped_and_buffer(self.config(), &self.stopped, &pair.to_string())
-              as Box<dyn Transformable>,
-          ]
-        }
-        [pair] => vec![box StoppedTransformer::completed(
-          self.config(),
-          self.stopped.clone() + &pair.to_string(),
-        ) as Box<dyn Transformable>],
-        vec => {
-          let (last, elems) = vec.split_last().unwrap();
-          let stopped = elems
-            .iter()
-            .fold("".to_string(), |acc, pair| acc + &pair.to_string());
-
-          match last.state() {
-            Continue => {
-              vec![
-                box Self::from_stopped_and_buffer(self.config(), stopped, last.to_string())
-                  as Box<dyn Transformable>,
-              ]
-            }
-            Stop => {
-              vec![
-                box StoppedTransformer::completed(self.config(), stopped + &last.to_string())
-                  as Box<dyn Transformable>,
-              ]
-            }
-          }
-        }
-      })
-      .or(Some(vec![]))
+    Some(vec![match tf.buffer.is_stopped() {
+      true => tf.to_completed(),
+      false => box tf,
+    }])
   }
 
   fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    match self.is_empty() {
-      true => Some(vec![]),
-      false => Some(vec![self.pop().0]),
+    match self.buffer.is_empty() {
+      true => None,
+      false => Some(vec![]),
     }
   }
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    match self.is_empty() {
+    match self.buffer.is_empty() {
       true => None,
       false => {
-        let tf = self.pop().0;
-        match tf.is_canceled() {
+        let mut tf = self.clone();
+        tf.buffer.remove_last();
+
+        match tf.buffer.is_empty() {
           true => Some(vec![]),
-          false => Some(vec![tf]),
+          false if tf.buffer.is_stopped() => Some(vec![tf.to_completed()]),
+          false => Some(vec![box tf]),
         }
       }
     }
@@ -165,7 +120,7 @@ impl Transformable for HiraganaTransformer {
 
 impl Displayable for HiraganaTransformer {
   fn buffer_content(&self) -> String {
-    self.stopped.clone() + &self.buffer
+    self.buffer.to_string()
   }
 
   fn display_string(&self) -> String {
@@ -175,7 +130,7 @@ impl Displayable for HiraganaTransformer {
 
 impl AsTransformerTrait for HiraganaTransformer {
   fn as_trait(&self) -> Box<dyn Transformable> {
-    Box::new(self.clone())
+    box self.clone()
   }
 }
 
@@ -185,17 +140,16 @@ impl Stackable for HiraganaTransformer {
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    let mut ret = self.clone();
-    ret.buffer.pop();
-
-    let ret = match (ret.buffer.len() == 0, &self.stopped.clone() as &str) {
-      (true, "") => ret.to_canceled(),
-      (false, "") => box Self::from_buffer(self.config(), &ret.buffer),
-      (true, _) => ret.to_completed(),
-      (false, s) => box Self::from_stopped_and_buffer(self.config(), s, &ret.buffer),
+    let mut tf = self.clone();
+    let tf = match tf.buffer.is_empty() {
+      true => tf.to_canceled(),
+      false => {
+        tf.buffer.remove_last();
+        box tf
+      }
     };
 
-    (ret, Some(self.to_canceled()))
+    (tf, None)
   }
 
   fn replace_last_element(&self, _: Vec<Box<dyn Transformable>>) -> Vec<Box<dyn Transformable>> {

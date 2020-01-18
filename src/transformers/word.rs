@@ -25,7 +25,7 @@ impl YomiPair {
         self.1 = None;
       }
       (yomi, None) => {
-        yomi.pop();
+        yomi.remove_last();
       }
     }
   }

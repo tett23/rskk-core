@@ -1,4 +1,4 @@
-use super::{BufferPair, LetterType};
+use super::{BufferPair, BufferState, LetterType};
 
 #[derive(Clone, Debug)]
 pub struct BufferPairs {
@@ -9,25 +9,22 @@ pub struct BufferPairs {
 impl BufferPairs {
   pub fn new(letter_type: LetterType) -> Self {
     BufferPairs {
-      buffer: vec![BufferPair::new_empty(letter_type)],
+      buffer: vec![],
       letter_type,
     }
   }
 
   pub fn push(&mut self, character: char) {
-    if let Some(pair) = self.buffer.last() {
-      if pair.is_stopped() {
-        self.buffer.push(BufferPair::new_empty(self.letter_type))
-      }
-    };
-    let pair = self
-      .buffer
-      .pop()
-      .unwrap_or(BufferPair::new_empty(self.letter_type));
+    match &*self.buffer {
+      [] => self.push_new_pair(),
+      [.., last] if last.is_stopped() => self.push_new_pair(),
+      _ => {}
+    }
 
-    pair.push(character).and_then(|vec| {
-      vec.into_iter().for_each(|pair| self.buffer.push(pair));
-      Some(())
+    self.buffer.pop().and_then(|pair| {
+      pair
+        .push(character)
+        .map(|vec| vec.into_iter().for_each(|pair| self.buffer.push(pair)))
     });
   }
 
@@ -39,8 +36,20 @@ impl BufferPairs {
       .unwrap_or(false)
   }
 
-  pub fn pop(&mut self) -> Option<BufferPair> {
-    self.buffer.pop()
+  pub fn remove_last(&mut self) -> Option<BufferPair> {
+    let mut pair = self.buffer.pop()?;
+    match pair.state() {
+      BufferState::Stop => Some(pair),
+      BufferState::Continue => {
+        let character = pair.remove_last()?;
+        let ret = BufferPair::new(self.letter_type, character.to_string(), BufferState::Stop);
+        if !pair.is_empty() {
+          self.buffer.push(pair);
+        }
+
+        Some(ret)
+      }
+    }
   }
 
   pub fn to_string(&self) -> String {
@@ -52,6 +61,10 @@ impl BufferPairs {
 
   pub fn is_empty(&self) -> bool {
     self.buffer.is_empty()
+  }
+
+  fn push_new_pair(&mut self) {
+    self.buffer.push(BufferPair::new_empty(self.letter_type))
   }
 }
 
@@ -93,6 +106,44 @@ mod tests {
     assert_eq!(
       &BufferPairs::from((Hiragana, "hogehoge")).to_string(),
       "ほげほげ"
+    );
+  }
+
+  #[test]
+  fn remove_last() {
+    let mut pairs = BufferPairs::from((Hiragana, ""));
+    assert_eq!(pairs.remove_last(), None);
+    assert_eq!(pairs.buffer, vec![]);
+
+    let mut pairs = BufferPairs::from((Hiragana, "a"));
+    assert_eq!(
+      pairs.remove_last(),
+      Some(BufferPair::new(pairs.letter_type, "あ", BufferState::Stop))
+    );
+    assert_eq!(pairs.buffer, vec![]);
+
+    let mut pairs = BufferPairs::from((Hiragana, "ts"));
+    assert_eq!(
+      pairs.remove_last(),
+      Some(BufferPair::new(pairs.letter_type, "s", BufferState::Stop))
+    );
+    assert_eq!(
+      pairs.buffer,
+      vec![BufferPair::new(
+        pairs.letter_type,
+        "t",
+        BufferState::Continue
+      )]
+    );
+
+    let mut pairs = BufferPairs::from((Hiragana, "tt"));
+    assert_eq!(
+      pairs.remove_last(),
+      Some(BufferPair::new(pairs.letter_type, "t", BufferState::Stop))
+    );
+    assert_eq!(
+      pairs.buffer,
+      vec![BufferPair::new(pairs.letter_type, "っ", BufferState::Stop)]
     );
   }
 }

@@ -29,12 +29,27 @@ impl BufferPair {
     self.state == BufferState::Stop
   }
 
+  pub fn is_empty(&self) -> bool {
+    self.buffer.is_empty()
+  }
+
   pub fn to_string(&self) -> String {
     self.buffer.clone()
   }
 
   pub fn state(&self) -> BufferState {
     self.state
+  }
+
+  pub fn remove_last(&mut self) -> Option<char> {
+    let mut vec = self.buffer.chars().collect::<Vec<char>>();
+    let character = vec.pop();
+
+    self.buffer = vec
+      .into_iter()
+      .fold(String::new(), |acc, c| acc + &c.to_string());
+
+    character
   }
 }
 
@@ -72,5 +87,40 @@ mod tests {
         BufferPair::new(Hiragana, "t", Continue)
       ])
     );
+  }
+
+  #[test]
+  fn remove_last() {
+    let mut pair = BufferPair::new_empty(Hiragana);
+    assert_eq!(pair.remove_last(), None);
+    assert_eq!(pair.buffer, "");
+
+    let mut pair = BufferPair::new_empty(Hiragana)
+      .push('a')
+      .unwrap()
+      .pop()
+      .unwrap();
+    assert_eq!(pair.remove_last(), Some('あ'));
+    assert_eq!(pair.buffer, "");
+
+    let mut pair = BufferPair::new_empty(Hiragana)
+      .push('t')
+      .unwrap()
+      .pop()
+      .unwrap();
+    assert_eq!(pair.remove_last(), Some('t'));
+    assert_eq!(pair.buffer, "");
+
+    let mut pair = BufferPair::new_empty(Hiragana)
+      .push('t')
+      .unwrap()
+      .pop()
+      .unwrap()
+      .push('s')
+      .unwrap()
+      .pop()
+      .unwrap();
+    assert_eq!(pair.remove_last(), Some('s'));
+    assert_eq!(pair.buffer, "t");
   }
 }

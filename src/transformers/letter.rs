@@ -1,4 +1,3 @@
-use super::tables::hiragana_convert;
 use super::tables::BufferPair;
 use super::{
   AsTransformerTrait, BufferState, Config, Displayable, HenkanTransformer, Stackable,
