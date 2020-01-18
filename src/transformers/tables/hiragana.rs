@@ -185,7 +185,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
     ("xy", 'i') => Some(vec![("い", Stop)]),
     ("xy", 'u') => Some(vec![("ゅ", Stop)]),
     ("xy", 'e') => Some(vec![("え", Stop)]),
-    ("xy", 'o') => Some(vec![("ぉ", Stop)]),
+    ("xy", 'o') => Some(vec![("ょ", Stop)]),
 
     // 「tte」 -> 「って」のような促音のルール
     // TODO: 「kkkk」 -> 「っっっk」のような連続した促音のルールが未実装
