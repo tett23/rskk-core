@@ -1,12 +1,13 @@
 use super::tables::BufferPairs;
 use super::Displayable;
+use super::LetterType;
 
 #[derive(Clone, Debug)]
 pub struct YomiPair(BufferPairs, Option<BufferPairs>);
 
 impl YomiPair {
   pub fn new() -> Self {
-    YomiPair(BufferPairs::new(), None)
+    YomiPair(BufferPairs::new(LetterType::Hiragana), None)
   }
 
   pub fn push(&mut self, character: char) {
@@ -30,7 +31,7 @@ impl YomiPair {
   }
 
   pub fn start_okuri(&mut self) {
-    self.1 = Some(BufferPairs::new())
+    self.1 = Some(BufferPairs::new(LetterType::Hiragana))
   }
 
   pub fn is_empty(&self) -> bool {

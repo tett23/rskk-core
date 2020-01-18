@@ -23,6 +23,7 @@ pub use hiragana::HiraganaTransformer;
 pub use select_candidate::SelectCandidateTransformer;
 pub use stackable::Stackable;
 pub use stopped::{StoppedReason, StoppedTransformer};
+pub use tables::LetterType;
 pub use unknown_word::UnknownWordTransformer;
 pub use word::Word;
 pub use yomi::YomiTransformer;
@@ -269,5 +270,5 @@ pub enum TransformerTypes {
   SelectCandidate,
   UnknownWord,
   Continuous,
-  OkuriCompleted,
+  Letter(LetterType),
 }

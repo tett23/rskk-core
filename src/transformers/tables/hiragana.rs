@@ -1,5 +1,6 @@
 use super::super::BufferState::*;
-use super::BufferPair;
+use super::{BufferPair, LetterType};
+use LetterType::*;
 
 pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>> {
   let character = character.to_lowercase().next()?;
@@ -292,7 +293,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
   Some(
     pairs
       .into_iter()
-      .map(|(c, state)| BufferPair::new(c, state))
+      .map(|(c, state)| BufferPair::new(Hiragana, c, state))
       .collect::<Vec<BufferPair>>(),
   )
 }
