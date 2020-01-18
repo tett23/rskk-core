@@ -1,5 +1,4 @@
 #![feature(box_syntax)]
-#![feature(result_map_or_else)]
 #![allow(improper_ctypes)]
 
 #[macro_use]
