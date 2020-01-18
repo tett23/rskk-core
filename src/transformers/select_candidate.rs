@@ -76,7 +76,7 @@ impl Transformable for SelectCandidateTransformer {
     let mut new_state = self.clone();
     Some(match new_state.candidates.next() {
       Some(_) => vec![box new_state],
-      None => vec![box self.transition_to_unknown_word()],
+      None => vec![box self.clone(), box self.transition_to_unknown_word()],
     })
   }
 
@@ -179,76 +179,36 @@ impl Candidates {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::tds;
+  use crate::tests::{dummy_conf, test_transformer};
   use crate::transformers::StoppedReason::*;
-  use crate::{key, set, Dictionary, RSKKConfig};
-  use std::rc::Rc;
   use TransformerTypes::*;
 
   #[test]
-  fn space() {
-    let config = Config::new(
-      Rc::new(RSKKConfig::default_config()),
-      Rc::new(Dictionary::new(set![])),
-    );
+  fn it_works() {
+    let conf = dummy_conf();
     let candidate1 = Candidate::new("a", None);
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
-    let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate =
-      SelectCandidateTransformer::new(config.clone(), &dictionary_entry, Word::new());
-
-    assert_eq!(select_candidate.buffer_content(), "a");
-    assert_eq!(
-      select_candidate
-        .push_meta_key(&key!("space"))
-        .unwrap()
-        .iter()
-        .fold("".to_owned(), |acc, item| acc + &item.buffer_content()),
-      "b"
+    let tf = SelectCandidateTransformer::new(
+      conf.clone(),
+      &DictionaryEntry::new("test", vec),
+      Word::from("michigo"),
     );
-    // TODO: 単語登録のテストCandidate
-  }
 
-  #[test]
-  fn enter() {
-    let config = Config::new(
-      Rc::new(RSKKConfig::default_config()),
-      Rc::new(Dictionary::new(set![])),
-    );
-    let candidate1 = Candidate::new("a", None);
-    let vec = vec![candidate1.clone()];
-    let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate =
-      SelectCandidateTransformer::new(config.clone(), &dictionary_entry, Word::new());
-
-    let stopped = select_candidate.push_meta_key(&key!("enter")).unwrap();
-    let stopped = stopped.first().unwrap();
-    assert_eq!(stopped.transformer_type(), Stopped(Compleated));
-    assert_eq!(stopped.buffer_content(), "a");
-  }
-
-  #[test]
-  fn delete() {
-    let config = Config::new(
-      Rc::new(RSKKConfig::default_config()),
-      Rc::new(Dictionary::new(set![])),
-    );
-    let candidate1 = Candidate::new("a", None);
-    let candidate2 = Candidate::new("b", None);
-    let vec = vec![candidate1.clone(), candidate2.clone()];
-    let dictionary_entry = DictionaryEntry::new("test", vec);
-    let select_candidate =
-      SelectCandidateTransformer::new(config.clone(), &dictionary_entry, Word::new());
-
-    let select_candidate = select_candidate.push_meta_key(&key!("space")).unwrap();
-    let select_candidate = select_candidate.first().unwrap();
-    let select_candidate = select_candidate.push_meta_key(&key!("delete")).unwrap();
-    let select_candidate = select_candidate.first().unwrap();
-    assert_eq!(select_candidate.buffer_content(), "a");
-
-    let canceled = select_candidate.push_meta_key(&key!("delete")).unwrap();
-    let canceled = canceled.first();
-    assert_eq!(canceled.is_none(), true);
+    let items = tds![tf;
+      ["", "▼a", SelectCandidate],
+      ["[backspace]", "", Stopped(Canceled)],
+      ["[escape]", "", Stopped(Canceled)],
+      ["\n", "a", Stopped(Compleated)],
+      [" ", "▼b", SelectCandidate],
+      [" [backspace]", "▼a", SelectCandidate],
+      ["  ", "[登録: みちご]", UnknownWord],
+      ["  [escape]", "", Stopped(Canceled)],
+      ["  a", "[登録: みちご]あ", UnknownWord],
+      ["  a\n", "あ", Stopped(Compleated)],
+    ];
+    test_transformer(items);
   }
 
   mod candidates {
