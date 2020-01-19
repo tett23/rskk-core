@@ -142,10 +142,10 @@ struct Candidates {
 
 impl Candidates {
   pub fn new(candidates: &Vec<Candidate>) -> Self {
-    let mut items = Vec::new();
-    for item in candidates.iter() {
-      items.push(item.clone());
-    }
+    let items = candidates.iter().fold(vec![], |mut acc, c| {
+      acc.push(c.clone());
+      acc
+    });
 
     Candidates {
       candidates: items,
