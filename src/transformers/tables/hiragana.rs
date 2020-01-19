@@ -32,13 +32,25 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
     ("s", 'u') => Some(vec![("す", Stop)]),
     ("s", 'e') => Some(vec![("せ", Stop)]),
     ("s", 'o') => Some(vec![("そ", Stop)]),
+    ("s", 'y') => Some(vec![("sy", Continue)]),
+    ("sy", 'a') => Some(vec![("し", Stop), ("ゃ", Stop)]),
+    ("sy", 'i') => Some(vec![("し", Stop), ("ぃ", Stop)]),
+    ("sy", 'u') => Some(vec![("し", Stop), ("ゅ", Stop)]),
+    ("sy", 'e') => Some(vec![("し", Stop), ("ぇ", Stop)]),
+    ("sy", 'o') => Some(vec![("し", Stop), ("ょ", Stop)]),
+    ("s", 'h') => Some(vec![("sh", Continue)]),
+    ("sh", 'a') => Some(vec![("しゃ", Stop), ("ゃ", Stop)]),
+    ("sh", 'i') => Some(vec![("し", Stop)]),
+    ("sh", 'u') => Some(vec![("しゅ", Stop), ("ゅ", Stop)]),
+    ("sh", 'e') => Some(vec![("しぇ", Stop), ("ぇ", Stop)]),
+    ("sh", 'o') => Some(vec![("しょ", Stop), ("ょ", Stop)]),
 
     ("", 'z') => Some(vec![("z", Continue)]),
     ("z", 'a') => Some(vec![("ざ", Stop)]),
     ("z", 'i') => Some(vec![("じ", Stop)]),
     ("z", 'u') => Some(vec![("ず", Stop)]),
-    ("z", 'e') => Some(vec![("で", Stop)]),
-    ("z", 'o') => Some(vec![("ど", Stop)]),
+    ("z", 'e') => Some(vec![("ぜ", Stop)]),
+    ("z", 'o') => Some(vec![("ぞ", Stop)]),
 
     ("", 't') => Some(vec![("t", Continue)]),
     ("t", 'a') => Some(vec![("た", Stop)]),
@@ -260,6 +272,11 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
     ("", '&') => Some(vec![("&", Stop)]),
     ("", '*') => Some(vec![("*", Stop)]),
 
+    ("", '-') => Some(vec![("ー", Stop)]),
+    ("", '_') => Some(vec![("_", Stop)]),
+    ("", '+') => Some(vec![("+", Stop)]),
+    ("", '=') => Some(vec![("=", Stop)]),
+
     ("", '\\') => Some(vec![("\\", Stop)]),
     ("", '|') => Some(vec![("|", Stop)]),
 
@@ -274,6 +291,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
 
     // 複合記号類
     ("z", ' ') => Some(vec![("　", Stop)]),
+    ("z", '-') => Some(vec![("〜", Stop)]),
 
     ("z", '[') => Some(vec![("『", Stop)]),
     ("z", ']') => Some(vec![("』", Stop)]),

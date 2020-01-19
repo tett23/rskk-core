@@ -32,6 +32,18 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
     ("s", 'u') => Some(vec![("ス", Stop)]),
     ("s", 'e') => Some(vec![("セ", Stop)]),
     ("s", 'o') => Some(vec![("ソ", Stop)]),
+    ("s", 'y') => Some(vec![("sy", Continue)]),
+    ("sy", 'a') => Some(vec![("シャ", Stop), ("ャ", Stop)]),
+    ("sy", 'i') => Some(vec![("シィ", Stop), ("ィ", Stop)]),
+    ("sy", 'u') => Some(vec![("シュ", Stop), ("ュ", Stop)]),
+    ("sy", 'e') => Some(vec![("シェ", Stop), ("ェ", Stop)]),
+    ("sy", 'o') => Some(vec![("ショ", Stop), ("ョ", Stop)]),
+    ("s", 'h') => Some(vec![("sh", Continue)]),
+    ("sh", 'a') => Some(vec![("シャ", Stop), ("ャ", Stop)]),
+    ("sh", 'i') => Some(vec![("シャ", Stop)]),
+    ("sh", 'u') => Some(vec![("シュ", Stop), ("ュ", Stop)]),
+    ("sh", 'e') => Some(vec![("シェ", Stop), ("ェ", Stop)]),
+    ("sh", 'o') => Some(vec![("ショ", Stop), ("ョ", Stop)]),
 
     ("", 'z') => Some(vec![("z", Continue)]),
     ("z", 'a') => Some(vec![("ザ", Stop)]),
@@ -260,6 +272,11 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
     ("", '&') => Some(vec![("&", Stop)]),
     ("", '*') => Some(vec![("*", Stop)]),
 
+    ("", '-') => Some(vec![("ー", Stop)]),
+    ("", '_') => Some(vec![("_", Stop)]),
+    ("", '+') => Some(vec![("+", Stop)]),
+    ("", '=') => Some(vec![("=", Stop)]),
+
     ("", '\\') => Some(vec![("\\", Stop)]),
     ("", '|') => Some(vec![("|", Stop)]),
 
@@ -274,6 +291,7 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
 
     // 複合記号類
     ("z", ' ') => Some(vec![("　", Stop)]),
+    ("z", '-') => Some(vec![("〜", Stop)]),
 
     ("z", '[') => Some(vec![("『", Stop)]),
     ("z", ']') => Some(vec![("』", Stop)]),
