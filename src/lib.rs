@@ -244,6 +244,9 @@ macro_rules! tf {
             crate::transformers::TransformerTypes::Katakana => {
                 Box::new(crate::transformers::KatakanaTransformer::new($conf))
             }
+            crate::transformers::TransformerTypes::Abbr => {
+                Box::new(crate::transformers::AbbrTransformer::new($conf))
+            }
             crate::transformers::TransformerTypes::Henkan => {
                 Box::new(crate::transformers::HenkanTransformer::new(
                     $conf,

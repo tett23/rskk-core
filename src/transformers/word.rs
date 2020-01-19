@@ -54,6 +54,19 @@ impl YomiPair {
   }
 }
 
+impl From<(LetterType, &str)> for YomiPair {
+  fn from((letter_type, buffer): (LetterType, &str)) -> Self {
+    buffer
+      .chars()
+      .collect::<Vec<char>>()
+      .into_iter()
+      .fold(Self::new(letter_type), |mut acc, c| {
+        acc.push(c);
+        acc
+      })
+  }
+}
+
 #[derive(Clone, Debug)]
 pub struct Word {
   pair: YomiPair,
@@ -63,9 +76,18 @@ pub struct Word {
 
 impl Word {
   pub fn new(letter_type: LetterType) -> Self {
-    Word {
+    Self {
       pair: YomiPair::new(letter_type),
       dic_read: BufferPairs::new(LetterType::Hiragana),
+      okuri: None,
+    }
+  }
+
+  pub fn new_abbr<S: Into<String>>(buf: S) -> Self {
+    let buf = &buf.into() as &str;
+    Self {
+      pair: YomiPair::from((LetterType::Direct, buf)),
+      dic_read: BufferPairs::from((LetterType::Direct, buf)),
       okuri: None,
     }
   }

@@ -1,3 +1,4 @@
+mod abbr;
 mod continuous;
 mod direct;
 mod henkan;
@@ -17,6 +18,7 @@ use objekt;
 use std::fmt;
 use std::rc::Rc;
 
+pub use abbr::AbbrTransformer;
 pub use continuous::ContinuousTransformer;
 pub use direct::DirectTransformer;
 pub use henkan::HenkanTransformer;

@@ -16,10 +16,11 @@ pub fn dummy_conf() -> Config {
     Rc::new(RSKKConfig::default_config()),
     Rc::new(Dictionary::parse(
       "
-かんじ/漢字/
-みち/未知/道/
-ご/語/
-おくr/送/
+かんじ /漢字/
+みち /未知/道/
+ご /語/
+おくr /送/
+test /テスト/
     ",
     )),
   )
