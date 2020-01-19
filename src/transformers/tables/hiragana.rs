@@ -263,8 +263,8 @@ pub fn convert(current_buffer: &str, character: char) -> Option<Vec<BufferPair>>
     ("", '\\') => Some(vec![("\\", Stop)]),
     ("", '|') => Some(vec![("|", Stop)]),
 
-    ("", '(') => Some(vec![("（", Stop)]),
-    ("", ')') => Some(vec![("）", Stop)]),
+    ("", '(') => Some(vec![("(", Stop)]),
+    ("", ')') => Some(vec![(")", Stop)]),
     ("", '[') => Some(vec![("「", Stop)]),
     ("", ']') => Some(vec![("」", Stop)]),
     ("", '{') => Some(vec![("{", Stop)]),
