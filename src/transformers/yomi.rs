@@ -1,6 +1,8 @@
+use kana::{half2kana, hira2kata, kata2hira};
+
 use super::tables::LetterType;
 use super::{
-  AsTransformerTrait, Config, Displayable, SelectCandidateTransformer, Stackable,
+  AsTransformerTrait, Config, Displayable, KeyCode, SelectCandidateTransformer, Stackable,
   StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
 };
 
@@ -110,6 +112,21 @@ impl Transformable for YomiTransformer {
   fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
     self.push_backspace()
   }
+
+  fn push_any_character(&self, key: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
+    match key.printable_key() {
+      Some('q') => Some(vec![box StoppedTransformer::completed(
+        self.config(),
+        match self.current_transformer_type {
+          TransformerTypes::Hiragana => hira2kata(&self.buffer_content()),
+          TransformerTypes::Katakana => kata2hira(&self.buffer_content()),
+          TransformerTypes::EnKatakana => half2kana(&self.buffer_content()),
+          _ => return None,
+        },
+      )]),
+      _ => None,
+    }
+  }
 }
 
 impl Displayable for YomiTransformer {
@@ -194,6 +211,7 @@ mod tests {
       ["aK[backspace][backspace]a", "▽あ", Yomi],
       ["aK[backspace][backspace]K", "▽k", Yomi],
       ["henka[backspace][backspace]", "▽へ", Yomi],
+      ["katakanaq", "カタカナ", Stopped(Compleated)],
     ];
     test_transformer(items);
 

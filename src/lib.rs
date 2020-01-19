@@ -4,6 +4,7 @@
 
 #[macro_use]
 extern crate serde;
+extern crate kana;
 
 mod composition;
 mod dictionary;
@@ -373,6 +374,8 @@ mod lib_tests {
             ["[down:ctrl]j[up:ctrl]Henkann[backspace]nn", "▽へんかん", Henkan],
             ["[down:ctrl]j[up:ctrl]Kanji \n", "漢字", Stopped(Compleated)],
             ["[down:ctrl]j[up:ctrl]qka", "カ", Stopped(Compleated)],
+            ["[down:ctrl]j[up:ctrl]Katakanaq", "カタカナ", Stopped(Compleated)],
+            ["[down:ctrl]j[up:ctrl]qHiraganaq", "ひらがな", Stopped(Compleated)],
         ];
         test_transformer(items);
     }
