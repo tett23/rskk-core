@@ -160,6 +160,9 @@ impl<'a> KeyEventProcessor<'a> {
         KeyCode::PrintableMeta(MetaKey::Space, _) if transformer.is_base_transformer() => None,
         KeyCode::PrintableMeta(MetaKey::Enter, _) if transformer.is_base_transformer() => None,
         KeyCode::PrintableMeta(MetaKey::Tab, _) if transformer.is_base_transformer() => None,
+        KeyCode::PrintableMeta(MetaKey::Shift, _) if transformer.is_base_transformer() => None,
+        KeyCode::PrintableMeta(MetaKey::Ctrl, _) if transformer.is_base_transformer() => None,
+        KeyCode::PrintableMeta(MetaKey::Super, _) if transformer.is_base_transformer() => None,
         _ => Some(()),
       },
       false => match key {

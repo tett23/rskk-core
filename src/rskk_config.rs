@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::keyboards::{KeyCode, KeyCombination, KeyCombinations, Keyboards};
 use crate::transformers::TransformerTypes;
-use crate::{combo, combos, key};
+use crate::{combo, combos};
 use std::collections::HashSet;
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
@@ -78,14 +78,14 @@ impl KeyConfig {
 
   pub fn default_config() -> Self {
     KeyConfig {
-      enter: combos![combo![key!("enter")]],
-      enter_hiragana_transformer: combos![combo![key!("ctrl"), key!("j")]],
-      enter_katakana_transformer: combos![combo![key!("q")]],
-      enter_en_katakana_transformer: combos![combo![key!("ctrl"), key!("q")]],
-      enter_em_eisu_transformer: combos![combo![key!("shift"), key!("l")]],
-      enter_abbr_transformer: combos![combo![key!("/")]],
-      enter_direct_transformer: combos![combo![key!("l")]],
-      sticky_key: combos![combo![key!(";")]],
+      enter: combos![combo![KeyCode::from("enter")]],
+      enter_hiragana_transformer: combos![combo![KeyCode::from("ctrl"), KeyCode::from("j")]],
+      enter_katakana_transformer: combos![combo![KeyCode::from("q")]],
+      enter_en_katakana_transformer: combos![combo![KeyCode::from("ctrl"), KeyCode::from("q")]],
+      enter_em_eisu_transformer: combos![combo![KeyCode::from("shift"), KeyCode::from("l")]],
+      enter_abbr_transformer: combos![combo![KeyCode::from("/")]],
+      enter_direct_transformer: combos![combo![KeyCode::from("l")]],
+      sticky_key: combos![combo![KeyCode::from(";")]],
     }
   }
 }

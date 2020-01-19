@@ -221,44 +221,6 @@ macro_rules! combos {
   };
 
 }
-#[macro_export]
-macro_rules! key {
-    ( $v:expr ) => {
-        match $v {
-            "ctrl" | "left_control" | "right_control" => {
-                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Ctrl)
-            }
-            "shift" | "left_shift" | "right_shift" => {
-                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Shift)
-            }
-            "alt" | "left_option" | "right_option" => {
-                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Alt)
-            }
-            "super" | "left_command" | "right_command" => {
-                crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Super)
-            }
-            "enter" | "return" | "\n" => {
-                crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Enter, '\n')
-            }
-            "space" | " " => {
-                crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Space, ' ')
-            }
-            "tab" | "\t" => {
-                crate::keyboards::KeyCode::PrintableMeta(crate::keyboards::MetaKey::Tab, '\t')
-            }
-            "escape" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Escape),
-            "delete" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Delete),
-            "backspace" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::Backspace),
-            "arrow_right" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowRight),
-            "arrow_down" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowDown),
-            "arrow_left" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowLeft),
-            "arrow_up" => crate::keyboards::KeyCode::Meta(crate::keyboards::MetaKey::ArrowUp),
-            "null" => crate::keyboards::KeyCode::Null,
-            string if string == "" => crate::keyboards::KeyCode::Null,
-            string => crate::keyboards::KeyCode::Printable(string.chars().next().unwrap()),
-        }
-    };
-}
 
 #[macro_export]
 macro_rules! tf {

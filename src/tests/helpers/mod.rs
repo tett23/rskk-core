@@ -5,7 +5,7 @@ pub mod transformer;
 
 use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
 use crate::transformers::Config;
-use crate::{key, Dictionary, RSKKConfig};
+use crate::{Dictionary, RSKKConfig};
 use std::rc::Rc;
 use KeyEvents::*;
 
@@ -71,7 +71,7 @@ fn parse_token(token: &str) -> Option<Vec<KeyEvents>> {
   let idx = idx.unwrap();
 
   let (action, key) = token.split_at(idx);
-  let key = key!(&key[1..]);
+  let key = KeyCode::from(&key[1..]);
   match action {
     "up" => Some(vec![KeyEvents::KeyUp(key)]),
     "down" => Some(vec![KeyEvents::KeyDown(key)]),
@@ -95,7 +95,7 @@ fn build_events(key: &KeyCode, with_shift: bool) -> Vec<KeyEvents> {
 
 fn to_key_events(character: &str) -> Option<Vec<KeyEvents>> {
   let lowercase = character.to_lowercase().to_string();
-  let key = key!(&*lowercase);
+  let key = KeyCode::from(&*lowercase);
 
   Some(build_events(
     &key,
@@ -113,31 +113,37 @@ mod tests {
     assert_eq!(
       events,
       vec![
-        KeyDown(key!("shift")),
-        KeyDown(key!("a")),
-        KeyUp(key!("a")),
-        KeyUp(key!("shift")),
-        KeyDown(key!("shift")),
-        KeyDown(key!("b")),
-        KeyUp(key!("b")),
-        KeyUp(key!("shift")),
+        KeyDown(KeyCode::from("shift")),
+        KeyDown(KeyCode::from("a")),
+        KeyUp(KeyCode::from("a")),
+        KeyUp(KeyCode::from("shift")),
+        KeyDown(KeyCode::from("shift")),
+        KeyDown(KeyCode::from("b")),
+        KeyUp(KeyCode::from("b")),
+        KeyUp(KeyCode::from("shift")),
       ]
     );
 
     let events = str_to_key_code_vector("[ctrl]");
-    assert_eq!(events, vec![KeyDown(key!("ctrl")), KeyUp(key!("ctrl"))]);
+    assert_eq!(
+      events,
+      vec![KeyDown(KeyCode::from("ctrl")), KeyUp(KeyCode::from("ctrl"))]
+    );
 
     let events = str_to_key_code_vector("[a]");
-    assert_eq!(events, vec![KeyDown(key!("a")), KeyUp(key!("a"))]);
+    assert_eq!(
+      events,
+      vec![KeyDown(KeyCode::from("a")), KeyUp(KeyCode::from("a"))]
+    );
 
     let events = str_to_key_code_vector(" \n");
     assert_eq!(
       events,
       vec![
-        KeyDown(key!(" ")),
-        KeyUp(key!(" ")),
-        KeyDown(key!("\n")),
-        KeyUp(key!("\n"))
+        KeyDown(KeyCode::from(" ")),
+        KeyUp(KeyCode::from(" ")),
+        KeyDown(KeyCode::from("\n")),
+        KeyUp(KeyCode::from("\n"))
       ]
     );
   }
