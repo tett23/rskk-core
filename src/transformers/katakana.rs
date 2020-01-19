@@ -81,11 +81,7 @@ impl Transformable for KatakanaTransformer {
     }
 
     let mut tf = self.clone();
-    dbg!(&tf.as_trait());
-    dbg!(&tf.buffer);
     tf.buffer.push(character);
-    dbg!(&tf.as_trait());
-    dbg!(&tf.buffer);
     // TODO: 停止したバッファを複数返せるようにする
     Some(vec![match tf.buffer.is_stopped() {
       true => tf.to_completed(),
