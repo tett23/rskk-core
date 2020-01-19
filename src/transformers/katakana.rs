@@ -1,7 +1,7 @@
 use super::tables::{BufferPairs, LetterType};
 use super::{
-  AsTransformerTrait, Config, Displayable, HenkanTransformer, Stackable, Transformable,
-  TransformerTypes, WithConfig,
+  AbbrTransformer, AsTransformerTrait, Config, Displayable, HenkanTransformer, Stackable,
+  Transformable, TransformerTypes, WithConfig,
 };
 use crate::keyboards::{KeyCode, Keyboard};
 use crate::{set, tf};
@@ -42,7 +42,7 @@ impl KatakanaTransformer {
 
   fn try_enter_abbr(&self, character: char) -> Option<Box<dyn Transformable>> {
     match character {
-      '/' => unimplemented!(),
+      '/' => Some(box AbbrTransformer::new(self.config())),
       _ => None,
     }
   }
