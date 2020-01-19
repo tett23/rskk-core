@@ -47,6 +47,11 @@ impl KeyConfig {
     {
       return Some(TransformerTypes::Hiragana);
     }
+    if allow.contains(&TransformerTypes::Katakana)
+      && self.enter_katakana_transformer.fulfilled(pressing_keys)
+    {
+      return Some(TransformerTypes::Katakana);
+    }
     if allow.contains(&TransformerTypes::EnKatakana)
       && self.enter_en_katakana_transformer.fulfilled(pressing_keys)
     {
