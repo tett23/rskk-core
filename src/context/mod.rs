@@ -10,11 +10,15 @@ pub struct Context {
 
 impl Context {
   pub fn new(config: Rc<RSKKConfig>, dictionary: Rc<Dictionary>) -> Self {
-    Context {
+    Self {
       config,
       dictionary,
       result: CompositionResult::new(),
     }
+  }
+
+  pub fn new_empty(&self) -> Rc<Self> {
+    Rc::new(Self::new(self.config.clone(), self.dictionary.clone()))
   }
 
   pub fn config(&self) -> &RSKKConfig {

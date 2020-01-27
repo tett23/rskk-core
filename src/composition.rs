@@ -72,7 +72,7 @@ impl Composition {
   }
 
   pub fn next_composition(&self) -> Composition {
-    Composition::new(self.context.clone(), self.base_transformer_type)
+    Composition::new(self.context.new_empty(), self.base_transformer_type)
   }
 
   pub fn buffer_content(&self) -> String {
