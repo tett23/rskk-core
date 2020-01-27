@@ -1,21 +1,24 @@
+use std::rc::Rc;
+
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, KeyCode,
-  SelectCandidateTransformer, Stackable, StoppedTransformer, Transformable, TransformerTypes,
-  UnknownWordTransformer, WithConfig, Word,
+  AsTransformerTrait, ContinuousTransformer, Displayable, KeyCode, SelectCandidateTransformer,
+  Stackable, StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer,
+  WithContext, Word,
 };
+use crate::Context;
 
 #[derive(Clone)]
 pub struct AbbrTransformer {
-  config: Config,
+  context: Rc<Context>,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl AbbrTransformer {
-  pub fn new(config: Config) -> Self {
+  pub fn new(context: Rc<Context>) -> Self {
     Self {
-      config: config.clone(),
+      context: context.clone(),
       stack: vec![box ContinuousTransformer::new(
-        config,
+        context,
         TransformerTypes::Direct,
       )],
     }
@@ -30,14 +33,16 @@ impl AbbrTransformer {
 
   fn try_transition_to_select_candidate(&self) -> Option<SelectCandidateTransformer> {
     self
-      .config
+      .context
       .dictionary()
       .transform(self.to_word().to_dic_read()?)
-      .map(|dic_entry| SelectCandidateTransformer::new(self.config(), dic_entry, self.to_word()))
+      .map(|dic_entry| {
+        SelectCandidateTransformer::new(self.clone_context(), dic_entry, self.to_word())
+      })
   }
 
   fn transition_to_unknown_word(&self) -> UnknownWordTransformer {
-    UnknownWordTransformer::new(self.config(), { self.to_word() })
+    UnknownWordTransformer::new(self.clone_context(), { self.to_word() })
   }
 
   fn to_word(&self) -> Word {
@@ -46,15 +51,19 @@ impl AbbrTransformer {
 
   fn clear_stack(&mut self) {
     self.stack = vec![box ContinuousTransformer::new(
-      self.config(),
+      self.clone_context(),
       TransformerTypes::Direct,
     )]
   }
 }
 
-impl WithConfig for AbbrTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for AbbrTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -149,7 +158,7 @@ impl AsTransformerTrait for AbbrTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => box StoppedTransformer::empty(self.config()),
+      None => box StoppedTransformer::empty(self.clone_context()),
     }
   }
 }
@@ -197,13 +206,13 @@ impl Stackable for AbbrTransformer {
 #[cfg(test)]
 mod tests {
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, Abbr;
       ["[backspace]", "", Stopped(Canceled)],

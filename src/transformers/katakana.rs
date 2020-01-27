@@ -1,22 +1,24 @@
+use std::rc::Rc;
+
 use super::tables::{BufferPairs, LetterType};
 use super::{
-  AbbrTransformer, AsTransformerTrait, Config, Displayable, HenkanTransformer, Stackable,
-  Transformable, TransformerTypes, WithConfig,
+  AbbrTransformer, AsTransformerTrait, Displayable, HenkanTransformer, Stackable, Transformable,
+  TransformerTypes, WithContext,
 };
 use crate::keyboards::{KeyCode, Keyboard};
-use crate::{set, tf};
+use crate::{set, tf, Context};
 use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct KatakanaTransformer {
-  config: Config,
+  context: Rc<Context>,
   buffer: BufferPairs,
 }
 
 impl KatakanaTransformer {
-  pub fn new(config: Config) -> Self {
+  pub fn new(context: Rc<Context>) -> Self {
     KatakanaTransformer {
-      config,
+      context,
       buffer: BufferPairs::new(LetterType::Katakana),
     }
   }
@@ -33,7 +35,7 @@ impl KatakanaTransformer {
   fn try_enter_henkan(&self, character: char) -> Option<Box<dyn Transformable>> {
     match character.is_uppercase() {
       true => Some(box HenkanTransformer::new(
-        self.config(),
+        self.clone_context(),
         TransformerTypes::Katakana,
       )),
       false => None,
@@ -42,15 +44,19 @@ impl KatakanaTransformer {
 
   fn try_enter_abbr(&self, character: char) -> Option<Box<dyn Transformable>> {
     match character {
-      '/' => Some(box AbbrTransformer::new(self.config())),
+      '/' => Some(box AbbrTransformer::new(self.clone_context())),
       _ => None,
     }
   }
 }
 
-impl WithConfig for KatakanaTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for KatakanaTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -65,11 +71,12 @@ impl Transformable for KatakanaTransformer {
     _: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
-      .config
+      .context
+      .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
 
-    Some(tf!(self.config(), transformer_type?))
+    Some(tf!(self.clone_context(), transformer_type?))
   }
 
   fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
@@ -166,14 +173,14 @@ impl Stackable for KatakanaTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
   use crate::{tds, tfe};
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, Katakana;
       ["a", "ア", Stopped(Compleated)],
@@ -195,7 +202,7 @@ mod tests {
 
   #[test]
   fn stack() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let tf = tfe!(conf, Katakana; "").pop().0;
     assert_eq!(tf.transformer_type(), Stopped(Canceled));

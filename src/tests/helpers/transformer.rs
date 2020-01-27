@@ -27,7 +27,7 @@ pub fn test_transformer(items: Vec<TestData>) {
   items.into_iter().enumerate().for_each(
     |(i, TestData(start_transformer, input, output, out_transformer))| {
       let mut composition =
-        Composition::new_from_transformer(start_transformer.config(), start_transformer);
+        Composition::new_from_transformer(start_transformer.clone_context(), start_transformer);
       composition.push_key_events(&str_to_key_code_vector(&input));
       assert_eq!(
         (out_transformer, output.into()),

@@ -1,13 +1,15 @@
-use super::StoppedTransformer;
+use std::rc::Rc;
+
 use super::{
-  AsTransformerTrait, BufferState, Config, Displayable, KeyCode, Stackable, Transformable,
-  TransformerTypes, UnknownWordTransformer, WithConfig, Word,
+  AsTransformerTrait, BufferState, Displayable, KeyCode, Stackable, StoppedTransformer,
+  Transformable, TransformerTypes, UnknownWordTransformer, WithContext, Word,
 };
 use crate::dictionary::{Candidate, DictionaryEntry};
+use crate::Context;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidateTransformer {
-  config: Config,
+  context: Rc<Context>,
   buffer: String,
   buffer_state: BufferState,
   dictionary_entry: DictionaryEntry,
@@ -16,9 +18,9 @@ pub struct SelectCandidateTransformer {
 }
 
 impl SelectCandidateTransformer {
-  pub fn new(config: Config, dictionary_entry: &DictionaryEntry, word: Word) -> Self {
+  pub fn new(context: Rc<Context>, dictionary_entry: &DictionaryEntry, word: Word) -> Self {
     SelectCandidateTransformer {
-      config,
+      context,
       buffer: "".to_string(),
       buffer_state: BufferState::Continue,
       dictionary_entry: dictionary_entry.clone(),
@@ -32,7 +34,7 @@ impl SelectCandidateTransformer {
       .candidates
       .current()
       .and(Some(box StoppedTransformer::completed(
-        self.config(),
+        self.clone_context(),
         self.buffer_content(),
       )))
   }
@@ -45,13 +47,17 @@ impl SelectCandidateTransformer {
   }
 
   fn transition_to_unknown_word(&self) -> UnknownWordTransformer {
-    UnknownWordTransformer::new(self.config(), self.word.clone())
+    UnknownWordTransformer::new(self.clone_context(), self.word.clone())
   }
 }
 
-impl WithConfig for SelectCandidateTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for SelectCandidateTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -181,13 +187,13 @@ mod tests {
   use super::super::tables::LetterType;
   use super::*;
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason::*;
   use TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
     let candidate1 = Candidate::new("a", None);
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];

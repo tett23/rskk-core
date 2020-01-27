@@ -7,6 +7,8 @@ extern crate serde;
 extern crate kana;
 
 mod composition;
+mod composition_result;
+mod context;
 mod dictionary;
 mod keyboards;
 mod rskk_config;
@@ -20,8 +22,10 @@ use std::rc::Rc;
 
 use composition::Composition;
 use keyboards::KeyEvents;
-use transformers::{Config, TransformerTypes};
+use transformers::TransformerTypes;
 
+pub use composition_result::CompositionResult;
+pub use context::Context;
 pub use dictionary::{Dictionary, DictionaryEntry};
 pub use rskk_config::{KeyConfig, RSKKConfig};
 
@@ -57,7 +61,7 @@ impl RSKK {
 
     pub fn start_composition_as(&self, composition_type: TransformerTypes) -> Composition {
         Composition::new(
-            Config::new(self.config.clone(), self.dictionary.clone()),
+            Rc::new(Context::new(self.config.clone(), self.dictionary.clone())),
             composition_type,
         )
     }
@@ -279,7 +283,7 @@ macro_rules! tf {
 macro_rules! tfe {
     ( $conf:expr, $t:tt; $input:expr ) => {{
         let tf = crate::tf!($conf.clone(), $t);
-        let mut composition = crate::Composition::new_from_transformer(tf.config(), tf);
+        let mut composition = crate::Composition::new_from_transformer(tf.clone_context(), tf);
         let vec = crate::tests::str_to_key_code_vector($input);
         composition.push_key_events(&vec);
 
@@ -322,13 +326,13 @@ macro_rules! tds {
 #[cfg(test)]
 mod lib_tests {
     use super::*;
-    use crate::tests::{dummy_conf, test_transformer};
+    use crate::tests::{dummy_context, test_transformer};
     use crate::transformers::StoppedReason::*;
     use TransformerTypes::*;
 
     #[test]
     fn it_works() {
-        let conf = dummy_conf();
+        let conf = dummy_context();
 
         let items = tds![conf, Direct;
             ["a", "a", Stopped(Compleated)],

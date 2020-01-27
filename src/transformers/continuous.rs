@@ -1,27 +1,29 @@
+use std::rc::Rc;
+
 use super::{
-  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
 };
 use crate::keyboards::{KeyCode, Keyboard};
-use crate::tf;
+use crate::{tf, Context};
 
 #[derive(Clone)]
 pub struct ContinuousTransformer {
-  config: Config,
+  context: Rc<Context>,
   current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl ContinuousTransformer {
-  pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Rc<Context>, transformer_type: TransformerTypes) -> Self {
     ContinuousTransformer {
-      config: config.clone(),
+      context,
       current_transformer_type: transformer_type,
       stack: vec![],
     }
   }
 
   fn base_transformer(&self) -> Box<dyn Transformable> {
-    tf!(self.config(), self.current_transformer_type)
+    tf!(self.clone_context(), self.current_transformer_type)
   }
 
   fn push_new_base_transformer(&mut self) {
@@ -29,9 +31,13 @@ impl ContinuousTransformer {
   }
 }
 
-impl WithConfig for ContinuousTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for ContinuousTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -169,14 +175,14 @@ impl Stackable for ContinuousTransformer {
 mod tests {
   use super::*;
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason;
   use StoppedReason::*;
   use TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, ContinuousTransformer, Hiragana;
       ["[escape]", "", Stopped(Canceled)],

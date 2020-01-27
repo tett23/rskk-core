@@ -12,11 +12,12 @@ mod unknown_word;
 mod word;
 mod yomi;
 
-use crate::keyboards::{KeyCode, Keyboard, MetaKey};
-use crate::{Dictionary, KeyConfig, RSKKConfig};
 use objekt;
 use std::fmt;
 use std::rc::Rc;
+
+use crate::keyboards::{KeyCode, Keyboard, MetaKey};
+use crate::Context;
 
 pub use abbr::AbbrTransformer;
 pub use continuous::ContinuousTransformer;
@@ -46,39 +47,13 @@ pub trait Displayable {
   }
 }
 
-#[derive(Clone, Debug)]
-pub struct Config {
-  rskk_config: Rc<RSKKConfig>,
-  dictionary: Rc<Dictionary>,
-}
-
-impl Config {
-  pub fn new(rskk_config: Rc<RSKKConfig>, dictionary: Rc<Dictionary>) -> Self {
-    Config {
-      rskk_config,
-      dictionary,
-    }
-  }
-
-  pub fn rskk_config(&self) -> &RSKKConfig {
-    &self.rskk_config
-  }
-
-  pub fn dictionary(&self) -> &Dictionary {
-    &self.dictionary
-  }
-
-  pub fn key_config(&self) -> &KeyConfig {
-    &self.rskk_config.key_config
-  }
-}
-
-pub trait WithConfig {
-  fn config(&self) -> Config;
+pub trait WithContext {
+  fn context(&self) -> &Context;
+  fn clone_context(&self) -> Rc<Context>;
 }
 
 pub trait Transformable:
-  AsTransformerTrait + WithConfig + Displayable + Stackable + objekt::Clone
+  AsTransformerTrait + Displayable + Stackable + WithContext + objekt::Clone
 {
   fn transformer_type(&self) -> TransformerTypes;
   fn is_base_transformer(&self) -> bool {
@@ -113,11 +88,11 @@ pub trait Transformable:
   }
 
   fn to_completed(&self) -> Box<dyn Transformable> {
-    box StoppedTransformer::completed(self.config(), self.buffer_content())
+    box StoppedTransformer::completed(self.clone_context(), self.buffer_content())
   }
 
   fn to_canceled(&self) -> Box<dyn Transformable> {
-    box StoppedTransformer::canceled(self.config())
+    box StoppedTransformer::canceled(self.clone_context())
   }
 
   fn push_key(&self, key: &KeyCode) -> Option<Box<dyn Transformable>> {

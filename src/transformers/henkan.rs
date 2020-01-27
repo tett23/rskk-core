@@ -1,28 +1,35 @@
+use std::rc::Rc;
+
 use super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, Stackable, StoppedTransformer, Transformable,
-  TransformerTypes, WithConfig, YomiTransformer,
+  AsTransformerTrait, Displayable, KeyCode, Stackable, StoppedTransformer, Transformable,
+  TransformerTypes, WithContext, YomiTransformer,
 };
+use crate::Context;
 
 #[derive(Clone)]
 pub struct HenkanTransformer {
-  config: Config,
+  context: Rc<Context>,
   current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl HenkanTransformer {
-  pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Rc<Context>, transformer_type: TransformerTypes) -> Self {
     HenkanTransformer {
-      config: config.clone(),
+      context: context.clone(),
       current_transformer_type: transformer_type,
-      stack: vec![box YomiTransformer::new(config, transformer_type)],
+      stack: vec![box YomiTransformer::new(context, transformer_type)],
     }
   }
 }
 
-impl WithConfig for HenkanTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for HenkanTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -99,7 +106,7 @@ impl AsTransformerTrait for HenkanTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => box StoppedTransformer::empty(self.config()),
+      None => box StoppedTransformer::empty(self.clone_context()),
     }
   }
 }
@@ -147,13 +154,13 @@ impl Stackable for HenkanTransformer {
 #[cfg(test)]
 mod tests {
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, HenkanTransformer, Hiragana;
       ["hiragana", "▽ひらがな", Henkan],

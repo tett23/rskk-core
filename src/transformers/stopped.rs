@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use super::{
-  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
 };
+use crate::Context;
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
 pub enum StoppedReason {
@@ -10,36 +13,40 @@ pub enum StoppedReason {
 
 #[derive(Clone)]
 pub struct StoppedTransformer {
-  config: Config,
+  context: Rc<Context>,
   reason: StoppedReason,
   buffer: String,
 }
 
 impl StoppedTransformer {
-  pub fn new<S: Into<String>>(config: Config, reason: StoppedReason, buffer: S) -> Self {
+  pub fn new<S: Into<String>>(context: Rc<Context>, reason: StoppedReason, buffer: S) -> Self {
     StoppedTransformer {
-      config,
+      context,
       reason,
       buffer: buffer.into(),
     }
   }
 
-  pub fn completed<S: Into<String>>(config: Config, buffer: S) -> Self {
-    Self::new(config, StoppedReason::Compleated, buffer)
+  pub fn completed<S: Into<String>>(context: Rc<Context>, buffer: S) -> Self {
+    Self::new(context, StoppedReason::Compleated, buffer)
   }
 
-  pub fn empty(config: Config) -> Self {
-    Self::new(config, StoppedReason::Compleated, "")
+  pub fn empty(context: Rc<Context>) -> Self {
+    Self::new(context, StoppedReason::Compleated, "")
   }
 
-  pub fn canceled(config: Config) -> Self {
-    Self::new(config, StoppedReason::Canceled, "")
+  pub fn canceled(context: Rc<Context>) -> Self {
+    Self::new(context, StoppedReason::Canceled, "")
   }
 }
 
-impl WithConfig for StoppedTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for StoppedTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -93,14 +100,14 @@ impl Stackable for StoppedTransformer {
 
     if ret.buffer.len() == 0 {
       return (
-        box StoppedTransformer::canceled(self.config()),
-        Some(box StoppedTransformer::canceled(self.config())),
+        box StoppedTransformer::canceled(self.clone_context()),
+        Some(box StoppedTransformer::canceled(self.clone_context())),
       );
     }
 
     (
       box ret,
-      Some(box StoppedTransformer::canceled(self.config())),
+      Some(box StoppedTransformer::canceled(self.clone_context())),
     )
   }
 
@@ -116,13 +123,13 @@ impl Stackable for StoppedTransformer {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::tests::dummy_conf;
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
   fn stack() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let tf = StoppedTransformer::completed(conf.clone(), "aa").pop().0;
     assert_eq!(tf.transformer_type(), Stopped(Compleated));

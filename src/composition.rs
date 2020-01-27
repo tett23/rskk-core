@@ -1,12 +1,14 @@
+use std::rc::Rc;
+
 use super::keyboards::{KeyCode, KeyEvents, Keyboard, MetaKey};
-use super::transformers::{Config, Transformable, TransformerTypes};
-use crate::tf;
+use super::transformers::{Transformable, TransformerTypes};
+use crate::{tf, Context};
 
 #[derive(Clone)]
 pub struct Composition {
   transformer: Box<dyn Transformable>,
   base_transformer_type: TransformerTypes,
-  config: Config,
+  context: Rc<Context>,
   keyboard: Box<dyn Keyboard>,
   // TODO: 変更のあった辞書要素を保持できる必要あり？
   // 変更は読みと変換先だけあればいいかな。
@@ -15,26 +17,26 @@ pub struct Composition {
 }
 
 impl Composition {
-  pub fn new(config: Config, transformer_types: TransformerTypes) -> Self {
-    let keyboard = config.rskk_config().keyboard_type.to_keyboard();
+  pub fn new(context: Rc<Context>, transformer_types: TransformerTypes) -> Self {
+    let keyboard = context.config().keyboard_type.to_keyboard();
 
     Composition {
-      transformer: tf!(config.clone(), transformer_types),
+      transformer: tf!(context.clone(), transformer_types),
       base_transformer_type: transformer_types,
-      config: config,
-      keyboard: keyboard,
+      context,
+      keyboard,
     }
   }
 
   #[cfg(test)]
-  pub fn new_from_transformer(config: Config, transformer: Box<dyn Transformable>) -> Self {
-    let keyboard = config.rskk_config().keyboard_type.to_keyboard();
+  pub fn new_from_transformer(context: Rc<Context>, transformer: Box<dyn Transformable>) -> Self {
+    let keyboard = context.config().keyboard_type.to_keyboard();
 
     Composition {
       transformer,
       base_transformer_type: TransformerTypes::Direct,
-      config: config,
-      keyboard: keyboard,
+      context,
+      keyboard,
     }
   }
 
@@ -70,7 +72,7 @@ impl Composition {
   }
 
   pub fn next_composition(&self) -> Composition {
-    Composition::new(self.config.clone(), self.base_transformer_type)
+    Composition::new(self.context.clone(), self.base_transformer_type)
   }
 
   pub fn buffer_content(&self) -> String {

@@ -1,22 +1,24 @@
 use kana::{half2kana, hira2kata, kata2hira};
+use std::rc::Rc;
 
 use super::tables::LetterType;
 use super::{
-  AsTransformerTrait, Config, Displayable, KeyCode, SelectCandidateTransformer, Stackable,
-  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithConfig, Word,
+  AsTransformerTrait, Displayable, KeyCode, SelectCandidateTransformer, Stackable,
+  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithContext, Word,
 };
+use crate::Context;
 
 #[derive(Clone, Debug)]
 pub struct YomiTransformer {
-  config: Config,
+  context: Rc<Context>,
   current_transformer_type: TransformerTypes,
   word: Word,
 }
 
 impl YomiTransformer {
-  pub fn new(config: Config, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Rc<Context>, transformer_type: TransformerTypes) -> Self {
     YomiTransformer {
-      config: config.clone(),
+      context,
       current_transformer_type: transformer_type,
       word: Word::new(match transformer_type {
         TransformerTypes::Hiragana => LetterType::Hiragana,
@@ -37,20 +39,26 @@ impl YomiTransformer {
 
   fn try_transition_to_select_candidate(&self) -> Option<SelectCandidateTransformer> {
     self
-      .config
+      .context
       .dictionary()
       .transform(self.word.to_dic_read()?)
-      .map(|dic_entry| SelectCandidateTransformer::new(self.config(), dic_entry, self.word.clone()))
+      .map(|dic_entry| {
+        SelectCandidateTransformer::new(self.clone_context(), dic_entry, self.word.clone())
+      })
   }
 
   fn transition_to_unknown_word(&self) -> UnknownWordTransformer {
-    UnknownWordTransformer::new(self.config(), { self.word.clone() })
+    UnknownWordTransformer::new(self.clone_context(), { self.word.clone() })
   }
 }
 
-impl WithConfig for YomiTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for YomiTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -93,7 +101,7 @@ impl Transformable for YomiTransformer {
     tf.word.remove_okuri();
 
     Some(vec![box StoppedTransformer::completed(
-      self.config(),
+      self.clone_context(),
       tf.word.buffer_content(),
     )])
   }
@@ -116,7 +124,7 @@ impl Transformable for YomiTransformer {
   fn push_any_character(&self, key: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
     match key.printable_key() {
       Some('q') => Some(vec![box StoppedTransformer::completed(
-        self.config(),
+        self.clone_context(),
         match self.current_transformer_type {
           TransformerTypes::Hiragana => hira2kata(&self.buffer_content()),
           TransformerTypes::Katakana => kata2hira(&self.buffer_content()),
@@ -176,13 +184,13 @@ impl Stackable for YomiTransformer {
 #[cfg(test)]
 mod tests {
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, YomiTransformer, Hiragana;
       ["[escape]", "", Stopped(Canceled)],

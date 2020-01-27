@@ -1,21 +1,23 @@
+use std::rc::Rc;
+
 use super::tables::{BufferPairs, LetterType};
 use super::{
-  AsTransformerTrait, Config, Displayable, Stackable, Transformable, TransformerTypes, WithConfig,
+  AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
 };
 use crate::keyboards::{KeyCode, Keyboard};
-use crate::{set, tf};
+use crate::{set, tf, Context};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct DirectTransformer {
-  config: Config,
+  context: Rc<Context>,
   buffer: BufferPairs,
 }
 
 impl DirectTransformer {
-  pub fn new(config: Config) -> Self {
+  pub fn new(context: Rc<Context>) -> Self {
     DirectTransformer {
-      config,
+      context,
       buffer: BufferPairs::new(LetterType::Direct),
     }
   }
@@ -25,9 +27,13 @@ impl DirectTransformer {
   }
 }
 
-impl WithConfig for DirectTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for DirectTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -42,11 +48,12 @@ impl Transformable for DirectTransformer {
     _: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
-      .config
+      .context
+      .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
 
-    Some(tf!(self.config(), transformer_type?))
+    Some(tf!(self.clone_context(), transformer_type?))
   }
 
   fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
@@ -101,13 +108,13 @@ impl AsTransformerTrait for DirectTransformer {
 #[cfg(test)]
 mod tests {
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, Direct;
       ["[escape]", "", Direct],

@@ -1,19 +1,22 @@
+use std::rc::Rc;
+
 use super::{
-  AsTransformerTrait, Config, ContinuousTransformer, Displayable, Stackable, Transformable,
-  TransformerTypes, WithConfig, Word,
+  AsTransformerTrait, ContinuousTransformer, Displayable, Stackable, Transformable,
+  TransformerTypes, WithContext, Word,
 };
+use crate::Context;
 
 #[derive(Clone)]
 pub struct UnknownWordTransformer {
-  config: Config,
+  context: Rc<Context>,
   word: Word,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl UnknownWordTransformer {
-  pub fn new(config: Config, word: Word) -> Self {
+  pub fn new(context: Rc<Context>, word: Word) -> Self {
     UnknownWordTransformer {
-      config: config.clone(),
+      context,
       word,
       stack: vec![],
     }
@@ -27,9 +30,13 @@ impl UnknownWordTransformer {
   }
 }
 
-impl WithConfig for UnknownWordTransformer {
-  fn config(&self) -> Config {
-    self.config.clone()
+impl WithContext for UnknownWordTransformer {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn clone_context(&self) -> Rc<Context> {
+    self.context.clone()
   }
 }
 
@@ -106,7 +113,7 @@ impl AsTransformerTrait for UnknownWordTransformer {
       .last()
       .map(|tf| tf.clone())
       .unwrap_or(box ContinuousTransformer::new(
-        self.config(),
+        self.clone_context(),
         TransformerTypes::Hiragana,
       ))
   }
@@ -154,14 +161,14 @@ mod tests {
   use super::super::tables::LetterType;
   use super::*;
   use crate::tds;
-  use crate::tests::{dummy_conf, test_transformer};
+  use crate::tests::{dummy_context, test_transformer};
   use crate::transformers::StoppedReason;
   use StoppedReason::*;
   use TransformerTypes::*;
 
   #[test]
   fn it_works() {
-    let conf = dummy_conf();
+    let conf = dummy_context();
 
     let items = tds![conf, UnknownWordTransformer, Word::from((LetterType::Hiragana, "michigo"));
       ["[escape]", "", Stopped(Canceled)],

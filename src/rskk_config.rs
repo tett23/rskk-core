@@ -20,6 +20,10 @@ impl RSKKConfig {
       is_enable_sticky_shift: false,
     }
   }
+
+  pub fn key_config(&self) -> &KeyConfig {
+    &self.key_config
+  }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
@@ -33,8 +37,6 @@ pub struct KeyConfig {
   pub enter_direct_transformer: KeyCombinations,
   pub sticky_key: KeyCombinations,
 }
-
-impl KeyConfig {}
 
 impl KeyConfig {
   pub fn try_change_transformer(
