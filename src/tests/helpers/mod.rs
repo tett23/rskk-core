@@ -1,17 +1,18 @@
 #![cfg(test)]
 
-#[macro_use]
 pub mod transformer;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::keyboards::{KeyCode, KeyEvents, MetaKey};
 use crate::{Context, Dictionary, RSKKConfig};
-use std::rc::Rc;
 use KeyEvents::*;
 
 pub use transformer::*;
 
-pub fn dummy_context() -> Rc<Context> {
-  Rc::new(Context::new(
+pub fn dummy_context() -> Rc<RefCell<Context>> {
+  Rc::new(RefCell::new(Context::new(
     Rc::new(RSKKConfig::default_config()),
     Rc::new(Dictionary::parse(
       "
@@ -22,7 +23,7 @@ pub fn dummy_context() -> Rc<Context> {
 test /テスト/
     ",
     )),
-  ))
+  )))
 }
 
 pub fn str_to_key_code_vector(string: &str) -> Vec<KeyEvents> {

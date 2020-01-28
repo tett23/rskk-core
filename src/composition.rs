@@ -1,14 +1,15 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::keyboards::{KeyCode, KeyEvents, Keyboard, MetaKey};
 use super::transformers::{Transformable, TransformerTypes};
-use crate::{tf, Context};
+use crate::{tf, CompositionResult, Context};
 
 #[derive(Clone)]
 pub struct Composition {
   transformer: Box<dyn Transformable>,
   base_transformer_type: TransformerTypes,
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   keyboard: Box<dyn Keyboard>,
   // TODO: 変更のあった辞書要素を保持できる必要あり？
   // 変更は読みと変換先だけあればいいかな。
@@ -17,8 +18,8 @@ pub struct Composition {
 }
 
 impl Composition {
-  pub fn new(context: Rc<Context>, transformer_types: TransformerTypes) -> Self {
-    let keyboard = context.config().keyboard_type.to_keyboard();
+  pub fn new(context: Rc<RefCell<Context>>, transformer_types: TransformerTypes) -> Self {
+    let keyboard = context.borrow().config().keyboard_type.to_keyboard();
 
     Composition {
       transformer: tf!(context.clone(), transformer_types),
@@ -29,11 +30,16 @@ impl Composition {
   }
 
   #[cfg(test)]
-  pub fn new_from_transformer(context: Rc<Context>, transformer: Box<dyn Transformable>) -> Self {
-    let keyboard = context.config().keyboard_type.to_keyboard();
+  pub fn new_from_transformer(
+    context: Rc<RefCell<Context>>,
+    transformer: Box<dyn Transformable>,
+  ) -> Self {
+    let keyboard = context.borrow().config().keyboard_type.to_keyboard();
+    let mut tf = transformer;
+    tf.set_context(context.clone());
 
     Composition {
-      transformer,
+      transformer: tf,
       base_transformer_type: TransformerTypes::Direct,
       context,
       keyboard,
@@ -72,11 +78,19 @@ impl Composition {
   }
 
   pub fn next_composition(&self) -> Composition {
-    Composition::new(self.context.new_empty(), self.base_transformer_type)
+    Composition::new(
+      self.context.borrow().new_empty(),
+      self.base_transformer_type,
+    )
   }
 
-  pub fn buffer_content(&self) -> String {
-    self.transformer.buffer_content()
+  pub fn stopped_buffer(&self) -> String {
+    self
+      .context
+      .borrow()
+      .result()
+      .stopped_buffer()
+      .unwrap_or(String::new())
   }
 
   pub fn display_string(&self) -> String {
@@ -97,6 +111,10 @@ impl Composition {
 
   pub fn base_transformer_type(&self) -> TransformerTypes {
     self.base_transformer_type
+  }
+
+  pub fn result(&self) -> CompositionResult {
+    self.context.borrow().result().clone()
   }
 }
 

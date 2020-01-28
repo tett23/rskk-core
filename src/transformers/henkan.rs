@@ -1,20 +1,21 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{
-  AsTransformerTrait, Displayable, KeyCode, Stackable, StoppedTransformer, Transformable,
-  TransformerTypes, WithContext, YomiTransformer,
+  AsTransformerTrait, Displayable, KeyCode, Stackable, Transformable, TransformerTypes,
+  WithContext, YomiTransformer,
 };
 use crate::Context;
 
 #[derive(Clone)]
 pub struct HenkanTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl HenkanTransformer {
-  pub fn new(context: Rc<Context>, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
     HenkanTransformer {
       context: context.clone(),
       current_transformer_type: transformer_type,
@@ -24,12 +25,13 @@ impl HenkanTransformer {
 }
 
 impl WithContext for HenkanTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -106,7 +108,7 @@ impl AsTransformerTrait for HenkanTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => box StoppedTransformer::empty(self.clone_context()),
+      None => self.to_completed(),
     }
   }
 }
@@ -153,8 +155,7 @@ impl Stackable for HenkanTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
@@ -162,35 +163,35 @@ mod tests {
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, HenkanTransformer, Hiragana;
-      ["hiragana", "▽ひらがな", Henkan],
-      ["hiragana\n", "ひらがな", Stopped(Compleated)],
-      ["hiragana[escape]", "", Stopped(Canceled)],
-      ["kannji ", "▼漢字", Henkan],
-      ["kannji [backspace]", "▽かんじ", Henkan],
-      ["kannji \n", "漢字", Stopped(Compleated)],
-      ["okuR", "▽おく*r", Henkan],
-      ["okuR\n", "おく", Stopped(Compleated)],
-      ["okuR[escape]", "▽おく", Henkan],
-      ["okuRi", "▼送り", Henkan],
-      ["okuRi[escape]", "▽おく", Henkan],
-      ["okuRi\n", "送り", Stopped(Compleated)],
-      ["okuRia", "送り", Stopped(Compleated)],
-      ["michigo ", "[登録: みちご]", Henkan],
-      ["aA", "[登録: あ*あ]", Henkan],
-      ["michigo [backspace]", "[登録: みちご]", Henkan],
-      ["aa[backspace]", "▽あ", Henkan],
-      ["aa[backspace][backspace]", "▽", Henkan],
-      ["aa[backspace][backspace][backspace]", "", Stopped(Canceled)],
-      ["aA", "[登録: あ*あ]", Henkan],
-      ["aA[escape]", "▽あ", Henkan],
-      ["aKa", "[登録: あ*か]", Henkan],
-      ["aA[escape]", "▽あ", Henkan],
-      ["aTte", "[登録: あ*って]", Henkan],
-      ["aA[escape]", "▽あ", Henkan],
-      ["aTsu", "[登録: あ*つ]", Henkan],
+    let vec = crate::tds![conf, HenkanTransformer, Hiragana;
+      ["hiragana", { display: "▽ひらがな", transformer_type: Henkan }],
+      ["hiragana\n", { stopped_buffer: "ひらがな", transformer_type: Stopped(Compleated) }],
+      ["hiragana[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["kannji ", { display: "▼漢字", transformer_type: Henkan }],
+      ["kannji [backspace]", { display: "▽かんじ", transformer_type: Henkan }],
+      ["kannji \n", { stopped_buffer: "漢字", transformer_type: Stopped(Compleated) }],
+      ["okuR", { display: "▽おく*r", transformer_type: Henkan }],
+      ["okuR\n", { stopped_buffer: "おく", transformer_type: Stopped(Compleated) }],
+      ["okuR[escape]", { display: "▽おく", transformer_type: Henkan }],
+      ["okuRi", { display: "▼送り", transformer_type: Henkan }],
+      ["okuRi[escape]", { display: "▽おく", transformer_type: Henkan }],
+      ["okuRi\n", { stopped_buffer: "送り", transformer_type: Stopped(Compleated) }],
+      ["okuRia", { stopped_buffer: "送り", transformer_type: Stopped(Compleated) }],
+      ["michigo ", { display: "[登録: みちご]", transformer_type: Henkan }],
+      ["aA", { display: "[登録: あ*あ]", transformer_type: Henkan }],
+      ["michigo [backspace]", { display: "[登録: みちご]", transformer_type: Henkan }],
+      ["aa[backspace]", { display: "▽あ", transformer_type: Henkan }],
+      ["aa[backspace][backspace]", { display: "▽", transformer_type: Henkan }],
+      ["aa[backspace][backspace][backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["aA", { display: "[登録: あ*あ]", transformer_type: Henkan }],
+      ["aA[escape]", { display: "▽あ", transformer_type: Henkan }],
+      ["aKa", { display: "[登録: あ*か]", transformer_type: Henkan }],
+      ["aA[escape]", { display: "▽あ", transformer_type: Henkan }],
+      ["aTte", { display: "[登録: あ*って]", transformer_type: Henkan }],
+      ["aA[escape]", { display: "▽あ", transformer_type: Henkan }],
+      ["aTsu", { display: "[登録: あ*つ]", transformer_type: Henkan }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
 
     // TODO: カタカナ時のテスト
   }

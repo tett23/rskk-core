@@ -1,15 +1,16 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{
-  AsTransformerTrait, BufferState, Displayable, KeyCode, Stackable, StoppedTransformer,
-  Transformable, TransformerTypes, UnknownWordTransformer, WithContext, Word,
+  AsTransformerTrait, BufferState, Displayable, KeyCode, Stackable, Transformable,
+  TransformerTypes, UnknownWordTransformer, WithContext, Word,
 };
 use crate::dictionary::{Candidate, DictionaryEntry};
 use crate::Context;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidateTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   buffer: String,
   buffer_state: BufferState,
   dictionary_entry: DictionaryEntry,
@@ -18,7 +19,11 @@ pub struct SelectCandidateTransformer {
 }
 
 impl SelectCandidateTransformer {
-  pub fn new(context: Rc<Context>, dictionary_entry: &DictionaryEntry, word: Word) -> Self {
+  pub fn new(
+    context: Rc<RefCell<Context>>,
+    dictionary_entry: &DictionaryEntry,
+    word: Word,
+  ) -> Self {
     SelectCandidateTransformer {
       context,
       buffer: "".to_string(),
@@ -30,13 +35,9 @@ impl SelectCandidateTransformer {
   }
 
   fn try_transition_to_stopped(&self) -> Option<Box<dyn Transformable>> {
-    self
-      .candidates
-      .current()
-      .and(Some(box StoppedTransformer::completed(
-        self.clone_context(),
-        self.buffer_content(),
-      )))
+    self.candidates.current().and(Some(
+      self.to_completed_with_update_buffer(self.buffer_content()),
+    ))
   }
 
   fn append_okuri(&self) -> Option<String> {
@@ -52,12 +53,13 @@ impl SelectCandidateTransformer {
 }
 
 impl WithContext for SelectCandidateTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -186,8 +188,7 @@ impl Candidates {
 mod tests {
   use super::super::tables::LetterType;
   use super::*;
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use TransformerTypes::*;
 
@@ -203,19 +204,19 @@ mod tests {
       Word::from((LetterType::Hiragana, "michigo")),
     );
 
-    let items = tds![tf;
-      ["", "▼a", SelectCandidate],
-      ["[backspace]", "", Stopped(Canceled)],
-      ["[escape]", "", Stopped(Canceled)],
-      ["\n", "a", Stopped(Compleated)],
-      [" ", "▼b", SelectCandidate],
-      [" [backspace]", "▼a", SelectCandidate],
-      ["  ", "[登録: みちご]", UnknownWord],
-      ["  [escape]", "", Stopped(Canceled)],
-      ["  a", "[登録: みちご]あ", UnknownWord],
-      ["  a\n", "あ", Stopped(Compleated)],
+    let vec = crate::tds![tf;
+      ["", { display: "▼a", transformer_type: SelectCandidate }],
+      ["[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["\n", { stopped_buffer: "a", transformer_type: Stopped(Compleated) }],
+      [" ", { display: "▼b", transformer_type: SelectCandidate }],
+      [" [backspace]", { display: "▼a", transformer_type: SelectCandidate }],
+      ["  ", { display: "[登録: みちご]", transformer_type: UnknownWord }],
+      ["  [escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["  a", { display: "[登録: みちご]あ", transformer_type: UnknownWord }],
+      ["  a\n", { stopped_buffer: "あ", transformer_type: Stopped(Compleated) }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
   }
 
   mod candidates {

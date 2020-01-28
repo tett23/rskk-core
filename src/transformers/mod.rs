@@ -13,6 +13,7 @@ mod word;
 mod yomi;
 
 use objekt;
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -48,8 +49,9 @@ pub trait Displayable {
 }
 
 pub trait WithContext {
-  fn context(&self) -> &Context;
-  fn clone_context(&self) -> Rc<Context>;
+  fn clone_context(&self) -> Rc<RefCell<Context>>;
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>);
 }
 
 pub trait Transformable:
@@ -88,7 +90,17 @@ pub trait Transformable:
   }
 
   fn to_completed(&self) -> Box<dyn Transformable> {
-    box StoppedTransformer::completed(self.clone_context(), self.buffer_content())
+    box StoppedTransformer::completed(self.clone_context())
+  }
+
+  fn to_completed_with_update_buffer(&self, buffer: String) -> Box<dyn Transformable> {
+    let context = self.clone_context();
+    {
+      let mut context = context.borrow_mut();
+      context.push_result_string(buffer);
+    }
+
+    box StoppedTransformer::completed(context)
   }
 
   fn to_canceled(&self) -> Box<dyn Transformable> {

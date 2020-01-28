@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::tables::{BufferPairs, LetterType};
@@ -10,12 +11,12 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct DirectTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   buffer: BufferPairs,
 }
 
 impl DirectTransformer {
-  pub fn new(context: Rc<Context>) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>) -> Self {
     DirectTransformer {
       context,
       buffer: BufferPairs::new(LetterType::Direct),
@@ -28,12 +29,13 @@ impl DirectTransformer {
 }
 
 impl WithContext for DirectTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -49,6 +51,7 @@ impl Transformable for DirectTransformer {
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .context
+      .borrow()
       .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
@@ -60,8 +63,9 @@ impl Transformable for DirectTransformer {
     let mut tf = self.clone();
 
     tf.buffer.push(character);
+    dbg!(&tf.buffer);
     Some(vec![match tf.buffer.is_stopped() {
-      true => tf.to_completed(),
+      true => tf.to_completed_with_update_buffer(tf.buffer.to_string()),
       false => box tf,
     }])
   }
@@ -107,8 +111,7 @@ impl AsTransformerTrait for DirectTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
@@ -116,12 +119,12 @@ mod tests {
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, Direct;
-      ["[escape]", "", Direct],
-      ["a", "a", Stopped(Compleated)],
-      ["A", "A", Stopped(Compleated)],
-      ["!", "!", Stopped(Compleated)],
-    ];
-    test_transformer(items);
+    let vec = crate::tds!(conf, Direct;
+      ["[escape]", { display: "", transformer_type: Direct }],
+      ["a", { display: "", stopped_buffer: "a", transformer_type: Stopped(Compleated) }],
+      ["A", { display: "", stopped_buffer: "A", transformer_type: Stopped(Compleated) }],
+      ["!", { display: "", stopped_buffer: "!", transformer_type: Stopped(Compleated) }],
+    );
+    crate::tests::helpers::TestData::batch(vec);
   }
 }

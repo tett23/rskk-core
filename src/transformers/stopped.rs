@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{
@@ -13,40 +14,32 @@ pub enum StoppedReason {
 
 #[derive(Clone)]
 pub struct StoppedTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   reason: StoppedReason,
-  buffer: String,
 }
 
 impl StoppedTransformer {
-  pub fn new<S: Into<String>>(context: Rc<Context>, reason: StoppedReason, buffer: S) -> Self {
-    StoppedTransformer {
-      context,
-      reason,
-      buffer: buffer.into(),
-    }
+  pub fn new(context: Rc<RefCell<Context>>, reason: StoppedReason) -> Self {
+    StoppedTransformer { context, reason }
   }
 
-  pub fn completed<S: Into<String>>(context: Rc<Context>, buffer: S) -> Self {
-    Self::new(context, StoppedReason::Compleated, buffer)
+  pub fn completed(context: Rc<RefCell<Context>>) -> Self {
+    Self::new(context, StoppedReason::Compleated)
   }
 
-  pub fn empty(context: Rc<Context>) -> Self {
-    Self::new(context, StoppedReason::Compleated, "")
-  }
-
-  pub fn canceled(context: Rc<Context>) -> Self {
-    Self::new(context, StoppedReason::Canceled, "")
+  pub fn canceled(context: Rc<RefCell<Context>>) -> Self {
+    Self::new(context, StoppedReason::Canceled)
   }
 }
 
 impl WithContext for StoppedTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -58,28 +51,15 @@ impl Transformable for StoppedTransformer {
   fn push_character(&self, _: char) -> Option<Vec<Box<dyn Transformable>>> {
     None
   }
-
-  fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    let tf = self.pop().0;
-    if tf.is_canceled() {
-      return Some(vec![]);
-    }
-
-    Some(vec![tf])
-  }
-
-  fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    self.push_backspace()
-  }
 }
 
 impl Displayable for StoppedTransformer {
   fn buffer_content(&self) -> String {
-    self.buffer.clone()
+    String::new()
   }
 
   fn display_string(&self) -> String {
-    self.buffer.clone()
+    String::new()
   }
 }
 
@@ -95,20 +75,7 @@ impl Stackable for StoppedTransformer {
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    let mut ret = self.clone();
-    ret.buffer.pop();
-
-    if ret.buffer.len() == 0 {
-      return (
-        box StoppedTransformer::canceled(self.clone_context()),
-        Some(box StoppedTransformer::canceled(self.clone_context())),
-      );
-    }
-
-    (
-      box ret,
-      Some(box StoppedTransformer::canceled(self.clone_context())),
-    )
+    unreachable!()
   }
 
   fn replace_last_element(&self, _: Vec<Box<dyn Transformable>>) -> Vec<Box<dyn Transformable>> {
@@ -117,30 +84,5 @@ impl Stackable for StoppedTransformer {
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
     vec![]
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::tests::dummy_context;
-  use crate::transformers::StoppedReason::*;
-  use crate::transformers::TransformerTypes::*;
-
-  #[test]
-  fn stack() {
-    let conf = dummy_context();
-
-    let tf = StoppedTransformer::completed(conf.clone(), "aa").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Compleated));
-    assert_eq!(tf.buffer_content(), "a");
-
-    let tf = StoppedTransformer::completed(conf.clone(), "a").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
-
-    let tf = StoppedTransformer::canceled(conf.clone()).pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
   }
 }

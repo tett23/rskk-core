@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
@@ -11,12 +12,12 @@ use crate::{set, tf, Context};
 
 #[derive(Clone)]
 pub struct HiraganaTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   buffer: BufferPairs,
 }
 
 impl HiraganaTransformer {
-  pub fn new(context: Rc<Context>) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>) -> Self {
     HiraganaTransformer {
       context,
       buffer: BufferPairs::new(LetterType::Hiragana),
@@ -51,12 +52,13 @@ impl HiraganaTransformer {
 }
 
 impl WithContext for HiraganaTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -72,6 +74,7 @@ impl Transformable for HiraganaTransformer {
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .context
+      .borrow()
       .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
@@ -89,9 +92,8 @@ impl Transformable for HiraganaTransformer {
 
     let mut tf = self.clone();
     tf.buffer.push(character);
-    // TODO: 停止したバッファを複数返せるようにする
     Some(vec![match tf.buffer.is_stopped() {
-      true => tf.to_completed(),
+      true => tf.to_completed_with_update_buffer(tf.buffer.to_string()),
       false => box tf,
     }])
   }
@@ -173,42 +175,39 @@ impl Stackable for HiraganaTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
-  use crate::{tds, tfe};
 
   #[test]
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, Hiragana;
-      ["a", "あ", Stopped(Compleated)],
-      ["k", "k", Hiragana],
-      ["k[escape]", "", Stopped(Canceled)],
-      ["k[backspace]", "", Stopped(Canceled)],
-      ["ts[backspace]", "t", Hiragana],
-      ["ka", "か", Stopped(Compleated)],
-      ["tt", "っt", Hiragana],
-      ["tt[backspace]", "っ", Stopped(Compleated)],
-      ["tte", "って", Stopped(Compleated)],
-      ["tte[backspace]", "っ", Stopped(Compleated)],
-      ["k[escape]", "", Stopped(Canceled)],
-      ["Kannji", "▽かんじ", Henkan],
-      ["Kanji", "▽かんじ", Henkan],
+    let vec = crate::tds![conf, Hiragana;
+      ["a", { display: "", stopped_buffer: "あ", transformer_type: Stopped(Compleated) }],
+      ["k", { display: "k", transformer_type: Hiragana }],
+      ["k[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["k[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["ts[backspace]", { display: "t", transformer_type: Hiragana }],
+      ["ka", { display: "", stopped_buffer: "か", transformer_type: Stopped(Compleated) }],
+      ["tt", { display: "t", stopped_buffer: "っ", transformer_type: Hiragana }],
+      ["tt[backspace]", { display: "", stopped_buffer: "っ", transformer_type: Stopped(Compleated) }],
+      ["tte", { display: "", stopped_buffer: "って", transformer_type: Stopped(Compleated) }],
+      ["Kannji", { display: "▽かんじ", transformer_type: Henkan }],
+      ["Kanji", { display: "▽かんじ", transformer_type: Henkan }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
   }
 
   #[test]
   fn stack() {
     let conf = dummy_context();
 
-    let tf = tfe!(conf, Hiragana; "").pop().0;
+    let tf = crate::tfe!(conf, Hiragana; "").pop().0;
     assert_eq!(tf.transformer_type(), Stopped(Canceled));
     assert_eq!(tf.buffer_content(), "");
 
-    let tf = tfe!(conf, Hiragana; "ts").pop().0;
+    let tf = crate::tfe!(conf, Hiragana; "ts").pop().0;
     assert_eq!(tf.transformer_type(), Hiragana);
     assert_eq!(tf.buffer_content(), "t");
   }

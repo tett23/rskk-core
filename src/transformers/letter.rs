@@ -177,19 +177,19 @@ mod tests {
     let conf = dummy_conf();
 
     let items = tds![conf, Hiragana;
-      ["a", "あ", Stopped(Compleated)],
-      ["k", "k", Hiragana],
-      ["k[escape]", "", Stopped(Canceled)],
-      ["k[backspace]", "", Stopped(Canceled)],
-      ["ts[backspace]", "t", Hiragana],
-      ["ka", "か", Stopped(Compleated)],
-      ["tt", "っt", Hiragana],
-      ["tt[backspace]", "っ", Stopped(Compleated)],
-      ["tte", "って", Stopped(Compleated)],
-      ["tte[backspace]", "っ", Stopped(Compleated)],
-      ["k[escape]", "", Stopped(Canceled)],
-      ["Kannji", "▽かんじ", Henkan],
-      ["Kanji", "▽かんじ", Henkan],
+      ["a", { display: "あ", transformer_type: Stopped(Compleated) }],
+      ["k", { display: "k", transformer_type: Hiragana }],
+      ["k[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["k[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["ts[backspace]", { display: "t", transformer_type: Hiragana }],
+      ["ka", { display: "か", transformer_type: Stopped(Compleated) }],
+      ["tt", { display: "っt", transformer_type: Hiragana }],
+      ["tt[backspace]", { display: "っ", transformer_type: Stopped(Compleated) }],
+      ["tte", { display: "って", transformer_type: Stopped(Compleated) }],
+      ["tte[backspace]", { display: "っ", transformer_type: Stopped(Compleated) }],
+      ["k[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["Kannji", { display: "▽かんじ", transformer_type: Henkan }],
+      ["Kanji", { display: "▽かんじ", transformer_type: Henkan }],
     ];
     test_transformer(items);
   }

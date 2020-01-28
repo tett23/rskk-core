@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{
@@ -9,12 +10,12 @@ use crate::Context;
 
 #[derive(Clone)]
 pub struct AbbrTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl AbbrTransformer {
-  pub fn new(context: Rc<Context>) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>) -> Self {
     Self {
       context: context.clone(),
       stack: vec![box ContinuousTransformer::new(
@@ -34,6 +35,7 @@ impl AbbrTransformer {
   fn try_transition_to_select_candidate(&self) -> Option<SelectCandidateTransformer> {
     self
       .context
+      .borrow()
       .dictionary()
       .transform(self.to_word().to_dic_read()?)
       .map(|dic_entry| {
@@ -58,12 +60,13 @@ impl AbbrTransformer {
 }
 
 impl WithContext for AbbrTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -158,7 +161,7 @@ impl AsTransformerTrait for AbbrTransformer {
   fn send_target(&self) -> Box<dyn Transformable> {
     match self.stack.last() {
       Some(tf) => tf.clone(),
-      None => box StoppedTransformer::empty(self.clone_context()),
+      None => box StoppedTransformer::completed(self.clone_context()),
     }
   }
 }
@@ -205,8 +208,7 @@ impl Stackable for AbbrTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
@@ -214,18 +216,18 @@ mod tests {
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, Abbr;
-      ["[backspace]", "", Stopped(Canceled)],
-      ["[escape]", "", Stopped(Canceled)],
-      ["a[backspace]", "▽", Abbr],
-      ["test", "▽test", Abbr],
-      ["test\n", "test", Stopped(Compleated)],
-      ["hoge ", "[登録: hoge]", Abbr],
-      ["hoge [escape]", "▽hoge", Abbr],
-      ["hoge [backspace]", "[登録: hoge]", Abbr],
-      ["hoge fuga", "[登録: hoge]ふが", Abbr],
-      ["hoge fuga\n", "ふが", Stopped(Compleated)],
+    let vec = crate::tds![conf, Abbr;
+      ["[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["a[backspace]", { display: "▽", transformer_type: Abbr }],
+      ["test", { display: "▽test", transformer_type: Abbr }],
+      ["test\n", { display: "", stopped_buffer: "test", transformer_type: Stopped(Compleated) }],
+      ["hoge ", { display: "[登録: hoge]", transformer_type: Abbr }],
+      ["hoge [escape]", { display: "▽hoge", transformer_type: Abbr }],
+      ["hoge [backspace]", { display: "[登録: hoge]", transformer_type: Abbr }],
+      ["hoge fuga", { display: "[登録: hoge]ふが", transformer_type: Abbr }],
+      ["hoge fuga\n", { display: "", stopped_buffer: "ふが", transformer_type: Stopped(Compleated) }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
   }
 }

@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::tables::{BufferPairs, LetterType};
@@ -11,12 +12,12 @@ use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct KatakanaTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   buffer: BufferPairs,
 }
 
 impl KatakanaTransformer {
-  pub fn new(context: Rc<Context>) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>) -> Self {
     KatakanaTransformer {
       context,
       buffer: BufferPairs::new(LetterType::Katakana),
@@ -51,12 +52,13 @@ impl KatakanaTransformer {
 }
 
 impl WithContext for KatakanaTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -72,6 +74,7 @@ impl Transformable for KatakanaTransformer {
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .context
+      .borrow()
       .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());
@@ -89,9 +92,8 @@ impl Transformable for KatakanaTransformer {
 
     let mut tf = self.clone();
     tf.buffer.push(character);
-    // TODO: 停止したバッファを複数返せるようにする
     Some(vec![match tf.buffer.is_stopped() {
-      true => tf.to_completed(),
+      true => tf.to_completed_with_update_buffer(tf.buffer.to_string()),
       false => box tf,
     }])
   }
@@ -173,42 +175,39 @@ impl Stackable for KatakanaTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
-  use crate::{tds, tfe};
 
   #[test]
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, Katakana;
-      ["a", "ア", Stopped(Compleated)],
-      ["k", "k", Katakana],
-      ["k[escape]", "", Stopped(Canceled)],
-      ["k[backspace]", "", Stopped(Canceled)],
-      ["ts[backspace]", "t", Katakana],
-      ["ka", "カ", Stopped(Compleated)],
-      ["tt", "ッt", Katakana],
-      ["tt[backspace]", "ッ", Stopped(Compleated)],
-      ["tte", "ッテ", Stopped(Compleated)],
-      ["tte[backspace]", "ッ", Stopped(Compleated)],
-      ["k[escape]", "", Stopped(Canceled)],
-      ["Kannji", "▽カンジ", Henkan],
-      ["Kanji", "▽カンジ", Henkan],
+    let vec = crate::tds![conf, Katakana;
+      ["a", { display: "", stopped_buffer: "ア", transformer_type: Stopped(Compleated) }],
+      ["k", { display: "k", transformer_type: Katakana }],
+      ["k[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["k[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["ts[backspace]", { display: "t", transformer_type: Katakana }],
+      ["ka", { display: "", stopped_buffer: "カ", transformer_type: Stopped(Compleated) }],
+      ["tt", { display: "t", stopped_buffer: "ッ", transformer_type: Katakana }],
+      ["tt[backspace]", { display: "", stopped_buffer: "っ", transformer_type: Stopped(Compleated) }],
+      ["tte", { display: "", stopped_buffer: "ッテ", transformer_type: Stopped(Compleated) }],
+      ["Kannji", { display: "▽カンジ", transformer_type: Henkan }],
+      ["Kanji", { display: "▽カンジ", transformer_type: Henkan }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
   }
 
   #[test]
   fn stack() {
     let conf = dummy_context();
 
-    let tf = tfe!(conf, Katakana; "").pop().0;
+    let tf = crate::tfe!(conf, Katakana; "").pop().0;
     assert_eq!(tf.transformer_type(), Stopped(Canceled));
     assert_eq!(tf.buffer_content(), "");
 
-    let tf = tfe!(conf, Katakana; "ts").pop().0;
+    let tf = crate::tfe!(conf, Katakana; "ts").pop().0;
     assert_eq!(tf.transformer_type(), Katakana);
     assert_eq!(tf.buffer_content(), "t");
   }

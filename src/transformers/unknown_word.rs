@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{
@@ -8,13 +9,13 @@ use crate::Context;
 
 #[derive(Clone)]
 pub struct UnknownWordTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   word: Word,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl UnknownWordTransformer {
-  pub fn new(context: Rc<Context>, word: Word) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>, word: Word) -> Self {
     UnknownWordTransformer {
       context,
       word,
@@ -31,12 +32,13 @@ impl UnknownWordTransformer {
 }
 
 impl WithContext for UnknownWordTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -160,8 +162,7 @@ impl Stackable for UnknownWordTransformer {
 mod tests {
   use super::super::tables::LetterType;
   use super::*;
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason;
   use StoppedReason::*;
   use TransformerTypes::*;
@@ -169,30 +170,31 @@ mod tests {
   #[test]
   fn it_works() {
     let conf = dummy_context();
+    let word = Word::from((LetterType::Hiragana, "michigo"));
 
-    let items = tds![conf, UnknownWordTransformer, Word::from((LetterType::Hiragana, "michigo"));
-      ["[escape]", "", Stopped(Canceled)],
-      ["hiragana", "[登録: みちご]ひらがな", UnknownWord],
-      ["Kannji", "[登録: みちご]▽かんじ", UnknownWord],
-      ["Kannji ", "[登録: みちご]▼漢字", UnknownWord],
-      ["Kannji \n", "[登録: みちご]漢字", UnknownWord],
-      ["Kannji \n\n", "漢字", Stopped(Compleated)],
-      ["Michi \nGo", "[登録: みちご]未知▽ご", UnknownWord],
-      ["Michi \nGo ", "[登録: みちご]未知▼語", UnknownWord],
-      ["Michi \nGo \n", "[登録: みちご]未知語", UnknownWord],
-      ["Michi \nGo \n[backspace]", "[登録: みちご]未知", UnknownWord],
-      ["Michi \nGo \n[backspace][backspace]", "[登録: みちご]未", UnknownWord],
-      ["Michi \nGo \n\n","未知語", Stopped(Compleated)],
-      ["AK", "[登録: みちご]▽あ*k", UnknownWord],
-      ["AA", "[登録: みちご][登録: あ*あ]", UnknownWord],
-      ["AAA", "[登録: みちご][登録: あ*あ]▽あ", UnknownWord],
-      ["AAOkuRi", "[登録: みちご][登録: あ*あ]▼送り", UnknownWord],
-      ["AAOkuRi[escape]", "[登録: みちご][登録: あ*あ]▽おく", UnknownWord],
-      ["AAOkuRi[escape][escape]", "[登録: みちご][登録: あ*あ]", UnknownWord],
-      ["AAOkuRi[escape][escape][escape]", "[登録: みちご]▽あ", UnknownWord],
-      ["AAOkuRi[escape][escape][escape][escape]", "[登録: みちご]", UnknownWord],
-      ["AAOkuRi[escape][escape][escape][escape][escape]", "", Stopped(Canceled)],
+    let vec = crate::tds![conf, UnknownWordTransformer, word;
+      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["hiragana", { display: "[登録: みちご]ひらがな", transformer_type: UnknownWord }],
+      ["Kannji", { display: "[登録: みちご]▽かんじ", transformer_type: UnknownWord }],
+      ["Kannji ", { display: "[登録: みちご]▼漢字", transformer_type: UnknownWord }],
+      ["Kannji \n", { display: "[登録: みちご]漢字", transformer_type: UnknownWord }],
+      ["Kannji \n\n", { stopped_buffer: "漢字", transformer_type: Stopped(Compleated) }],
+      ["Michi \nGo", { display: "[登録: みちご]未知▽ご", transformer_type: UnknownWord }],
+      ["Michi \nGo ", { display: "[登録: みちご]未知▼語", transformer_type: UnknownWord }],
+      ["Michi \nGo \n", { display: "[登録: みちご]未知語", transformer_type: UnknownWord }],
+      ["Michi \nGo \n[backspace]", { display: "[登録: みちご]未知", transformer_type: UnknownWord }],
+      ["Michi \nGo \n[backspace][backspace]", { display: "[登録: みちご]未", transformer_type: UnknownWord }],
+      ["Michi \nGo \n\n", { stopped_buffer: "未知語", transformer_type: Stopped(Compleated) }],
+      ["AK", { display: "[登録: みちご]▽あ*k", transformer_type: UnknownWord }],
+      ["AA", { display: "[登録: みちご][登録: あ*あ]", transformer_type: UnknownWord }],
+      ["AAA", { display: "[登録: みちご][登録: あ*あ]▽あ", transformer_type: UnknownWord }],
+      ["AAOkuRi", { display: "[登録: みちご][登録: あ*あ]▼送り", transformer_type: UnknownWord }],
+      ["AAOkuRi[escape]", { display: "[登録: みちご][登録: あ*あ]▽おく", transformer_type: UnknownWord }],
+      ["AAOkuRi[escape][escape]", { display: "[登録: みちご][登録: あ*あ]", transformer_type: UnknownWord }],
+      ["AAOkuRi[escape][escape][escape]", { display: "[登録: みちご]▽あ", transformer_type: UnknownWord }],
+      ["AAOkuRi[escape][escape][escape][escape]", { display: "[登録: みちご]", transformer_type: UnknownWord }],
+      ["AAOkuRi[escape][escape][escape][escape][escape]", { display: "", transformer_type: Stopped(Canceled) }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
   }
 }

@@ -1,22 +1,23 @@
 use kana::{half2kana, hira2kata, kata2hira};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::tables::LetterType;
 use super::{
-  AsTransformerTrait, Displayable, KeyCode, SelectCandidateTransformer, Stackable,
-  StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer, WithContext, Word,
+  AsTransformerTrait, Displayable, KeyCode, SelectCandidateTransformer, Stackable, Transformable,
+  TransformerTypes, UnknownWordTransformer, WithContext, Word,
 };
 use crate::Context;
 
 #[derive(Clone, Debug)]
 pub struct YomiTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   current_transformer_type: TransformerTypes,
   word: Word,
 }
 
 impl YomiTransformer {
-  pub fn new(context: Rc<Context>, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
     YomiTransformer {
       context,
       current_transformer_type: transformer_type,
@@ -40,6 +41,7 @@ impl YomiTransformer {
   fn try_transition_to_select_candidate(&self) -> Option<SelectCandidateTransformer> {
     self
       .context
+      .borrow()
       .dictionary()
       .transform(self.word.to_dic_read()?)
       .map(|dic_entry| {
@@ -53,12 +55,13 @@ impl YomiTransformer {
 }
 
 impl WithContext for YomiTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -100,10 +103,9 @@ impl Transformable for YomiTransformer {
     let mut tf = self.clone();
     tf.word.remove_okuri();
 
-    Some(vec![box StoppedTransformer::completed(
-      self.clone_context(),
-      tf.word.buffer_content(),
-    )])
+    Some(vec![
+      self.to_completed_with_update_buffer(tf.word.buffer_content())
+    ])
   }
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
@@ -123,8 +125,7 @@ impl Transformable for YomiTransformer {
 
   fn push_any_character(&self, key: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
     match key.printable_key() {
-      Some('q') => Some(vec![box StoppedTransformer::completed(
-        self.clone_context(),
+      Some('q') => Some(vec![self.to_completed_with_update_buffer(
         match self.current_transformer_type {
           TransformerTypes::Hiragana => hira2kata(&self.buffer_content()),
           TransformerTypes::Katakana => kata2hira(&self.buffer_content()),
@@ -183,8 +184,7 @@ impl Stackable for YomiTransformer {
 
 #[cfg(test)]
 mod tests {
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason::*;
   use crate::transformers::TransformerTypes::*;
 
@@ -192,36 +192,36 @@ mod tests {
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, YomiTransformer, Hiragana;
-      ["[escape]", "", Stopped(Canceled)],
-      ["hiragana", "▽ひらがな", Yomi],
-      ["hiragana\n", "ひらがな", Stopped(Compleated)],
-      ["oku[escape]", "", Stopped(Canceled)],
-      ["okuR", "▽おく*r", Yomi],
-      ["okuR[escape]", "▽おく", Yomi],
-      ["okuR\n", "おく", Stopped(Compleated)],
-      ["okuRi", "▼送り", SelectCandidate],
-      ["kannji ", "▼漢字", SelectCandidate],
-      ["kannji [escape]", "", Stopped(Canceled)],
-      ["michigo ", "[登録: みちご]", UnknownWord],
-      ["aA", "[登録: あ*あ]", UnknownWord],
-      ["aKa", "[登録: あ*か]", UnknownWord],
-      ["aTte", "[登録: あ*って]", UnknownWord],
-      ["aTsu", "[登録: あ*つ]", UnknownWord],
-      ["a[backspace]", "▽", Yomi],
-      ["aa[backspace]", "▽あ", Yomi],
-      ["aa[backspace]a", "▽ああ", Yomi],
-      ["aa[backspace][backspace]i", "▽い", Yomi],
-      ["a[backspace][backspace]", "", Stopped(Canceled)],
-      ["aK", "▽あ*k", Yomi],
-      ["aK[backspace]", "▽あ", Yomi],
-      ["aK[backspace][backspace]", "▽", Yomi],
-      ["aK[backspace][backspace]a", "▽あ", Yomi],
-      ["aK[backspace][backspace]K", "▽k", Yomi],
-      ["henka[backspace][backspace]", "▽へ", Yomi],
-      ["katakanaq", "カタカナ", Stopped(Compleated)],
+    let vec = crate::tds![conf, YomiTransformer, Hiragana;
+      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["hiragana", { display: "▽ひらがな", transformer_type: Yomi }],
+      ["hiragana\n", { stopped_buffer: "ひらがな", transformer_type: Stopped(Compleated) }],
+      ["oku[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["okuR", { display: "▽おく*r", transformer_type: Yomi }],
+      ["okuR[escape]", { display: "▽おく", transformer_type: Yomi }],
+      ["okuR\n", { stopped_buffer: "おく", transformer_type: Stopped(Compleated) }],
+      ["okuRi", { display: "▼送り", transformer_type: SelectCandidate }],
+      ["kannji ", { display: "▼漢字", transformer_type: SelectCandidate }],
+      ["kannji [escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["michigo ", { display: "[登録: みちご]", transformer_type: UnknownWord }],
+      ["aA", { display: "[登録: あ*あ]", transformer_type: UnknownWord }],
+      ["aKa", { display: "[登録: あ*か]", transformer_type: UnknownWord }],
+      ["aTte", { display: "[登録: あ*って]", transformer_type: UnknownWord }],
+      ["aTsu", { display: "[登録: あ*つ]", transformer_type: UnknownWord }],
+      ["a[backspace]", { display: "▽", transformer_type: Yomi }],
+      ["aa[backspace]", { display: "▽あ", transformer_type: Yomi }],
+      ["aa[backspace]a", { display: "▽ああ", transformer_type: Yomi }],
+      ["aa[backspace][backspace]i", { display: "▽い", transformer_type: Yomi }],
+      ["a[backspace][backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["aK", { display: "▽あ*k", transformer_type: Yomi }],
+      ["aK[backspace]", { display: "▽あ", transformer_type: Yomi }],
+      ["aK[backspace][backspace]", { display: "▽", transformer_type: Yomi }],
+      ["aK[backspace][backspace]a", { display: "▽あ", transformer_type: Yomi }],
+      ["aK[backspace][backspace]K", { display: "▽k", transformer_type: Yomi }],
+      ["henka[backspace][backspace]", { display: "▽へ", transformer_type: Yomi }],
+      ["katakanaq", { stopped_buffer: "カタカナ", transformer_type: Stopped(Compleated) }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
 
     // TODO: カタカナ時のテスト
   }

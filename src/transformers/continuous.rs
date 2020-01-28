@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{
@@ -8,17 +9,19 @@ use crate::{tf, Context};
 
 #[derive(Clone)]
 pub struct ContinuousTransformer {
-  context: Rc<Context>,
+  context: Rc<RefCell<Context>>,
   current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
+  buffer: String,
 }
 
 impl ContinuousTransformer {
-  pub fn new(context: Rc<Context>, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
     ContinuousTransformer {
       context,
       current_transformer_type: transformer_type,
       stack: vec![],
+      buffer: String::new(),
     }
   }
 
@@ -32,12 +35,13 @@ impl ContinuousTransformer {
 }
 
 impl WithContext for ContinuousTransformer {
-  fn context(&self) -> &Context {
-    &self.context
+  fn clone_context(&self) -> Rc<RefCell<Context>> {
+    self.context.clone()
   }
 
-  fn clone_context(&self) -> Rc<Context> {
-    self.context.clone()
+  #[cfg(test)]
+  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+    self.context = context;
   }
 }
 
@@ -174,8 +178,7 @@ impl Stackable for ContinuousTransformer {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::tds;
-  use crate::tests::{dummy_context, test_transformer};
+  use crate::tests::dummy_context;
   use crate::transformers::StoppedReason;
   use StoppedReason::*;
   use TransformerTypes::*;
@@ -184,21 +187,21 @@ mod tests {
   fn it_works() {
     let conf = dummy_context();
 
-    let items = tds![conf, ContinuousTransformer, Hiragana;
-      ["[escape]", "", Stopped(Canceled)],
-      ["[backspace]", "", Stopped(Canceled)],
-      ["aa[backspace]", "あ", Continuous],
-      ["ak[backspace]", "あ", Continuous],
-      ["aa[backspace]i", "あい", Continuous],
-      ["ak\n", "あ", Continuous],
-      ["hiragana", "ひらがな", Continuous],
-      ["hiragana\n", "ひらがな", Stopped(Compleated)],
-      ["Kannji", "▽かんじ", Continuous],
-      ["Kannji \n", "漢字", Continuous],
-      ["Kannji \n\n", "漢字", Stopped(Compleated)],
-      ["Kannji \n[backspace]", "漢", Continuous],
-      ["Kannji \n[backspace]a", "漢あ", Continuous],
+    let vec = crate::tds![conf, ContinuousTransformer, Hiragana;
+      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["aa[backspace]", { display: "あ", transformer_type: Continuous }],
+      ["ak[backspace]", { display: "あ", transformer_type: Continuous }],
+      ["aa[backspace]i", { display: "あい", transformer_type: Continuous }],
+      ["ak\n", { display: "あ", transformer_type: Continuous }],
+      ["hiragana", { display: "ひらがな", transformer_type: Continuous }],
+      ["hiragana\n", { stopped_buffer: "ひらがな", transformer_type: Stopped(Compleated) }],
+      ["Kannji", { display: "▽かんじ", transformer_type: Continuous }],
+      ["Kannji \n", { display: "漢字", transformer_type: Continuous }],
+      ["Kannji \n\n", { stopped_buffer: "漢字", transformer_type: Stopped(Compleated) }],
+      ["Kannji \n[backspace]", { display: "漢", transformer_type: Continuous }],
+      ["Kannji \n[backspace]a", { display: "漢あ", transformer_type: Continuous }],
     ];
-    test_transformer(items);
+    crate::tests::helpers::TestData::batch(vec);
   }
 }
