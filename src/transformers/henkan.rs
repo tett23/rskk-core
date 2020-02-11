@@ -29,7 +29,6 @@ impl WithContext for HenkanTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }
@@ -45,6 +44,7 @@ impl Transformable for HenkanTransformer {
   }
 
   fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
+    dbg!(&self.stack);
     Some(self.replace_last_element(self.stack.last()?.push_escape()?))
   }
 
@@ -176,7 +176,6 @@ mod tests {
       ["okuRi", { display: "▼送り", transformer_type: Henkan }],
       ["okuRi[escape]", { display: "▽おく", transformer_type: Henkan }],
       ["okuRi\n", { stopped_buffer: "送り", transformer_type: Stopped(Compleated) }],
-      ["okuRia", { stopped_buffer: "送り", transformer_type: Stopped(Compleated) }],
       ["michigo ", { display: "[登録: みちご]", transformer_type: Henkan }],
       ["aA", { display: "[登録: あ*あ]", transformer_type: Henkan }],
       ["michigo [backspace]", { display: "[登録: みちご]", transformer_type: Henkan }],
@@ -186,10 +185,11 @@ mod tests {
       ["aA", { display: "[登録: あ*あ]", transformer_type: Henkan }],
       ["aA[escape]", { display: "▽あ", transformer_type: Henkan }],
       ["aKa", { display: "[登録: あ*か]", transformer_type: Henkan }],
-      ["aA[escape]", { display: "▽あ", transformer_type: Henkan }],
+      ["aKa[escape]", { display: "▽あ", transformer_type: Henkan }],
       ["aTte", { display: "[登録: あ*って]", transformer_type: Henkan }],
-      ["aA[escape]", { display: "▽あ", transformer_type: Henkan }],
+      ["aTte[escape]", { display: "▽あ", transformer_type: Henkan }],
       ["aTsu", { display: "[登録: あ*つ]", transformer_type: Henkan }],
+      ["aTsu[escape]", { display: "▽あ", transformer_type: Henkan }],
     ];
     crate::tests::helpers::TestData::batch(vec);
 

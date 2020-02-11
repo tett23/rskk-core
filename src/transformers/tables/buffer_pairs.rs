@@ -24,7 +24,7 @@ impl BufferPairs {
     self.buffer.pop().and_then(|pair| {
       pair
         .push(character)
-        .map(|vec| vec.into_iter().for_each(|pair| self.buffer.push(pair)))
+        .map(|vec| vec.into_iter().for_each(|pair| self.push_pair(pair)))
     });
   }
 
@@ -44,7 +44,7 @@ impl BufferPairs {
         let character = pair.remove_last()?;
         let ret = BufferPair::new(self.letter_type, character.to_string(), BufferState::Stop);
         if !pair.is_empty() {
-          self.buffer.push(pair);
+          self.push_pair(pair);
         }
 
         Some(ret)
@@ -69,6 +69,27 @@ impl BufferPairs {
 
   fn push_new_pair(&mut self) {
     self.buffer.push(BufferPair::new_empty(self.letter_type))
+  }
+
+  fn push_pair(&mut self, pair: BufferPair) {
+    self.buffer.push(pair)
+  }
+
+  pub fn partition_by_state(&self) -> (BufferPairs, BufferPairs) {
+    self.buffer.iter().fold(
+      (
+        BufferPairs::new(self.letter_type()),
+        BufferPairs::new(self.letter_type()),
+      ),
+      |mut acc, pair| {
+        match pair.state() {
+          BufferState::Continue => acc.1.push_pair(pair.clone()),
+          BufferState::Stop => acc.0.push_pair(pair.clone()),
+        };
+
+        acc
+      },
+    )
   }
 }
 
@@ -149,6 +170,23 @@ mod tests {
     assert_eq!(
       pairs.buffer,
       vec![BufferPair::new(pairs.letter_type, "っ", BufferState::Stop)]
+    );
+  }
+
+  #[test]
+  fn partition_by_state() {
+    let mut pairs = BufferPairs::new(Hiragana);
+    pairs.push_pair(BufferPair::new(Hiragana, "あ", BufferState::Stop));
+    pairs.push_pair(BufferPair::new(Hiragana, "k", BufferState::Continue));
+
+    let (stopped, continued) = pairs.partition_by_state();
+    assert_eq!(
+      stopped.buffer.iter().map(|item| item).collect::<Vec<_>>(),
+      vec![pairs.buffer.get(0).unwrap()]
+    );
+    assert_eq!(
+      continued.buffer.iter().map(|item| item).collect::<Vec<_>>(),
+      vec![pairs.buffer.get(1).unwrap()]
     );
   }
 }

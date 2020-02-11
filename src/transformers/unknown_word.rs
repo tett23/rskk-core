@@ -36,7 +36,6 @@ impl WithContext for UnknownWordTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }
@@ -99,7 +98,6 @@ impl Displayable for UnknownWordTransformer {
       .iter()
       .fold("".to_string(), |acc, item| acc + &item.display_string());
 
-    dbg!(self.word.display_string());
     "[登録: ".to_string() + &self.word.display_string() + "]" + &buf
   }
 }

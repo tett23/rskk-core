@@ -27,7 +27,7 @@ use keyboards::KeyEvents;
 use transformers::TransformerTypes;
 
 pub use composition_result::CompositionResult;
-pub use context::Context;
+pub use context::{Context, Contexts};
 pub use dictionary::{Dictionary, DictionaryEntry};
 pub use rskk_config::{KeyConfig, RSKKConfig};
 

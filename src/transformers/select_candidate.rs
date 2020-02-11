@@ -48,7 +48,7 @@ impl SelectCandidateTransformer {
   }
 
   fn transition_to_unknown_word(&self) -> UnknownWordTransformer {
-    UnknownWordTransformer::new(self.clone_context(), self.word.clone())
+    UnknownWordTransformer::new(self.new_context(), self.word.clone())
   }
 }
 
@@ -57,7 +57,6 @@ impl WithContext for SelectCandidateTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }

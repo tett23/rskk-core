@@ -34,6 +34,7 @@ impl Composition {
     context: Rc<RefCell<Context>>,
     transformer: Box<dyn Transformable>,
   ) -> Self {
+    let context = context.borrow().new_empty();
     let keyboard = context.borrow().config().keyboard_type.to_keyboard();
     let mut tf = transformer;
     tf.set_context(context.clone());
@@ -54,15 +55,16 @@ impl Composition {
     self.transformer.is_empty()
   }
 
+  #[cfg(test)]
   pub fn push_key_events(&mut self, events: &Vec<KeyEvents>) {
     events.iter().for_each(|e| {
       self.push_key_event(e);
+      self.context.borrow().result().stopped_buffer();
     })
   }
 
   pub fn push_key_event(&mut self, event: &KeyEvents) -> bool {
     self.keyboard.push_event(event);
-    dbg!(&self.transformer);
 
     KeyEventProcessor::new(event, &self.keyboard, &self.transformer)
       .next()

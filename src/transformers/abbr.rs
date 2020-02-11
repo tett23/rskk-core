@@ -64,7 +64,6 @@ impl WithContext for AbbrTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }
@@ -218,7 +217,6 @@ mod tests {
 
     let vec = crate::tds![conf, Abbr;
       ["[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
-      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
       ["a[backspace]", { display: "▽", transformer_type: Abbr }],
       ["test", { display: "▽test", transformer_type: Abbr }],
       ["test\n", { display: "", stopped_buffer: "test", transformer_type: Stopped(Compleated) }],

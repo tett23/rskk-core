@@ -36,7 +36,7 @@ impl KatakanaTransformer {
   fn try_enter_henkan(&self, character: char) -> Option<Box<dyn Transformable>> {
     match character.is_uppercase() {
       true => Some(box HenkanTransformer::new(
-        self.clone_context(),
+        self.new_context(),
         TransformerTypes::Katakana,
       )),
       false => None,
@@ -45,7 +45,7 @@ impl KatakanaTransformer {
 
   fn try_enter_abbr(&self, character: char) -> Option<Box<dyn Transformable>> {
     match character {
-      '/' => Some(box AbbrTransformer::new(self.clone_context())),
+      '/' => Some(box AbbrTransformer::new(self.new_context())),
       _ => None,
     }
   }
@@ -56,7 +56,6 @@ impl WithContext for KatakanaTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }
@@ -92,9 +91,15 @@ impl Transformable for KatakanaTransformer {
 
     let mut tf = self.clone();
     tf.buffer.push(character);
-    Some(vec![match tf.buffer.is_stopped() {
-      true => tf.to_completed_with_update_buffer(tf.buffer.to_string()),
-      false => box tf,
+    let (stopped, continued) = tf.buffer.partition_by_state();
+    tf.buffer = continued;
+    tf.set_context(tf.clear_stopped_buffer());
+    Some(vec![match tf.is_empty() {
+      true => tf.to_completed_with_update_buffer(stopped.to_string()),
+      false => {
+        tf.set_context(tf.push_stopped_buffer(stopped.to_string()));
+        box tf
+      }
     }])
   }
 
@@ -191,24 +196,11 @@ mod tests {
       ["ts[backspace]", { display: "t", transformer_type: Katakana }],
       ["ka", { display: "", stopped_buffer: "カ", transformer_type: Stopped(Compleated) }],
       ["tt", { display: "t", stopped_buffer: "ッ", transformer_type: Katakana }],
-      ["tt[backspace]", { display: "", stopped_buffer: "っ", transformer_type: Stopped(Compleated) }],
-      ["tte", { display: "", stopped_buffer: "ッテ", transformer_type: Stopped(Compleated) }],
+      ["tt[backspace]", { display: "", stopped_buffer: "ッ", transformer_type: Stopped(Canceled) }],
+      ["tte", { display: "", stopped_buffer: "テ", transformer_type: Stopped(Compleated) }],
       ["Kannji", { display: "▽カンジ", transformer_type: Henkan }],
       ["Kanji", { display: "▽カンジ", transformer_type: Henkan }],
     ];
     crate::tests::helpers::TestData::batch(vec);
-  }
-
-  #[test]
-  fn stack() {
-    let conf = dummy_context();
-
-    let tf = crate::tfe!(conf, Katakana; "").pop().0;
-    assert_eq!(tf.transformer_type(), Stopped(Canceled));
-    assert_eq!(tf.buffer_content(), "");
-
-    let tf = crate::tfe!(conf, Katakana; "ts").pop().0;
-    assert_eq!(tf.transformer_type(), Katakana);
-    assert_eq!(tf.buffer_content(), "t");
   }
 }

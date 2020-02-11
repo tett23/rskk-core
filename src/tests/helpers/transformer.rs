@@ -1,11 +1,10 @@
 #![cfg(test)]
 
-use std::fmt;
-
 use super::str_to_key_code_vector;
 use crate::composition::Composition;
 use crate::transformers::{Transformable, TransformerTypes};
 
+#[derive(Debug)]
 pub struct Example {
   pub display: Option<String>,
   pub stopped_buffer: Option<String>,
@@ -33,33 +32,69 @@ impl Example {
     self.transformer_type = Some(value)
   }
 
-  pub fn test(&self, tf: &Box<dyn Transformable>) -> bool {
-    if let Some(t) = &self.transformer_type {
-      if t != &tf.transformer_type() {
-        return false;
-      }
-    }
+  pub fn test(&self, tf: &Box<dyn Transformable>) -> Result<(), String> {
+    Some(
+      vec![
+        self.test_display(tf.display_string()),
+        self.test_stopped_buffer(tf.clone_context().borrow().result().stopped_buffer()),
+        self.test_transformer_type(tf.transformer_type()),
+      ]
+      .iter()
+      .filter(|item| item.is_err())
+      .collect::<Vec<_>>(),
+    )
+    .map(|vec| match vec.is_empty() {
+      true => None,
+      false => Some(vec),
+    })
+    .flatten()
+    .map(|vec| {
+      vec.iter().fold(String::new(), |acc, item| {
+        acc + &item.as_ref().err().unwrap()
+      })
+    })
+    .map(|messages| Err(messages))
+    .unwrap_or(Ok(()))
+  }
 
-    if let Some(buf) = &self.stopped_buffer {
-      if Some(buf)
-        != tf
-          .clone_context()
-          .borrow()
-          .result()
-          .stopped_buffer()
-          .as_ref()
-      {
-        return false;
-      }
-    }
+  fn test_display(&self, actual: String) -> Result<(), String> {
+    self
+      .display
+      .as_ref()
+      .map(|expected| match expected == &actual {
+        true => Ok(()),
+        false => Err(format!("display: {:?} == {:?}; ", expected, actual)),
+      })
+      .unwrap_or(Ok(()))
+  }
 
-    if let Some(display_string) = &self.display {
-      if display_string != &tf.display_string() {
-        return false;
-      }
-    }
+  fn test_stopped_buffer(&self, actual: Option<String>) -> Result<(), String> {
+    self
+      .stopped_buffer
+      .as_ref()
+      .map(|expected| match Some(expected) == actual.as_ref() {
+        true => Ok(()),
+        false => Err(format!(
+          "stopped_buffer: {:?} == {:?}; ",
+          Some(expected),
+          actual
+        )),
+      })
+      .unwrap_or(Ok(()))
+  }
 
-    true
+  fn test_transformer_type(&self, actual: TransformerTypes) -> Result<(), String> {
+    self
+      .transformer_type
+      .as_ref()
+      .map(|expected| match expected == &actual {
+        true => Ok(()),
+        false => Err(format!(
+          "transformer_type: {:?} == {:?}; ",
+          expected, actual
+        )),
+      })
+      .unwrap_or(Ok(()))
   }
 }
 
@@ -82,7 +117,7 @@ impl TestData {
     }
   }
 
-  pub fn test(&self) -> bool {
+  pub fn test(&self) -> Result<(), String> {
     let mut composition = Composition::new_from_transformer(
       self.transformer.clone_context().borrow().new_empty(),
       self.transformer.clone(),
@@ -97,56 +132,25 @@ impl TestData {
       items
         .into_iter()
         .enumerate()
-        .filter(|(_, item)| item.test())
-        .collect::<Vec<(usize, TestData)>>(),
+        .map(|(i, item)| (i, item.input.clone(), item.test()))
+        .filter(|(_, _, item)| item.is_err())
+        .collect::<Vec<_>>(),
     )
-    .and_then(|list| if list.is_empty() { Some(list) } else { None })
+    .and_then(|list| match list.is_empty() {
+      true => None,
+      false => Some(list),
+    })
     .map(|vec| {
-      vec.iter().fold(String::new(), |acc, (i, item)| {
-        acc + &format!("{}: {}\n", i, item)
+      vec.iter().fold(String::new(), |acc, (i, input, item)| {
+        acc
+          + &format!(
+            "{}: input: {:?}; {}\n",
+            i + 1,
+            input,
+            item.as_ref().err().unwrap()
+          )
       })
     })
     .map(|s| panic!(s));
-  }
-}
-
-impl fmt::Display for TestData {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}; ", &self.input)?;
-
-    self.example.transformer_type.as_ref().map(|display| {
-      write!(
-        f,
-        "{:?} = {:?}, ",
-        display,
-        &self.transformer.transformer_type()
-      )
-    });
-
-    self.example.stopped_buffer.as_ref().map(|buf| {
-      write!(
-        f,
-        "{:?} = {:?}, ",
-        Some(buf),
-        self
-          .transformer
-          .clone_context()
-          .borrow()
-          .result()
-          .stopped_buffer()
-          .as_ref()
-      )
-    });
-
-    self.example.display.as_ref().map(|display| {
-      write!(
-        f,
-        "{:?} = {:?}, ",
-        display,
-        self.transformer.display_string()
-      )
-    });
-
-    fmt::Result::Ok(())
   }
 }

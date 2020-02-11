@@ -29,7 +29,42 @@ impl CompositionResult {
     })
   }
 
+  pub fn pop_stopped_buffer(&mut self) {
+    self.stopped_buffer = match &self.stopped_buffer {
+      None => None,
+      Some(buf) => {
+        let mut buf = buf.clone();
+        buf.pop();
+
+        match buf.is_empty() {
+          true => None,
+          false => Some(buf),
+        }
+      }
+    }
+  }
+
   pub fn stopped_buffer(&self) -> Option<String> {
     self.stopped_buffer.clone()
+  }
+
+  pub fn dictionary_updates(&self) -> &Vec<DictionaryEntry> {
+    &self.dictionary_updates
+  }
+
+  pub fn push_dictionary_updates(&mut self, updates: &Vec<DictionaryEntry>) {
+    updates
+      .iter()
+      .for_each(|item| self.dictionary_updates.push(item.clone()))
+  }
+
+  pub fn merge_result(&mut self, result: &CompositionResult) {
+    result.stopped_buffer().map(|buf| self.push_buffer(buf));
+
+    self.push_dictionary_updates(result.dictionary_updates());
+  }
+
+  pub fn clear_stopped_buffer(&mut self) {
+    self.stopped_buffer = None
   }
 }

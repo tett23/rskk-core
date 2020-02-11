@@ -18,7 +18,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::keyboards::{KeyCode, Keyboard, MetaKey};
-use crate::Context;
+use crate::{Context, DictionaryEntry};
 
 pub use abbr::AbbrTransformer;
 pub use continuous::ContinuousTransformer;
@@ -50,8 +50,32 @@ pub trait Displayable {
 
 pub trait WithContext {
   fn clone_context(&self) -> Rc<RefCell<Context>>;
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>);
+
+  fn push_stopped_buffer(&self, buffer: String) -> Rc<RefCell<Context>> {
+    let context = self.clone_context().borrow().copy();
+    context.borrow_mut().push_result_string(buffer);
+
+    context
+  }
+
+  fn clear_stopped_buffer(&self) -> Rc<RefCell<Context>> {
+    let context = self.clone_context().borrow().copy();
+    context.borrow_mut().clear_stopped_buffer();
+
+    context
+  }
+
+  fn push_dictionary_updates(&mut self, updates: &Vec<DictionaryEntry>) -> Rc<RefCell<Context>> {
+    let context = self.clone_context().borrow().copy();
+    context.borrow_mut().push_dictionary_updates(updates);
+
+    context
+  }
+
+  fn new_context(&self) -> Rc<RefCell<Context>> {
+    self.clone_context().borrow().new_empty()
+  }
 }
 
 pub trait Transformable:
@@ -94,11 +118,7 @@ pub trait Transformable:
   }
 
   fn to_completed_with_update_buffer(&self, buffer: String) -> Box<dyn Transformable> {
-    let context = self.clone_context();
-    {
-      let mut context = context.borrow_mut();
-      context.push_result_string(buffer);
-    }
+    let context = self.push_stopped_buffer(buffer);
 
     box StoppedTransformer::completed(context)
   }
@@ -108,8 +128,11 @@ pub trait Transformable:
   }
 
   fn push_key(&self, key: &KeyCode) -> Option<Box<dyn Transformable>> {
-    println!("change transformer start {:?} {:?}", key, self.as_trait());
-    match (
+    println!(
+      "{}",
+      format!("change transformer start {:?} {:?}", key, self.as_trait())
+    );
+    let ret = match (
       self.push_meta_key(key),
       key
         .printable_key()
@@ -120,7 +143,10 @@ pub trait Transformable:
       (_, Some(tfs)) if tfs.is_empty() => Some(self.to_canceled()),
       (_, Some(tfs)) => Some(tfs.last()?.clone()),
       _ => None,
-    }
+    };
+    println!("{}", format!("change transformer end {:?} {:?}", key, &ret));
+
+    ret
   }
 
   fn try_change_transformer(

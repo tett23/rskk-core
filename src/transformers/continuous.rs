@@ -5,32 +5,94 @@ use super::{
   AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
 };
 use crate::keyboards::{KeyCode, Keyboard};
-use crate::{tf, Context};
+use crate::{tf, Context, DictionaryEntry};
 
 #[derive(Clone)]
 pub struct ContinuousTransformer {
   context: Rc<RefCell<Context>>,
   current_transformer_type: TransformerTypes,
-  stack: Vec<Box<dyn Transformable>>,
+  child: Box<dyn Transformable>,
   buffer: String,
 }
 
 impl ContinuousTransformer {
   pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
     ContinuousTransformer {
-      context,
+      context: context.clone(),
       current_transformer_type: transformer_type,
-      stack: vec![],
+      child: tf!(context.borrow().new_empty(), transformer_type),
       buffer: String::new(),
     }
   }
 
-  fn base_transformer(&self) -> Box<dyn Transformable> {
-    tf!(self.clone_context(), self.current_transformer_type)
+  fn new_child_transformer(&self) -> Box<dyn Transformable> {
+    tf!(self.new_context(), self.current_transformer_type)
   }
 
-  fn push_new_base_transformer(&mut self) {
-    self.stack.push(self.base_transformer())
+  fn merge_transform_results(&self, tfs: &Vec<Box<dyn Transformable>>) -> ContinuousTransformer {
+    self.merge_buffer(tfs).merge_dictionary_updates(tfs)
+  }
+
+  fn merge_buffer(&self, tfs: &Vec<Box<dyn Transformable>>) -> ContinuousTransformer {
+    match Self::collect_stopped_buffer(tfs) {
+      None => self.clone(),
+      Some(string) => {
+        let mut ret = self.clone();
+        ret.buffer.push_str(&string);
+
+        ret
+      }
+    }
+  }
+
+  fn collect_stopped_buffer(tfs: &Vec<Box<dyn Transformable>>) -> Option<String> {
+    let ret = tfs
+      .iter()
+      .map(|tf| tf.clone_context().borrow().result().stopped_buffer())
+      .filter(|item| item.is_some())
+      .map(|item| item.unwrap())
+      .fold(String::new(), |acc, item| acc + &item);
+
+    match ret.is_empty() {
+      true => None,
+      false => Some(ret),
+    }
+  }
+
+  fn merge_dictionary_updates(&self, tfs: &Vec<Box<dyn Transformable>>) -> ContinuousTransformer {
+    match Self::collect_dictonary_updates(tfs) {
+      None => self.clone(),
+      Some(vec) => {
+        let mut ret = self.clone();
+        ret.push_dictionary_updates(&vec);
+
+        ret
+      }
+    }
+  }
+
+  fn collect_dictonary_updates(tfs: &Vec<Box<dyn Transformable>>) -> Option<Vec<DictionaryEntry>> {
+    let ret = tfs
+      .iter()
+      .map(|tf| {
+        tf.clone_context()
+          .borrow()
+          .result()
+          .dictionary_updates()
+          .iter()
+          .map(|a| a.clone())
+          .collect::<Vec<_>>()
+      })
+      .fold(vec![], |mut acc, mut vec| {
+        acc.append(&mut vec);
+
+        acc
+      });
+
+    match ret.is_empty() {
+      true => None,
+      false => Some(ret),
+    }
   }
 }
 
@@ -39,7 +101,6 @@ impl WithContext for ContinuousTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }
@@ -55,45 +116,52 @@ impl Transformable for ContinuousTransformer {
     keyboard: &Box<dyn Keyboard>,
     last_key_code: &KeyCode,
   ) -> Option<Box<dyn Transformable>> {
-    self
-      .stack
-      .last()?
-      .try_change_transformer(keyboard, last_key_code)
+    self.child.try_change_transformer(keyboard, last_key_code)
   }
 
   fn push_character(&self, character: char) -> Option<Vec<Box<dyn Transformable>>> {
-    let mut tf = self.clone();
-    match &*tf.stack {
-      [] => tf.push_new_base_transformer(),
-      [.., last] if last.is_stopped() => tf.push_new_base_transformer(),
-      _ => {}
-    }
+    let tfs = self.child.push_character(character)?;
+    let tf = self.merge_transform_results(&tfs);
 
-    tf.stack
-      .last()
-      .and_then(|last| Some(tf.replace_last_element(last.push_character(character)?)))
+    let mut new_tf = tfs.last()?.clone();
+    new_tf.set_context(new_tf.clear_stopped_buffer());
+
+    Some(tf.replace_last_element(vec![new_tf]))
   }
 
   fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    if self.stack.is_empty() {
-      return Some(vec![]);
+    let tf = self.child.push_escape()?;
+    match tf.is_empty() {
+      true => Some(vec![]),
+      false => Some(self.replace_last_element(tf)),
     }
-
-    Some(self.replace_last_element(self.stack.last()?.push_escape()?))
   }
 
   fn push_enter(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    match &*self.stack {
-      [] => Some(vec![]),
-      [.., last] if last.is_stopped() => Some(vec![self.to_completed()]),
-      [.., last] => Some(self.replace_last_element(last.push_enter()?)),
+    match self.child.is_empty() {
+      true => Some(vec![
+        self.to_completed_with_update_buffer(self.buffer.clone())
+      ]),
+      false => {
+        let tfs = self.child.push_enter()?;
+        let tf = self.merge_transform_results(&tfs);
+
+        Some(tf.replace_last_element(vec![tf.new_child_transformer()]))
+      }
     }
   }
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    match &*self.stack {
-      [] => Some(vec![]),
-      [.., last] => Some(self.replace_last_element(last.push_backspace()?)),
+    match self.child.is_empty() {
+      true => {
+        let mut tf = self.clone();
+
+        match tf.buffer.pop().is_none() {
+          true => Some(vec![]),
+          false => Some(vec![box tf]),
+        }
+      }
+      false => Some(self.replace_last_element(self.child.push_backspace()?)),
     }
   }
 
@@ -102,23 +170,17 @@ impl Transformable for ContinuousTransformer {
   }
 
   fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    Some(self.replace_last_element(self.stack.last()?.push_space()?))
+    Some(self.replace_last_element(self.child.push_space()?))
   }
 }
 
 impl Displayable for ContinuousTransformer {
   fn buffer_content(&self) -> String {
-    self
-      .stack
-      .iter()
-      .fold("".to_string(), |acc, tf| acc + &tf.buffer_content())
+    self.buffer.clone() + &self.child.buffer_content()
   }
 
   fn display_string(&self) -> String {
-    self
-      .stack
-      .iter()
-      .fold("".to_string(), |acc, tf| acc + &tf.display_string())
+    self.buffer.clone() + &self.child.display_string()
   }
 }
 
@@ -128,27 +190,17 @@ impl AsTransformerTrait for ContinuousTransformer {
   }
 
   fn send_target(&self) -> Box<dyn Transformable> {
-    match self.stack.last() {
-      Some(tf) => tf.clone(),
-      None => self.to_canceled(),
-    }
+    self.child.clone()
   }
 }
 
 impl Stackable for ContinuousTransformer {
-  fn push(&self, item: Box<dyn Transformable>) -> Box<dyn Transformable> {
-    let mut ret = self.clone();
-
-    ret.stack.push(item);
-
-    box ret
+  fn push(&self, _: Box<dyn Transformable>) -> Box<dyn Transformable> {
+    unreachable!();
   }
 
   fn pop(&self) -> (Box<dyn Transformable>, Option<Box<dyn Transformable>>) {
-    let mut ret = self.clone();
-    let item = ret.stack.pop();
-
-    (box ret, item)
+    unreachable!();
   }
 
   fn replace_last_element(
@@ -157,21 +209,28 @@ impl Stackable for ContinuousTransformer {
   ) -> Vec<Box<dyn Transformable>> {
     let mut ret = self.clone();
 
-    ret.stack.pop();
-    items.iter().for_each(|item| ret.stack.push(item.clone()));
-    if ret.stack.len() == 0 {
-      return vec![];
-    }
+    match items.last() {
+      None => {
+        ret.child = self.new_child_transformer();
 
-    vec![box ret]
+        vec![box ret]
+      }
+      Some(tf) => {
+        ret.child = match tf.is_stopped() {
+          true => self.new_child_transformer(),
+          false => tf.clone(),
+        };
+        vec![box ret]
+      }
+    }
   }
 
   fn stack(&self) -> Vec<Box<dyn Transformable>> {
-    self.stack.clone()
+    vec![self.child.clone()]
   }
 
   fn child_transformer_type(&self) -> TransformerTypes {
-    self.stack.last().unwrap().child_transformer_type()
+    self.child.transformer_type()
   }
 }
 
@@ -188,8 +247,10 @@ mod tests {
     let conf = dummy_context();
 
     let vec = crate::tds![conf, ContinuousTransformer, Hiragana;
-      ["[escape]", { display: "", transformer_type: Stopped(Canceled) }],
       ["[backspace]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["a", { display: "あ", transformer_type: Continuous }],
+      ["a\n", { display: "", stopped_buffer: "あ", transformer_type: Stopped(Compleated) }],
+      ["aa", { display: "ああ", transformer_type: Continuous }],
       ["aa[backspace]", { display: "あ", transformer_type: Continuous }],
       ["ak[backspace]", { display: "あ", transformer_type: Continuous }],
       ["aa[backspace]i", { display: "あい", transformer_type: Continuous }],

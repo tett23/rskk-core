@@ -33,7 +33,6 @@ impl WithContext for DirectTransformer {
     self.context.clone()
   }
 
-  #[cfg(test)]
   fn set_context(&mut self, context: Rc<RefCell<Context>>) {
     self.context = context;
   }
@@ -63,10 +62,14 @@ impl Transformable for DirectTransformer {
     let mut tf = self.clone();
 
     tf.buffer.push(character);
-    dbg!(&tf.buffer);
-    Some(vec![match tf.buffer.is_stopped() {
-      true => tf.to_completed_with_update_buffer(tf.buffer.to_string()),
-      false => box tf,
+    let (stopped, continued) = tf.buffer.partition_by_state();
+    tf.buffer = continued;
+    Some(vec![match tf.is_empty() {
+      true => tf.to_completed_with_update_buffer(stopped.to_string()),
+      false => {
+        tf.push_stopped_buffer(stopped.to_string());
+        box tf
+      }
     }])
   }
 }
