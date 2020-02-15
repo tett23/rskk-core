@@ -207,6 +207,9 @@ mod tests {
       ["Kanji \n", { stopped_buffer: "漢字", display: "", transformer_type: Stopped(Compleated) }],
       ["Kanji a", { stopped_buffer: "漢字あ", display: "", transformer_type: Stopped(Compleated) }],
       ["Kanji A", { stopped_buffer: "漢字", display: "▽あ", transformer_type: Henkan }],
+      ["Kanji k", { stopped_buffer: "漢字", display: "k", transformer_type: Hiragana }],
+      ["Kanji K", { stopped_buffer: "漢字", display: "▽k", transformer_type: Henkan }],
+      ["Kanji Kanji", { stopped_buffer: "漢字", display: "▽かんじ", transformer_type: Henkan }],
     ];
     crate::tests::helpers::TestData::batch(vec);
 
