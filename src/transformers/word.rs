@@ -93,21 +93,25 @@ impl Word {
   }
 
   pub fn push(&mut self, character: char) {
-    let character = match self.is_empty() {
-      true => character.to_lowercase().next().unwrap(),
-      false => character,
-    };
-    let lowercase = character.to_lowercase().next().unwrap();
-    if character.is_ascii_uppercase() {
-      self.pair.start_okuri();
-      self.okuri = Some(lowercase);
-    }
+    self.try_okuri_start(character);
 
+    let character = character.to_lowercase().next().unwrap();
     if self.okuri.is_none() {
-      self.dic_read.push(lowercase);
+      self.dic_read.push(character);
     }
 
-    self.pair.push(lowercase);
+    self.pair.push(character);
+  }
+
+  fn try_okuri_start(&mut self, character: char) {
+    if self.is_okuri_start(character) {
+      self.pair.start_okuri();
+      self.okuri = Some(character.to_lowercase().next().unwrap());
+    }
+  }
+
+  fn is_okuri_start(&self, character: char) -> bool {
+    self.pair.0.is_stopped() && self.okuri.is_none() && character.is_ascii_uppercase()
   }
 
   pub fn pop(&mut self) {
