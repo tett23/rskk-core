@@ -44,7 +44,6 @@ impl Transformable for HenkanTransformer {
   }
 
   fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    dbg!(&self.stack);
     Some(self.replace_last_element(self.stack.last()?.push_escape()?))
   }
 
@@ -58,18 +57,7 @@ impl Transformable for HenkanTransformer {
   }
 
   fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    let mut new_tf = self.stack.last()?.push_space()?;
-    let vec = match self.stack.last()?.transformer_type() {
-      TransformerTypes::Yomi => {
-        let mut tf = self.clone();
-        tf.stack.append(&mut new_tf);
-
-        return Some(vec![box tf]);
-      }
-      _ => new_tf,
-    };
-
-    Some(self.replace_last_element(vec))
+    Some(self.replace_last_element(self.stack.last()?.push_space()?))
   }
 
   fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
