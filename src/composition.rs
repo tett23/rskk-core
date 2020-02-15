@@ -88,7 +88,8 @@ impl Composition {
 
   pub fn stopped_buffer(&self) -> String {
     self
-      .context
+      .transformer
+      .clone_context()
       .borrow()
       .result()
       .stopped_buffer()
@@ -116,7 +117,7 @@ impl Composition {
   }
 
   pub fn result(&self) -> CompositionResult {
-    self.context.borrow().result().clone()
+    self.transformer.clone_context().borrow().result().clone()
   }
 }
 
