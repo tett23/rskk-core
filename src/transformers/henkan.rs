@@ -5,7 +5,7 @@ use super::{
   AsTransformerTrait, Displayable, KeyCode, Stackable, Transformable, TransformerTypes,
   WithContext, YomiTransformer,
 };
-use crate::Context;
+use crate::{tf, Context};
 
 #[derive(Clone)]
 pub struct HenkanTransformer {
@@ -82,9 +82,26 @@ impl Transformable for HenkanTransformer {
 
   fn push_any_character(&self, key_code: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
     let tfs = self.stack.last()?.push_any_character(key_code)?;
+
     match &*tfs {
       [] => Some(vec![]),
-      [last] if last.is_stopped() => Some(vec![last.clone()]),
+      [last] if last.is_stopped() => {
+        let tf = tf!(self.new_context(), self.current_transformer_type);
+        let mut tf = key_code
+          .printable_key()
+          .and_then(|character| Some(tf.push_character(character)?.last()?.clone()))
+          .unwrap_or(tf);
+        let buf = tf
+          .clone_context()
+          .borrow()
+          .result()
+          .stopped_buffer()
+          .unwrap_or(String::new());
+        last.clone_context().borrow_mut().push_result_string(buf);
+        tf.set_context(last.clone_context());
+
+        Some(vec![tf])
+      }
       _ => Some(self.replace_last_element(tfs)),
     }
   }
@@ -198,6 +215,10 @@ mod tests {
       ["aTte[escape]", { display: "▽あ", transformer_type: Henkan }],
       ["aTsu", { display: "[登録: あ*つ]", transformer_type: Henkan }],
       ["aTsu[escape]", { display: "▽あ", transformer_type: Henkan }],
+      ["Kanji\n", { stopped_buffer: "かんじ", display: "", transformer_type: Stopped(Compleated) }],
+      ["Kanji \n", { stopped_buffer: "漢字", display: "", transformer_type: Stopped(Compleated) }],
+      ["Kanji a", { stopped_buffer: "漢字あ", display: "", transformer_type: Stopped(Compleated) }],
+      ["Kanji A", { stopped_buffer: "漢字", display: "▽あ", transformer_type: Henkan }],
     ];
     crate::tests::helpers::TestData::batch(vec);
 
