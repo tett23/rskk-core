@@ -58,8 +58,8 @@ impl Transformable for HenkanTransformer {
   }
 
   fn push_space(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    let mut new_tf = self.send_target().push_space()?;
-    let vec = match self.send_target().transformer_type() {
+    let mut new_tf = self.stack.last()?.push_space()?;
+    let vec = match self.stack.last()?.transformer_type() {
       TransformerTypes::Yomi => {
         let mut tf = self.clone();
         tf.stack.append(&mut new_tf);
@@ -73,11 +73,11 @@ impl Transformable for HenkanTransformer {
   }
 
   fn push_delete(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    Some(self.replace_last_element(self.send_target().push_delete()?))
+    Some(self.replace_last_element(self.stack.last()?.push_delete()?))
   }
 
   fn push_backspace(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    Some(self.replace_last_element(self.send_target().push_backspace()?))
+    Some(self.replace_last_element(self.stack.last()?.push_backspace()?))
   }
 
   fn push_any_character(&self, key_code: &KeyCode) -> Option<Vec<Box<dyn Transformable>>> {
@@ -92,11 +92,19 @@ impl Transformable for HenkanTransformer {
 
 impl Displayable for HenkanTransformer {
   fn buffer_content(&self) -> String {
-    self.send_target().buffer_content()
+    self
+      .stack
+      .last()
+      .and_then(|tf| Some(tf.buffer_content()))
+      .unwrap_or(String::new())
   }
 
   fn display_string(&self) -> String {
-    self.send_target().display_string()
+    self
+      .stack
+      .last()
+      .and_then(|tf| Some(tf.display_string()))
+      .unwrap_or(String::new())
   }
 }
 
