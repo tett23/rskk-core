@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::tables::{BufferPairs, LetterType};
 use super::{
   AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
@@ -11,12 +8,12 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct DirectTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   buffer: BufferPairs,
 }
 
 impl DirectTransformer {
-  pub fn new(context: Rc<RefCell<Context>>) -> Self {
+  pub fn new(context: Context) -> Self {
     DirectTransformer {
       context,
       buffer: BufferPairs::new(LetterType::Direct),
@@ -29,11 +26,15 @@ impl DirectTransformer {
 }
 
 impl WithContext for DirectTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }
@@ -50,7 +51,6 @@ impl Transformable for DirectTransformer {
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .context
-      .borrow()
       .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());

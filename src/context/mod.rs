@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -21,18 +20,8 @@ impl Context {
     }
   }
 
-  pub fn new_empty(&self) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self::new(
-      self.config.clone(),
-      self.dictionary.clone(),
-    )))
-  }
-
-  pub fn copy(&self) -> Rc<RefCell<Self>> {
-    let mut ret = Self::new(self.config.clone(), self.dictionary.clone());
-    ret.result = self.result.clone();
-
-    Rc::new(RefCell::new(ret))
+  pub fn new_empty(&self) -> Self {
+    Self::new(self.config.clone(), self.dictionary.clone())
   }
 
   pub fn config(&self) -> &RSKKConfig {
@@ -47,24 +36,39 @@ impl Context {
     &self.result
   }
 
-  pub fn push_result_string<S: Into<String>>(&mut self, buffer: S) {
-    self.result.push_buffer(buffer)
+  pub fn push_result_string<S: Into<String>>(&self, buffer: S) -> Self {
+    Self {
+      result: self.result.push_buffer(buffer),
+      ..self.clone()
+    }
   }
 
-  pub fn push_dictionary_updates(&mut self, updates: &Vec<DictionaryEntry>) {
-    self.result.push_dictionary_updates(updates)
+  pub fn push_dictionary_updates(&self, updates: &Vec<DictionaryEntry>) -> Self {
+    Self {
+      result: self.result.push_dictionary_updates(updates),
+      ..self.clone()
+    }
   }
 
-  pub fn pop_stopped_buffer(&mut self) {
-    self.result.pop_stopped_buffer()
+  pub fn pop_stopped_buffer(&self) -> Self {
+    Self {
+      result: self.result.pop_stopped_buffer(),
+      ..self.clone()
+    }
   }
 
-  pub fn merge_result(&mut self, result: &CompositionResult) {
-    self.result.merge_result(result)
+  pub fn merge_result(&self, result: &CompositionResult) -> Self {
+    Self {
+      result: self.result.merge_result(result),
+      ..self.clone()
+    }
   }
 
-  pub fn clear_stopped_buffer(&mut self) {
-    self.result.clear_stopped_buffer()
+  pub fn clear_stopped_buffer(&self) -> Self {
+    Self {
+      result: self.result.clear_stopped_buffer(),
+      ..self.clone()
+    }
   }
 }
 
@@ -75,7 +79,7 @@ impl fmt::Debug for Context {
 }
 
 #[derive(Clone, Debug)]
-pub struct Contexts(Vec<Rc<RefCell<Context>>>);
+pub struct Contexts(Vec<Context>);
 
 impl Contexts {
   pub fn stopped_buffer(&self) -> Option<String> {
@@ -83,7 +87,7 @@ impl Contexts {
       self
         .0
         .iter()
-        .map(|item| item.borrow().result().stopped_buffer())
+        .map(|item| item.result().stopped_buffer())
         .filter(|item| item.is_some())
         .collect::<Vec<_>>(),
     )
@@ -104,7 +108,6 @@ impl Contexts {
       .iter()
       .map(|item| {
         item
-          .borrow()
           .result()
           .dictionary_updates()
           .iter()
@@ -118,10 +121,10 @@ impl Contexts {
   }
 }
 
-impl From<&Vec<Rc<RefCell<Context>>>> for Contexts {
-  fn from(items: &Vec<Rc<RefCell<Context>>>) -> Contexts {
+impl From<&Vec<Context>> for Contexts {
+  fn from(items: &Vec<Context>) -> Contexts {
     let mut ret = Contexts(vec![]);
-    items.into_iter().for_each(|item| ret.0.push(item.clone()));
+    items.iter().for_each(|item| ret.0.push(item.clone()));
 
     ret
   }

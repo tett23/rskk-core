@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::tables::{BufferPairs, LetterType};
 use super::{
   AbbrTransformer, AsTransformerTrait, Displayable, HenkanTransformer, Stackable, Transformable,
@@ -12,12 +9,12 @@ use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct KatakanaTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   buffer: BufferPairs,
 }
 
 impl KatakanaTransformer {
-  pub fn new(context: Rc<RefCell<Context>>) -> Self {
+  pub fn new(context: Context) -> Self {
     KatakanaTransformer {
       context,
       buffer: BufferPairs::new(LetterType::Katakana),
@@ -52,11 +49,15 @@ impl KatakanaTransformer {
 }
 
 impl WithContext for KatakanaTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }
@@ -73,7 +74,6 @@ impl Transformable for KatakanaTransformer {
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .context
-      .borrow()
       .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());

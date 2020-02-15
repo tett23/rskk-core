@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashSet;
-use std::rc::Rc;
 
 use super::tables::{BufferPairs, LetterType};
 use super::{
@@ -12,12 +10,12 @@ use crate::{set, tf, Context};
 
 #[derive(Clone)]
 pub struct HiraganaTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   buffer: BufferPairs,
 }
 
 impl HiraganaTransformer {
-  pub fn new(context: Rc<RefCell<Context>>) -> Self {
+  pub fn new(context: Context) -> Self {
     HiraganaTransformer {
       context,
       buffer: BufferPairs::new(LetterType::Hiragana),
@@ -52,11 +50,15 @@ impl HiraganaTransformer {
 }
 
 impl WithContext for HiraganaTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }
@@ -73,7 +75,6 @@ impl Transformable for HiraganaTransformer {
   ) -> Option<Box<dyn Transformable>> {
     let transformer_type = self
       .context
-      .borrow()
       .config()
       .key_config()
       .try_change_transformer(&Self::allow_transformers(), keyboard.pressing_keys());

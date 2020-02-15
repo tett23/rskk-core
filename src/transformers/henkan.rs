@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::{
   AsTransformerTrait, Displayable, KeyCode, Stackable, Transformable, TransformerTypes,
   WithContext, YomiTransformer,
@@ -9,27 +6,34 @@ use crate::{tf, Context};
 
 #[derive(Clone)]
 pub struct HenkanTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   current_transformer_type: TransformerTypes,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl HenkanTransformer {
-  pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Context, transformer_type: TransformerTypes) -> Self {
     HenkanTransformer {
       context: context.clone(),
       current_transformer_type: transformer_type,
-      stack: vec![box YomiTransformer::new(context, transformer_type)],
+      stack: vec![box YomiTransformer::new(
+        context.new_empty(),
+        transformer_type,
+      )],
     }
   }
 }
 
 impl WithContext for HenkanTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }
@@ -80,13 +84,12 @@ impl Transformable for HenkanTransformer {
           .and_then(|character| Some(tf.push_character(character)?.last()?.clone()))
           .unwrap_or(tf);
         let buf = tf
-          .clone_context()
-          .borrow()
+          .context()
           .result()
           .stopped_buffer()
           .unwrap_or(String::new());
-        last.clone_context().borrow_mut().push_result_string(buf);
-        tf.set_context(last.clone_context());
+        let context = last.context().push_result_string(buf);
+        tf.set_context(context);
 
         Some(vec![tf])
       }

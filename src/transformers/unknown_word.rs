@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::{
   AsTransformerTrait, ContinuousTransformer, Displayable, Stackable, Transformable,
   TransformerTypes, WithContext, Word,
@@ -9,13 +6,13 @@ use crate::Context;
 
 #[derive(Clone)]
 pub struct UnknownWordTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   word: Word,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl UnknownWordTransformer {
-  pub fn new(context: Rc<RefCell<Context>>, word: Word) -> Self {
+  pub fn new(context: Context, word: Word) -> Self {
     UnknownWordTransformer {
       context,
       word,
@@ -32,11 +29,15 @@ impl UnknownWordTransformer {
 }
 
 impl WithContext for UnknownWordTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }

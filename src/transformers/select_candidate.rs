@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::{
   AsTransformerTrait, BufferState, Displayable, KeyCode, Stackable, Transformable,
   TransformerTypes, UnknownWordTransformer, WithContext, Word,
@@ -10,7 +7,7 @@ use crate::Context;
 
 #[derive(Clone, Debug)]
 pub struct SelectCandidateTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   buffer: String,
   buffer_state: BufferState,
   dictionary_entry: DictionaryEntry,
@@ -19,11 +16,7 @@ pub struct SelectCandidateTransformer {
 }
 
 impl SelectCandidateTransformer {
-  pub fn new(
-    context: Rc<RefCell<Context>>,
-    dictionary_entry: &DictionaryEntry,
-    word: Word,
-  ) -> Self {
+  pub fn new(context: Context, dictionary_entry: &DictionaryEntry, word: Word) -> Self {
     SelectCandidateTransformer {
       context,
       buffer: "".to_string(),
@@ -53,11 +46,15 @@ impl SelectCandidateTransformer {
 }
 
 impl WithContext for SelectCandidateTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }
@@ -198,7 +195,7 @@ mod tests {
     let candidate2 = Candidate::new("b", None);
     let vec = vec![candidate1.clone(), candidate2.clone()];
     let tf = SelectCandidateTransformer::new(
-      conf.clone(),
+      conf,
       &DictionaryEntry::new("test", vec),
       Word::from((LetterType::Hiragana, "michigo")),
     );

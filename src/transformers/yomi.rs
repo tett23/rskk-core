@@ -1,6 +1,4 @@
 use kana::{half2kana, hira2kata, kata2hira};
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use super::tables::LetterType;
 use super::{
@@ -11,13 +9,13 @@ use crate::Context;
 
 #[derive(Clone, Debug)]
 pub struct YomiTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   current_transformer_type: TransformerTypes,
   word: Word,
 }
 
 impl YomiTransformer {
-  pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Context, transformer_type: TransformerTypes) -> Self {
     YomiTransformer {
       context,
       current_transformer_type: transformer_type,
@@ -41,7 +39,6 @@ impl YomiTransformer {
   fn try_transition_to_select_candidate(&self) -> Option<SelectCandidateTransformer> {
     self
       .context
-      .borrow()
       .dictionary()
       .transform(self.word.to_dic_read()?)
       .map(|dic_entry| {
@@ -55,11 +52,15 @@ impl YomiTransformer {
 }
 
 impl WithContext for YomiTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }

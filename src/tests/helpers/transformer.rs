@@ -36,7 +36,7 @@ impl Example {
     Some(
       vec![
         self.test_display(tf.display_string()),
-        self.test_stopped_buffer(tf.clone_context().borrow().result().stopped_buffer()),
+        self.test_stopped_buffer(tf.context().result().stopped_buffer()),
         self.test_transformer_type(tf.transformer_type()),
       ]
       .iter()
@@ -119,10 +119,12 @@ impl TestData {
 
   pub fn test(&self) -> Result<(), String> {
     let mut composition = Composition::new_from_transformer(
-      self.transformer.clone_context().borrow().new_empty(),
+      self.transformer.context().new_empty(),
       self.transformer.clone(),
     );
-    composition.push_key_events(&str_to_key_code_vector(&self.input));
+    str_to_key_code_vector(&self.input).iter().for_each(|item| {
+      composition.push_key_event(item);
+    });
 
     self.example.test(&composition.transformer())
   }

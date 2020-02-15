@@ -13,9 +13,7 @@ mod word;
 mod yomi;
 
 use objekt;
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 
 use crate::keyboards::{KeyCode, Keyboard, MetaKey};
 use crate::{Context, DictionaryEntry};
@@ -49,32 +47,24 @@ pub trait Displayable {
 }
 
 pub trait WithContext {
-  fn clone_context(&self) -> Rc<RefCell<Context>>;
-  fn set_context(&mut self, context: Rc<RefCell<Context>>);
+  fn clone_context(&self) -> Context;
+  fn context(&self) -> &Context;
+  fn set_context(&mut self, context: Context);
 
-  fn push_stopped_buffer(&self, buffer: String) -> Rc<RefCell<Context>> {
-    let context = self.clone_context().borrow().copy();
-    context.borrow_mut().push_result_string(buffer);
-
-    context
+  fn push_stopped_buffer(&self, buffer: String) -> Context {
+    self.context().push_result_string(buffer)
   }
 
-  fn clear_stopped_buffer(&self) -> Rc<RefCell<Context>> {
-    let context = self.clone_context().borrow().copy();
-    context.borrow_mut().clear_stopped_buffer();
-
-    context
+  fn clear_stopped_buffer(&self) -> Context {
+    self.context().clear_stopped_buffer()
   }
 
-  fn push_dictionary_updates(&mut self, updates: &Vec<DictionaryEntry>) -> Rc<RefCell<Context>> {
-    let context = self.clone_context().borrow().copy();
-    context.borrow_mut().push_dictionary_updates(updates);
-
-    context
+  fn push_dictionary_updates(&mut self, updates: &Vec<DictionaryEntry>) -> Context {
+    self.context().push_dictionary_updates(updates)
   }
 
-  fn new_context(&self) -> Rc<RefCell<Context>> {
-    self.clone_context().borrow().new_empty()
+  fn new_context(&self) -> Context {
+    self.context().new_empty()
   }
 }
 

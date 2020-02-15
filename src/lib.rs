@@ -16,7 +16,6 @@ mod rskk_config;
 mod tests;
 mod transformers;
 
-use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -63,10 +62,7 @@ impl RSKK {
 
     pub fn start_composition_as(&self, composition_type: TransformerTypes) -> Composition {
         Composition::new(
-            Rc::new(RefCell::new(Context::new(
-                self.config.clone(),
-                self.dictionary.clone(),
-            ))),
+            Context::new(self.config.clone(), self.dictionary.clone()),
             composition_type,
         )
     }
@@ -236,9 +232,9 @@ macro_rules! tf {
     ( $conf:expr, $t:expr ) => {{
         let conf = $conf.clone();
         let ret: Box<dyn crate::transformers::Transformable> = match $t {
-            crate::transformers::TransformerTypes::Stopped(reason) => {
-                Box::new(crate::transformers::StoppedTransformer::new(conf, reason))
-            }
+            crate::transformers::TransformerTypes::Stopped(reason) => Box::new(
+                crate::transformers::StoppedTransformer::new(conf.clone(), reason),
+            ),
             crate::transformers::TransformerTypes::Direct => {
                 Box::new(crate::transformers::DirectTransformer::new(conf))
             }

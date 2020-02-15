@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::{
   AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
 };
@@ -14,30 +11,34 @@ pub enum StoppedReason {
 
 #[derive(Clone)]
 pub struct StoppedTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   reason: StoppedReason,
 }
 
 impl StoppedTransformer {
-  pub fn new(context: Rc<RefCell<Context>>, reason: StoppedReason) -> Self {
+  pub fn new(context: Context, reason: StoppedReason) -> Self {
     StoppedTransformer { context, reason }
   }
 
-  pub fn completed(context: Rc<RefCell<Context>>) -> Self {
+  pub fn completed(context: Context) -> Self {
     Self::new(context, StoppedReason::Compleated)
   }
 
-  pub fn canceled(context: Rc<RefCell<Context>>) -> Self {
+  pub fn canceled(context: Context) -> Self {
     Self::new(context, StoppedReason::Canceled)
   }
 }
 
 impl WithContext for StoppedTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }

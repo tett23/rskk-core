@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::{
   AsTransformerTrait, ContinuousTransformer, Displayable, KeyCode, SelectCandidateTransformer,
   Stackable, StoppedTransformer, Transformable, TransformerTypes, UnknownWordTransformer,
@@ -10,16 +7,16 @@ use crate::Context;
 
 #[derive(Clone)]
 pub struct AbbrTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   stack: Vec<Box<dyn Transformable>>,
 }
 
 impl AbbrTransformer {
-  pub fn new(context: Rc<RefCell<Context>>) -> Self {
+  pub fn new(context: Context) -> Self {
     Self {
       context: context.clone(),
       stack: vec![box ContinuousTransformer::new(
-        context,
+        context.new_empty(),
         TransformerTypes::Direct,
       )],
     }
@@ -35,7 +32,6 @@ impl AbbrTransformer {
   fn try_transition_to_select_candidate(&self) -> Option<SelectCandidateTransformer> {
     self
       .context
-      .borrow()
       .dictionary()
       .transform(self.to_word().to_dic_read()?)
       .map(|dic_entry| {
@@ -60,11 +56,15 @@ impl AbbrTransformer {
 }
 
 impl WithContext for AbbrTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }

@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::{
   AsTransformerTrait, Displayable, Stackable, Transformable, TransformerTypes, WithContext,
 };
@@ -9,18 +6,18 @@ use crate::{tf, Context, DictionaryEntry};
 
 #[derive(Clone)]
 pub struct ContinuousTransformer {
-  context: Rc<RefCell<Context>>,
+  context: Context,
   current_transformer_type: TransformerTypes,
   child: Box<dyn Transformable>,
   buffer: String,
 }
 
 impl ContinuousTransformer {
-  pub fn new(context: Rc<RefCell<Context>>, transformer_type: TransformerTypes) -> Self {
+  pub fn new(context: Context, transformer_type: TransformerTypes) -> Self {
     ContinuousTransformer {
       context: context.clone(),
       current_transformer_type: transformer_type,
-      child: tf!(context.borrow().new_empty(), transformer_type),
+      child: tf!(context.new_empty(), transformer_type),
       buffer: String::new(),
     }
   }
@@ -48,7 +45,7 @@ impl ContinuousTransformer {
   fn collect_stopped_buffer(tfs: &Vec<Box<dyn Transformable>>) -> Option<String> {
     let ret = tfs
       .iter()
-      .map(|tf| tf.clone_context().borrow().result().stopped_buffer())
+      .map(|tf| tf.context().result().stopped_buffer())
       .filter(|item| item.is_some())
       .map(|item| item.unwrap())
       .fold(String::new(), |acc, item| acc + &item);
@@ -75,8 +72,7 @@ impl ContinuousTransformer {
     let ret = tfs
       .iter()
       .map(|tf| {
-        tf.clone_context()
-          .borrow()
+        tf.context()
           .result()
           .dictionary_updates()
           .iter()
@@ -97,11 +93,15 @@ impl ContinuousTransformer {
 }
 
 impl WithContext for ContinuousTransformer {
-  fn clone_context(&self) -> Rc<RefCell<Context>> {
+  fn clone_context(&self) -> Context {
     self.context.clone()
   }
 
-  fn set_context(&mut self, context: Rc<RefCell<Context>>) {
+  fn context(&self) -> &Context {
+    &self.context
+  }
+
+  fn set_context(&mut self, context: Context) {
     self.context = context;
   }
 }
