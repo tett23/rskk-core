@@ -101,6 +101,12 @@ impl Composition {
   pub fn result(&self) -> CompositionResult {
     self.transformer.context().result().clone()
   }
+
+  pub fn clear_stopped_buffer(&mut self) {
+    self
+      .transformer
+      .set_context(self.transformer.clear_stopped_buffer())
+  }
 }
 
 struct KeyEventProcessor<'a> {

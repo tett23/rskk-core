@@ -168,6 +168,11 @@ pub extern "C" fn rskk_display_string(composition: *mut Composition) -> *mut c_c
 }
 
 #[no_mangle]
+pub extern "C" fn rskk_clear_stopped_buffer(composition: *mut Composition) {
+    unsafe { composition.as_mut() }.map(|c| c.clear_stopped_buffer());
+}
+
+#[no_mangle]
 pub extern "C" fn rskk_is_stopped(composition: *mut Composition) -> bool {
     unsafe { composition.as_ref().map(|c| c.is_stopped()).unwrap_or(true) }
 }
