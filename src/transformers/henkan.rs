@@ -219,6 +219,9 @@ mod tests {
       ["Michigo [escape][backspace]", { display: "▽みち", transformer_type: Henkan }],
       ["Michigo [escape][backspace] ", { display: "▼未知", transformer_type: Henkan }],
       ["Michigo [escape][backspace] \n", { stopped_buffer: "未知", display: "", transformer_type: Stopped(Compleated) }],
+      ["Michigo  [escape]", { display: "▽みちご", transformer_type: Henkan }],
+      ["Michigo  [escape][escape]", { display: "", transformer_type: Stopped(Canceled) }],
+      ["Michigo  [escape]a", { display: "▽みちごあ", transformer_type: Henkan }],
     ];
     crate::tests::helpers::TestData::batch(vec);
 

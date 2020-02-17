@@ -77,11 +77,17 @@ impl Transformable for UnknownWordTransformer {
   }
 
   fn push_escape(&self) -> Option<Vec<Box<dyn Transformable>>> {
-    if self.stack.is_empty() {
-      return Some(vec![]);
+    match self.stack.last() {
+      None => Some(vec![]),
+      Some(tf)
+        if tf.transformer_type() == TransformerTypes::Continuous
+          && tf.child_transformer_type() != TransformerTypes::Henkan
+          && tf.is_empty() =>
+      {
+        Some(vec![])
+      }
+      Some(tf) => Some(self.replace_last_element(tf.push_escape()?)),
     }
-
-    Some(self.replace_last_element(self.stack.last()?.push_escape()?))
   }
 }
 
