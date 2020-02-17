@@ -7,14 +7,6 @@ pub struct US {
   last_character: Option<KeyCode>,
 }
 
-// impl Clone for HashSet<KeyCode> {
-//   fn clone(&self) -> Self {
-//     let ret =HashSet::new();
-//     self.clone()
-//   }
-// }
-// impl Copy for HashSet<KeyCode> {}
-
 impl US {
   pub fn new() -> Self {
     US {

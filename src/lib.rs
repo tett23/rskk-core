@@ -364,6 +364,9 @@ mod lib_tests {
             ["[down:ctrl]j[up:ctrl]qka", { display: "", stopped_buffer: "カ", transformer_type: Stopped(Compleated) }],
             ["[down:ctrl]j[up:ctrl]Katakanaq", { display: "", stopped_buffer: "カタカナ", transformer_type: Stopped(Compleated) }],
             ["[down:ctrl]j[up:ctrl]qHiraganaq", { display: "", stopped_buffer: "ひらがな", transformer_type: Stopped(Compleated) }],
+            ["[down:ctrl]c", { display: "", transformer_type: Direct }],
+            ["[down:super]c", { display: "", transformer_type: Direct }],
+            ["[down:alt]c", { display: "", transformer_type: Direct }],
         ];
         crate::tests::helpers::TestData::batch(vec);
     }

@@ -136,16 +136,19 @@ impl<'a> KeyEventProcessor<'a> {
   pub fn next(&self) -> Option<KeyEventProcessorResult> {
     Self::next_key_code(self.event)
       .and_then(|key| Self::is_process_key(key, self.transformer))
-      .and(self.keyboard.last_character())
-      .map(|key| {
+      .and(Some((
+        self.keyboard.last_character(),
+        self.keyboard.last_printable_key(),
+      )))
+      .map(|(raw, printable)| {
         self
           .transformer
-          .try_change_transformer(&self.keyboard, &key)
+          .try_change_transformer(&self.keyboard, &raw?)
           .and_then(|tf| Some(KeyEventProcessorResult::TransformerChanged(tf)))
           .or_else(|| {
             self
               .transformer
-              .push_key(&key)
+              .push_key(&printable?)
               .map(|tf| KeyEventProcessorResult::KeyProcessed(tf))
           })
       })

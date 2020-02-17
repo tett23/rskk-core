@@ -48,6 +48,13 @@ pub trait Keyboard: objekt::Clone {
   fn pressing_keys(&self) -> &HashSet<KeyCode>;
   fn last_character(&self) -> Option<KeyCode>;
 
+  fn last_printable_key(&self) -> Option<KeyCode> {
+    match self.is_combination() {
+      true => None,
+      false => self.last_character(),
+    }
+  }
+
   fn push_event(&mut self, event: &KeyEvents) {
     match event {
       KeyEvents::KeyDown(key) => self.key_down(key),
@@ -68,8 +75,20 @@ pub trait Keyboard: objekt::Clone {
     self.is_pressing(&KeyCode::Meta(MetaKey::Ctrl))
   }
 
+  fn is_pressing_super(&self) -> bool {
+    self.is_pressing(&KeyCode::Meta(MetaKey::Super))
+  }
+
+  fn is_pressing_alt(&self) -> bool {
+    self.is_pressing(&KeyCode::Meta(MetaKey::Alt))
+  }
+
   fn is_pressing(&self, key: &KeyCode) -> bool {
     self.pressing_keys().contains(key)
+  }
+
+  fn is_combination(&self) -> bool {
+    self.is_pressing_ctrl() || self.is_pressing_super() || self.is_pressing_alt()
   }
 }
 
