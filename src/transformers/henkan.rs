@@ -213,6 +213,12 @@ mod tests {
       ["Kanji k", { stopped_buffer: "漢字", display: "k", transformer_type: Hiragana }],
       ["Kanji K", { stopped_buffer: "漢字", display: "▽k", transformer_type: Henkan }],
       ["Kanji Kanji", { stopped_buffer: "漢字", display: "▽かんじ", transformer_type: Henkan }],
+      ["Michi \n", { stopped_buffer: "未知", display: "", transformer_type: Stopped(Compleated) }],
+      ["Michigo ", { display: "[登録: みちご]", transformer_type: Henkan }],
+      ["Michigo [escape]", { display: "▽みちご", transformer_type: Henkan }],
+      ["Michigo [escape][backspace]", { display: "▽みち", transformer_type: Henkan }],
+      ["Michigo [escape][backspace] ", { display: "▼未知", transformer_type: Henkan }],
+      ["Michigo [escape][backspace] \n", { stopped_buffer: "未知", display: "", transformer_type: Stopped(Compleated) }],
     ];
     crate::tests::helpers::TestData::batch(vec);
 

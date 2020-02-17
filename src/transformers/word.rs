@@ -117,6 +117,7 @@ impl Word {
   pub fn pop(&mut self) {
     self.pair.pop();
     if self.pair.1.is_none() {
+      self.dic_read.remove_last();
       self.okuri = None;
     }
   }
@@ -259,5 +260,34 @@ mod tests {
     );
     assert_eq!(&Word::from((Katakana, "aTte")).display_string(), "ア*ッテ");
     assert_eq!(&Word::from((Katakana, "okuR")).display_string(), "オク*r");
+  }
+
+  #[test]
+  fn pop() {
+    {
+      let mut word = Word::from((Hiragana, "Oku"));
+      word.pop();
+      assert_eq!(&word.display_string(), "お");
+      assert_eq!(word.to_string_pair(), ("お".to_owned(), None));
+
+      word.pop();
+      assert_eq!(&word.display_string(), "");
+      assert_eq!(word.to_string_pair(), ("".to_owned(), None));
+    }
+
+    {
+      let mut word = Word::from((Hiragana, "OkuRi"));
+      word.pop();
+      assert_eq!(&word.display_string(), "おく");
+      assert_eq!(word.to_string_pair(), ("おく".to_owned(), None));
+
+      word.pop();
+      assert_eq!(&word.display_string(), "お");
+      assert_eq!(word.to_string_pair(), ("お".to_owned(), None));
+
+      word.pop();
+      assert_eq!(&word.display_string(), "");
+      assert_eq!(word.to_string_pair(), ("".to_owned(), None));
+    }
   }
 }
