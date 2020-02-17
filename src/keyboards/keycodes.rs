@@ -138,7 +138,7 @@ impl TryFrom<u16> for KeyCode {
       30 => Ok(KeyCode::from("]")),
       42 => Ok(KeyCode::from("\\")),
       41 => Ok(KeyCode::from(";")),
-      50 => Ok(KeyCode::from("‘")),
+      50 => Ok(KeyCode::from("`")),
       43 => Ok(KeyCode::from(",")),
       47 => Ok(KeyCode::from(".")),
       44 => Ok(KeyCode::from("/")),
