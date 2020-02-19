@@ -367,6 +367,9 @@ mod lib_tests {
             ["[down:ctrl]c", { display: "", transformer_type: Direct }],
             ["[down:super]c", { display: "", transformer_type: Direct }],
             ["[down:alt]c", { display: "", transformer_type: Direct }],
+            ["[down:ctrl]j[up:ctrl][down:super]c", { display: "", transformer_type: Hiragana }],
+            ["[down:ctrl]j[up:ctrl][down:ctrl]c", { display: "", transformer_type: Hiragana }],
+            ["[down:ctrl]j[up:ctrl][down:alt]c", { display: "", transformer_type: Hiragana }],
         ];
         crate::tests::helpers::TestData::batch(vec);
     }
